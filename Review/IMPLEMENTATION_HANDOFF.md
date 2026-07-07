@@ -33,7 +33,7 @@ Cập nhật: 2026-07-07.
 | **P1.5** | Identity: bỏ `trondomainjs`, gọi thẳng contract (mainnet-only, dùng chung tronWeb) | `IDENTITY_DIRECT_CONTRACT_SPEC.md` | ⬜ Chưa làm |
 | **P2** | Bridge `tronwallet-adapter`: QA ví thật + docs + đóng gói | `TRONWALLET_ADAPTER_BRIDGE_SPEC.md` | 🟩 Code Phase 1–2 xong; còn QA/docs |
 | **P3** | Tách module `packages/client` (index.ts 1.120 dòng → theo đối tượng) | mục 5b (dưới) | ⬜ Chưa làm — nên làm CHUNG với P1.5 identity |
-| **P3** | Wallet Registry mở: 1 descriptor/ví, gộp 3 nơi khai báo, dev push 1 file để thêm ví | `WALLET_REGISTRY_SPEC.md` | ⬜ Chưa làm — spec con, chỉ mở khi làm tới P3 |
+| **P3** | Wallet Registry mở: descriptor tự chứa + inject catalog runtime (PR 1 file HOẶC runtime plugin) | `WALLET_REGISTRY_SPEC.md` + **quyết định CUỐI ở mục 5c** | ⬜ Chưa làm — đọc 5c TRƯỚC (chốt kiến trúc, bãi bỏ manifest-in-core) |
 
 Lý do thứ tự: Core là nền cho mọi thứ chạy mượt (timeout/treo, ví mobile quay về). i18n là gap lớn nhất phía UI (hiện không đổi ngôn ngữ được). Bridge phần code đã xong, chỉ còn kiểm thử/đóng gói. Refactor client là maintainability — làm khi đụng identity (P1.5) cho đỡ sửa 2 lần.
 
@@ -155,6 +155,39 @@ Hai kit đang tổ chức khác nhau, **KHÔNG bê nguyên XRPL sang TRON**. B�
 | Bridge/combinator adapter | không có | có (`createFallback*`, `createAvailabilityProbe*`, bridge) | Giữ — đặc thù TRON (bọc `@tronweb3`). Chỉ tách sang `adapters/`. |
 
 **Tinh thần**: TRON không cần "core dày như XRPL" ở mọi chỗ (TRON không có reserve/activation kiểu XRPL), nhưng **client đang gánh quá nhiều** → tách module + đẩy enrichment/timeout/reconnect về core (P0) là hướng đúng. Resolver giữ ở client là divergence hợp lý vì dep `tronWeb`, đừng bê sang `ui`.
+
+### 5c. Wallet Registry — quyết định CUỐI: descriptor tự chứa + inject catalog runtime
+
+> Bãi bỏ hướng "manifest tách ở core" (bên dưới, đánh dấu ~~lỗi thời~~). Lý do: bắt ví ngoài khai báo mà phải đụng 3 package (metadata→core, icon→ui, integration→client) là **không khả thi cho đóng góp mở** — xé lẻ 1 ví ra 3 chỗ, và không cho phép bên thứ ba tự đăng ký từ app của họ.
+
+**Nguyên nhân gốc**: manifest-in-core chỉ để `ui` **đọc catalog TĨNH**. Nhưng nếu `ui` **nhận catalog lúc RUNTIME** (client bơm xuống) thì không cần manifest ở core, và cũng hết reverse-dep (không ai import ngược; client — lớp trên — đẩy data xuống ui).
+
+**Chốt kiến trúc (cuối)**:
+- **1 ví = 1 `WalletDescriptor` TỰ CHỨA trọn vẹn**: `metadata + icon (SVG/data-url inline) + integration (importer/detect/signMessageMode)`. Ở **1 chỗ duy nhất** — không xé lẻ.
+- **`ui` catalog-agnostic**: expose API `setCatalog(entries)`; render từ data bơm vào lúc runtime; KHÔNG giữ wallet data/icon tĩnh. Giữ `ui ← core`, không đụng client.
+- **`client`** đọc danh sách descriptor → `buildAdapters()` nạp manager + `buildCatalog()` bơm xuống `ui`. `client ← ui` (hợp lệ). **Không reverse-dep, không manifest-in-core.**
+
+**Phục vụ CẢ HAI kiểu "ví khác chủ động thêm"** (dùng chung 1 shape descriptor):
+1. **PR vào repo kit**: push **đúng 1 file** `client/src/wallets/entries/<id>.ts` (đủ metadata + icon + integration) + 1 dòng `registry.ts`. Không đụng core/ui.
+2. **Runtime plugin, KHÔNG sửa kit**: bên thứ ba tự dựng descriptor và truyền vào — `createWalletKit({ wallets: [...builtIn, myWalletDescriptor] })`. Kit không cần biết trước ví đó. (Đây là "mở" thật sự.)
+
+**Kiểm chứng không reverse-dep**:
+- `client`: đọc entries (local) → `buildCatalog()` → `ui.setCatalog(...)`. ✅ `client←ui`.
+- `ui`: nhận catalog runtime, render. Không import wallet data. ✅ `ui←core` giữ nguyên.
+- `core`/`adapters`: không phụ thuộc `client`/`ui`. ✅
+
+**Lưu ý triển khai**:
+- Icon **inline trong descriptor** (SVG string / data-url) → đi kèm data lúc `setCatalog`, `ui` render `<img>`/inline. Không cần asset tĩnh ở ui.
+- `WalletDescriptor` + `defineWallet()` phải là **public API** của `client` (để runtime-plugin dùng). `wallets?: WalletDescriptor[]` trong `WalletClientConfig` = builtin ∪ custom.
+- "Static manifest dùng chung" (nếu cần cho website/docs) = **artifact GENERATE ra từ entries**, không phải nguồn khai báo → không ép ai split.
+- Bridge integration vẫn **lazy importer** (không static import `@tronweb3` vào bundle mặc định).
+
+**→ Sửa `WALLET_REGISTRY_SPEC.md`**: bỏ split manifest/integration; `WalletDescriptor` tự chứa; thêm mục "runtime plugin registration" + `ui.setCatalog`. Mục 5 (đóng góp) đổi lại: **1 file entry (client) + 1 dòng registry**, icon inline — không còn 3-package.
+
+<details><summary>~~Hướng cũ (Phase 2, đã bãi bỏ): manifest tách ở core~~</summary>
+
+~~Static manifest (data) ở `core/src/wallets/manifest.ts`; integration ở `client/entries`; icon ở `ui`. Bãi bỏ vì xé lẻ 1 ví ra 3 package → không khả thi cho đóng góp ngoài.~~
+</details>
 
 ---
 

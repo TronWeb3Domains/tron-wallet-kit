@@ -4,6 +4,8 @@ Mục tiêu: **một đối tượng đăng ký (`WalletDescriptor`) duy nhất*
 
 Bối cảnh: hiện khai báo ví bị **rải 3 nơi** — `core/wallet-registry.ts` (metadata), `ui/wallet-catalog.ts` (catalog), `client` (`injected`/`bridge` config). Gộp về 1 registry. (Ăn khớp với refactor client mục 5b của `IMPLEMENTATION_HANDOFF.md`.)
 
+> **⚠️ QUYẾT ĐỊNH CUỐI (đọc mục 5c `IMPLEMENTATION_HANDOFF.md` trước — ưu tiên hơn mọi mô tả bên dưới):** `WalletDescriptor` **TỰ CHỨA trọn vẹn** (metadata + icon inline + integration) ở **1 chỗ** (`client/src/wallets/entries/<id>.ts`). KHÔNG tách manifest ra `core`, KHÔNG để icon ở `ui`. `ui` **catalog-agnostic**: nhận catalog qua `ui.setCatalog(...)` lúc runtime (client bơm xuống → không reverse-dep). Descriptor là **public API** để bên thứ ba tự đăng ký runtime: `createWalletKit({ wallets: [...builtIn, myWalletDescriptor] })` — không cần sửa kit. Các mục 2–5 dưới đây giữ ý tưởng descriptor/union nhưng **bỏ mọi chỗ nói "manifest ở core" / "icon ở ui riêng" / "3-package"**; đóng góp ví mới = **1 file entry (client) + 1 dòng registry**, icon inline.
+
 ---
 
 ## 1. Descriptor: union theo cách tích hợp
