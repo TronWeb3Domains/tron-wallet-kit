@@ -5,10 +5,14 @@ import { createWalletClient } from "./client";
 import { resolveIdentityResolver } from "./identity";
 import type { TronIdentity, WalletClientConfig, WalletKit } from "./types";
 import { toThemeConfig } from "./utils";
+import { buildCatalog } from "./wallets/build-catalog";
+import { resolveWalletDescriptors } from "./wallets/registry";
 
 export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
   const manager = createWalletClient(config);
-  const modal = createWalletModal({ manager, ...(config.ui ? { ui: config.ui } : {}) });
+  const catalog = buildCatalog(resolveWalletDescriptors(config.wallets));
+  const ui = { ...config.ui, catalog };
+  const modal = createWalletModal({ manager, ui });
   const buttonTheme = toThemeConfig(config.ui);
   const button = config.connectButton
     ? createWalletButton({
@@ -19,7 +23,7 @@ export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
         ...(config.connectButton.connectedLabel ? { connectedLabel: config.connectButton.connectedLabel } : {})
       })
     : null;
-  const toast = config.ui?.toast ? createWalletToast({ manager, ui: config.ui }) : null;
+  const toast = config.ui?.toast ? createWalletToast({ manager, ui }) : null;
   const identityResolver = resolveIdentityResolver(config.identity, manager);
   const identityCache = new Map<string, { identity: TronIdentity | undefined; expiresAt: number }>();
   const identityCacheTtlMs = config.identity?.cacheTtlMs ?? 10 * 60 * 1000;

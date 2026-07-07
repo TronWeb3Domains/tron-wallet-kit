@@ -422,7 +422,9 @@ export function ConnectModal(props: ConnectModalProps) {
   }, [kit]);
 
   const wallets = mergeWalletOptionsWithCatalog(
-    kit.manager.getWallets().map((adapter) => mapAdapterToWalletOption(adapter, availability[adapter.metadata.id] ?? (adapter.isAvailable ? "loading" : true)))
+    kit.manager.getWallets().map((adapter) => mapAdapterToWalletOption(adapter, availability[adapter.metadata.id] ?? (adapter.isAvailable ? "loading" : true))),
+    undefined,
+    props.catalog
   );
   const html = createConnectModalHtml({
     wallets,

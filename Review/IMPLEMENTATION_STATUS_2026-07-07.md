@@ -27,7 +27,7 @@ Companion status for `IMPLEMENTATION_HANDOFF.md`.
   - wallet icon image failure falls back to the wallet initial
   - QR render failures show an error state instead of a blank slot
 
-## Partial
+## Completed Continued
 
 - P3 mechanical client split is complete:
   - `types.ts` owns public client/kit/adapter/identity/balance types
@@ -51,8 +51,17 @@ Companion status for `IMPLEMENTATION_HANDOFF.md`.
   - `createDefaultAdapters()` now builds default runtime adapters from wallet descriptors
   - removed the older duplicated `adapters/defaults.ts` runtime list
   - exported wallet descriptor APIs from the client barrel
+- P3 wallet descriptor registry final 5c runtime catalog is complete:
+  - `WalletDescriptor` now supports runtime plugin descriptors through `WalletClientConfig.wallets`
+  - added `defineWallet()` / `isWalletDescriptor()` / `resolveWalletDescriptors()`
+  - added `buildCatalog()` to map descriptors into UI catalog entries
+  - `createWalletKit()` builds catalog from descriptors and injects it into UI config
+  - UI config accepts `catalog`, and modal/inline rendering use runtime catalog before static fallback
+  - React `ConnectModal` can render with a runtime catalog
+  - descriptor `featured` is treated as a default suggestion; `ui.walletList.featuredWallets`, whitelist/blacklist, availability sorting, and show-unavailable controls remain integrator-owned
+  - injected descriptors support `signMessageMode: "signMessageV2" | "sign" | "request"` for SafePal-style wallets
 
 ## Pending
 
 - P2 remains code-complete at bridge level but still needs real wallet QA/docs/package decision.
-- P3 wallet descriptor registry still needs a later UI/core unification phase if the package boundary is changed or a generated shared manifest is introduced.
+- Legacy `core/wallet-registry.ts` and UI static catalog remain as backward-compatible fallback only; new client-created kits inject descriptor catalog at runtime.

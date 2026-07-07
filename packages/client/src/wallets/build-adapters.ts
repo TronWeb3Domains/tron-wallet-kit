@@ -40,7 +40,7 @@ function toBridgeConfig(wallet: Extract<WalletDescriptor, { integration: "tronwe
     id: wallet.id,
     name: wallet.name,
     homepage: wallet.homepage,
-    platforms: wallet.platforms,
+    platforms: [...wallet.platforms],
     ...(wallet.signMessageMode ? { signMessageMode: wallet.signMessageMode } : {}),
     ...(wallet.availabilityTimeoutMs ? { availabilityTimeoutMs: wallet.availabilityTimeoutMs } : {}),
     ...(wallet.availabilityProbe ? { availabilityProbe: wallet.availabilityProbe } : {}),
@@ -57,7 +57,7 @@ function toInjectedFallback(wallet: Extract<WalletDescriptor, { integration: "tr
     ...(wallet.injectedFallback?.provider ? { provider: wallet.injectedFallback.provider } : {}),
     homepage: wallet.homepage,
     downloadUrl: wallet.downloadUrl ?? wallet.homepage,
-    platforms: wallet.platforms
+    platforms: [...wallet.platforms]
   };
 }
 
@@ -70,7 +70,8 @@ function toInjectedConfig(wallet: Extract<WalletDescriptor, { integration: "inje
     ...(wallet.icon ? { icon: wallet.icon } : {}),
     homepage: wallet.homepage,
     downloadUrl: wallet.downloadUrl ?? wallet.homepage,
-    platforms: wallet.platforms,
-    ...(wallet.requestMethods ? { requestMethods: wallet.requestMethods } : {})
+    platforms: [...wallet.platforms],
+    ...(wallet.requestMethods ? { requestMethods: wallet.requestMethods } : {}),
+    ...(wallet.signMessageMode ? { signMessageMode: wallet.signMessageMode } : {})
   };
 }

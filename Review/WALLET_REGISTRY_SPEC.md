@@ -195,6 +195,17 @@ export const myWallet: WalletDescriptor = {
 
 ---
 
+## 5b. Quyền hiển thị của người tích hợp (GIỮ NGUYÊN khi refactor)
+
+Tách bạch 2 tầng — **đừng gộp**:
+- **Descriptor = mặc định của tác giả ví**: `featured?: number` (gợi ý vị trí nổi bật), `group`. Chỉ là *đề xuất*.
+- **`ui.walletList` = quyết định của INTEGRATOR** (đã có sẵn trong code, phải giữ):
+  - `featuredWallets: string[]` + `featuredLimit` → chọn **ví nổi bật** + thứ tự (đè descriptor). Ưu tiên: `featuredWallets` > `descriptor.featured` > fallback.
+  - `wallets: "all" | string[]` (whitelist) / `disabledWallets: string[]` (blacklist) → chọn ví trong **All Wallets**.
+  - `showUnavailable`, `sortAvailableFirst`.
+
+⇒ Ví (kể cả runtime-plugin bên thứ ba) chỉ *đề xuất*; **hiện gì ở featured / All Wallets là do integrator quyết** qua `walletList`. Cơ chế chạy ở UI (`applyWalletListConfig` + `getFeaturedWalletOptions`) trên catalog đã inject → khi refactor sang descriptor tự chứa + `setCatalog`, **phải giữ nguyên** `walletList` áp lên catalog runtime. Custom wallet có `id` nên integrator feature/whitelist y như builtin.
+
 ## 6. Validate (giữ registry sạch khi mở PR)
 - **JSON Schema / zod** cho phần tĩnh của descriptor (id unique, name, homepage URL hợp lệ, platforms hợp lệ, icon tồn tại) → chạy trong CI + test `registry.test.ts` (duyệt `WALLETS`, assert từng entry).
 - Lint: `id` phải khớp tên file + tên icon; `featured` không trùng số; bridge entry phải có `importer` là dynamic import (không static).

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { TRON_MAINNET, TRON_NILE, type WalletAdapter } from "@tron-wallet-kit/core";
 import {
   BUILTIN_WALLET_DESCRIPTORS,
+  buildCatalog,
   createInjectedTronAdapter,
   createTronDomainIdentityResolver,
   createTronWeb3AdapterBridge,
@@ -284,6 +285,42 @@ describe("client entrypoints", () => {
       "walletconnect"
     ]);
     expect(BUILTIN_WALLET_DESCRIPTORS.every((wallet) => wallet.homepage && wallet.platforms.length > 0)).toBe(true);
+  });
+
+  it("accepts runtime wallet descriptors with inline catalog metadata", async () => {
+    const icon = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%2F%3E";
+    const wallet = {
+      id: "safepal-test",
+      name: "SafePal Test",
+      integration: "injected" as const,
+      homepage: "https://www.safepal.com",
+      downloadUrl: "https://www.safepal.com/download",
+      icon,
+      platforms: ["extension", "mobile"] as const,
+      group: "popular" as const,
+      featured: 1,
+      requestMethods: ["tron_requestAccounts"],
+      signMessageMode: "sign" as const,
+      detect: {
+        provider: () => ({
+          request: async () => ({ code: 200 }),
+          tronWeb: {
+            defaultAddress: { base58: "TSafePalRuntime" },
+            trx: {
+              sign: async (payload: string) => `signed:${payload}`
+            }
+          }
+        })
+      }
+    };
+
+    const manager = createWalletClient({ wallets: [wallet] });
+    const catalog = buildCatalog([wallet]);
+
+    expect(manager.getWallets().map((adapter) => adapter.metadata.id)).toEqual(["safepal-test"]);
+    expect(catalog).toMatchObject([{ id: "safepal-test", icon, featured: 1 }]);
+    await expect(manager.connect("safepal-test")).resolves.toMatchObject({ account: { address: "TSafePalRuntime" } });
+    await expect(manager.signMessage("hello")).resolves.toMatchObject({ signature: "signed:hello" });
   });
 
   it("allows default registry wallets to be disabled without removing adapter code", () => {

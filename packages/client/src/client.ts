@@ -7,14 +7,14 @@ import {
 import { createTronWeb3AdapterBridges } from "./adapters/bridge";
 import type { DefaultAdaptersConfig, WalletClientConfig } from "./types";
 import { buildAdapters } from "./wallets/build-adapters";
-import { getEnabledWalletDescriptors } from "./wallets/registry";
+import { resolveWalletDescriptors } from "./wallets/registry";
 
 export function createDefaultAdapters(config: DefaultAdaptersConfig = {}): WalletAdapter[] {
-  const defaultWallets = getEnabledWalletDescriptors().map((wallet) => wallet.id);
-  const requested = new Set(config.wallets === "all" || !config.wallets ? defaultWallets : config.wallets);
+  const requestedDescriptors = resolveWalletDescriptors(config.wallets);
+  const requested = new Set(requestedDescriptors.map((wallet) => wallet.id));
   for (const walletId of config.disabledWallets ?? []) requested.delete(walletId);
   return buildAdapters(
-    getEnabledWalletDescriptors().filter((wallet) => requested.has(wallet.id)),
+    requestedDescriptors.filter((wallet) => requested.has(wallet.id)),
     config
   );
 }

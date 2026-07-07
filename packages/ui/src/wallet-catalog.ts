@@ -1,30 +1,9 @@
 import { TRON_WALLET_REGISTRY, type TronWalletGroup, type TronWalletTransport } from "@tron-wallet-kit/core";
 import { en } from "./locales/en";
-import type { ConnectModalLabels, WalletListConfig, WalletOptionViewModel } from "./types";
+import type { ConnectModalLabels, TronWalletCatalogItem, WalletListConfig, WalletOptionViewModel } from "./types";
 import { walletIcons } from "./wallets/icons.generated";
 
 type WalletPlatform = "extension" | "mobile";
-
-export type TronWalletCatalogItem = {
-  id: string;
-  name: string;
-  enabled: boolean;
-  group: TronWalletGroup;
-  transport: TronWalletTransport;
-  platforms: readonly WalletPlatform[];
-  homepage?: string;
-  downloadUrl?: string;
-  icon?: string;
-  adapterId?: string;
-  providerPaths?: readonly string[];
-  conflictMarkers?: readonly string[];
-  mobileDeepLink?: {
-    scheme: string;
-    urlTemplate?: string;
-  };
-  supportsWalletConnect?: boolean;
-  badge?: WalletOptionViewModel["badge"];
-};
 
 const catalogBadgeTones: Record<string, NonNullable<WalletOptionViewModel["badge"]>["tone"]> = {
   tronlink: "installed",
@@ -51,12 +30,18 @@ export function getTronWalletCatalogIcon(walletId: string): string | undefined {
   return item?.icon ?? walletIcons[walletId];
 }
 
-export function mergeWalletOptionsWithCatalog(wallets: readonly WalletOptionViewModel[], labels: ConnectModalLabels = en.connectModal): WalletOptionViewModel[] {
+export function mergeWalletOptionsWithCatalog(
+  wallets: readonly WalletOptionViewModel[],
+  labels: ConnectModalLabels = en.connectModal,
+  catalog: readonly TronWalletCatalogItem[] = TRON_WALLET_CATALOG
+): WalletOptionViewModel[] {
   const adapterIds = new Set(wallets.map((wallet) => wallet.adapterId ?? wallet.id));
   const byId = new Map(wallets.map((wallet) => [wallet.id, wallet]));
   const merged: WalletOptionViewModel[] = [];
 
-  for (const item of TRON_WALLET_CATALOG) {
+  for (const item of catalog.filter((wallet) => wallet.enabled !== false)) {
+    const group = item.group ?? "popular";
+    const itemTransport = item.transport ?? (item.platforms.includes("extension") ? "extension" : "mobile");
     const current = byId.get(item.id);
     if (current) {
       merged.push(enrichWalletOption(current, item, adapterIds, labels));
@@ -68,14 +53,15 @@ export function mergeWalletOptionsWithCatalog(wallets: readonly WalletOptionView
     const hasNativeAdapter = adapterIds.has(nativeAdapterId);
     const canUseWalletConnect = item.supportsWalletConnect === true && item.id !== "walletconnect" && adapterIds.has("walletconnect");
     const adapterId = hasNativeAdapter ? nativeAdapterId : canUseWalletConnect ? "walletconnect" : nativeAdapterId;
-    const transport = hasNativeAdapter ? item.transport : canUseWalletConnect ? "qr" : item.transport;
+    const transport = hasNativeAdapter ? itemTransport : canUseWalletConnect ? "qr" : itemTransport;
     const option: WalletOptionViewModel = {
       id: item.id,
       adapterId,
       name: item.name,
-      group: item.group,
+      group,
       transport,
       platforms: item.platforms,
+      ...(item.featured !== undefined ? { featured: item.featured } : {}),
       ...(item.providerPaths ? { providerPaths: item.providerPaths } : {}),
       ...(item.conflictMarkers ? { conflictMarkers: item.conflictMarkers } : {}),
       ...(item.mobileDeepLink ? { mobileDeepLink: item.mobileDeepLink } : {}),
@@ -83,9 +69,9 @@ export function mergeWalletOptionsWithCatalog(wallets: readonly WalletOptionView
       available: hasNativeAdapter || canUseWalletConnect,
       readyState: hasNativeAdapter || canUseWalletConnect ? "found" : "notFound",
       capabilities: transport === "qr" || transport === "walletconnect" ? ["qr"] : [],
-      badge: createCatalogBadge({ ...item, transport }, hasNativeAdapter || canUseWalletConnect, labels)
+      badge: createCatalogBadge({ ...item, group, transport }, hasNativeAdapter || canUseWalletConnect, labels)
     };
-    const icon = getTronWalletCatalogIcon(item.id);
+    const icon = item.icon ?? getTronWalletCatalogIcon(item.id);
     if (icon) option.icon = icon;
     if (item.homepage) option.homepage = item.homepage;
     if (item.downloadUrl) option.downloadUrl = item.downloadUrl;
@@ -97,7 +83,16 @@ export function mergeWalletOptionsWithCatalog(wallets: readonly WalletOptionView
 
 export function getFeaturedWalletOptions(wallets: readonly WalletOptionViewModel[], config: Pick<WalletListConfig, "featuredLimit" | "featuredWallets"> | number = FEATURED_DEFAULT_LIMIT): WalletOptionViewModel[] {
   const limit = clampFeaturedLimit(typeof config === "number" ? config : config.featuredLimit);
-  const orderedIds = typeof config === "number" || !config.featuredWallets?.length ? featuredOrder : config.featuredWallets.slice(0, FEATURED_MAX_LIMIT);
+  const descriptorOrder = [...wallets]
+    .filter((wallet) => typeof wallet.featured === "number")
+    .sort((a, b) => (a.featured ?? 0) - (b.featured ?? 0))
+    .map((wallet) => wallet.id);
+  const orderedIds =
+    typeof config === "number" || !config.featuredWallets?.length
+      ? descriptorOrder.length > 0
+        ? descriptorOrder
+        : featuredOrder
+      : config.featuredWallets.slice(0, FEATURED_MAX_LIMIT);
   const byId = new Map(wallets.map((wallet) => [wallet.id, wallet]));
   const featured = orderedIds.flatMap((id) => {
     const wallet = byId.get(id);
@@ -151,13 +146,16 @@ function clampFeaturedLimit(value: number | undefined): number {
 function enrichWalletOption(wallet: WalletOptionViewModel, item: TronWalletCatalogItem, adapterIds: ReadonlySet<string>, labels: ConnectModalLabels): WalletOptionViewModel {
   const canUseWalletConnect = item.supportsWalletConnect === true && item.id !== "walletconnect" && adapterIds.has("walletconnect");
   const useQrFallback = canUseWalletConnect && (wallet.readyState === "notFound" || wallet.readyState === "unsupported");
-  const transport = useQrFallback ? "qr" : wallet.transport ?? item.transport;
+  const itemTransport = item.transport ?? (item.platforms.includes("extension") ? "extension" : "mobile");
+  const group = wallet.group ?? item.group ?? "popular";
+  const transport = useQrFallback ? "qr" : wallet.transport ?? itemTransport;
   const option: WalletOptionViewModel = {
     ...wallet,
     adapterId: useQrFallback ? "walletconnect" : wallet.adapterId ?? item.adapterId ?? item.id,
-    group: wallet.group ?? item.group,
+    group,
     transport,
     platforms: wallet.platforms ?? item.platforms,
+    ...(wallet.featured !== undefined || item.featured !== undefined ? { featured: wallet.featured ?? item.featured } : {}),
     ...(useQrFallback
       ? {
           available: true,
@@ -166,15 +164,15 @@ function enrichWalletOption(wallet: WalletOptionViewModel, item: TronWalletCatal
         }
       : {})
   };
-  const icon = wallet.icon ?? getTronWalletCatalogIcon(item.id);
+  const icon = wallet.icon ?? item.icon ?? getTronWalletCatalogIcon(item.id);
   const homepage = wallet.homepage ?? item.homepage;
   const downloadUrl = wallet.downloadUrl ?? item.downloadUrl;
   const providerPaths = wallet.providerPaths ?? item.providerPaths;
   const conflictMarkers = wallet.conflictMarkers ?? item.conflictMarkers;
   const mobileDeepLink = wallet.mobileDeepLink ?? item.mobileDeepLink;
   const supportsWalletConnect = wallet.supportsWalletConnect ?? item.supportsWalletConnect;
-  const badgeTransport: TronWalletTransport = useQrFallback ? "qr" : item.transport;
-  const badge = useQrFallback ? { label: labels.qrCode.toUpperCase(), tone: "qr" as const } : wallet.badge ?? createCatalogBadge({ ...item, transport: badgeTransport }, wallet.available === true || wallet.readyState === "found", labels);
+  const badgeTransport = useQrFallback ? "qr" : itemTransport;
+  const badge = useQrFallback ? { label: labels.qrCode.toUpperCase(), tone: "qr" as const } : wallet.badge ?? createCatalogBadge({ ...item, group, transport: badgeTransport }, wallet.available === true || wallet.readyState === "found", labels);
   if (icon) option.icon = icon;
   if (homepage) option.homepage = homepage;
   if (downloadUrl) option.downloadUrl = downloadUrl;

@@ -36,3 +36,19 @@ export const BUILTIN_WALLET_DESCRIPTORS = [
 export function getEnabledWalletDescriptors(wallets: readonly WalletDescriptor[] = BUILTIN_WALLET_DESCRIPTORS): readonly WalletDescriptor[] {
   return wallets.filter((wallet) => wallet.enabled !== false);
 }
+
+export function defineWallet<TWallet extends WalletDescriptor>(wallet: TWallet): TWallet {
+  return wallet;
+}
+
+export function isWalletDescriptor(value: unknown): value is WalletDescriptor {
+  return typeof value === "object" && value !== null && "id" in value && "name" in value && "integration" in value;
+}
+
+export function resolveWalletDescriptors(wallets: "all" | readonly (string | WalletDescriptor)[] | undefined): readonly WalletDescriptor[] {
+  if (wallets === "all" || !wallets) return getEnabledWalletDescriptors();
+  const explicitDescriptors = wallets.filter(isWalletDescriptor);
+  const requestedIds = new Set(wallets.filter((wallet): wallet is string => typeof wallet === "string"));
+  const requestedBuiltIns = getEnabledWalletDescriptors().filter((wallet) => requestedIds.has(wallet.id));
+  return [...requestedBuiltIns, ...explicitDescriptors.filter((wallet) => !requestedIds.has(wallet.id))];
+}

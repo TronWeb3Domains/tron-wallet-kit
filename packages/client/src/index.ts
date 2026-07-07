@@ -11,3 +11,4 @@ export * from "./adapters/injected";
 export * from "./wallets/types";
 export * from "./wallets/registry";
 export * from "./wallets/build-adapters";
+export * from "./wallets/build-catalog";

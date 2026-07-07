@@ -7,7 +7,7 @@ export type WalletDescriptorBase = {
   name: string;
   homepage: string;
   downloadUrl?: string;
-  platforms: WalletPlatform[];
+  platforms: readonly WalletPlatform[];
   group?: TronWalletGroup;
   featured?: number;
   description?: string;
@@ -38,6 +38,7 @@ export type InjectedWalletDescriptor = WalletDescriptorBase & {
   integration: "injected";
   detect: InjectedDetect;
   requestMethods?: readonly string[];
+  signMessageMode?: "signMessageV2" | "sign" | "request";
 };
 
 export type WalletConnectWalletDescriptor = WalletDescriptorBase & {

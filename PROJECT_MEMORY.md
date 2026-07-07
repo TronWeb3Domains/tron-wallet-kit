@@ -2017,3 +2017,37 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - direct `tsc --noEmit` in `packages/react`
   - direct `tsc --noEmit` in `packages/ui`
   - direct `tsc --noEmit` in `examples/react-basic`
+
+## 2026-07-07 Wallet Descriptor Registry 5c Runtime Catalog
+
+- Implemented the final 5c architecture direction from `Review/IMPLEMENTATION_HANDOFF.md`:
+  - descriptor is the runtime source for adapter + catalog data
+  - UI is catalog-agnostic and accepts runtime catalog through config/view model
+  - client builds adapters and catalog from the same descriptor list
+  - runtime plugin descriptors are accepted in `WalletClientConfig.wallets`
+- Added `packages/client/src/wallets/build-catalog.ts`.
+- Added public helpers:
+  - `defineWallet()`
+  - `isWalletDescriptor()`
+  - `resolveWalletDescriptors()`
+  - `buildCatalog()`
+- `createWalletKit()` now builds catalog from descriptors and injects it into `WalletUiConfig.catalog`.
+- `createDefaultAdapters()` supports mixed `wallets` arrays: legacy string ids and runtime `WalletDescriptor` objects.
+- UI changes:
+  - `WalletUiConfig.catalog`
+  - `ResolvedWalletUiConfig.catalog`
+  - `ConnectModalViewModel.catalog`
+  - `mergeWalletOptionsWithCatalog(..., catalog)`
+  - descriptor `featured` order is used as default while `ui.walletList.featuredWallets` remains the integrator override.
+- React `ConnectModal` forwards runtime catalog to the shared UI merge helper.
+- Injected descriptors now support `signMessageMode: "signMessageV2" | "sign" | "request"` so SafePal-style message signing can use `tronWeb.trx.sign(message)`.
+- Added client unit coverage for a runtime SafePal-style descriptor with inline icon, catalog build, connect, and signMessage.
+- Verification passed:
+  - direct `tsc --noEmit` in `packages/ui`
+  - direct `tsc --noEmit` in `packages/client`
+  - direct `tsc --noEmit` in `packages/react`
+  - direct `tsc --noEmit` in `examples/react-basic`
+  - direct `vitest run` in `packages/client` (26 tests)
+  - direct `vitest run` in `packages/ui` (37 tests)
+- Backward compatibility note:
+  - legacy `core/wallet-registry.ts` and static UI catalog still exist as fallback for standalone UI rendering, but client-created kits now inject descriptor catalog at runtime.

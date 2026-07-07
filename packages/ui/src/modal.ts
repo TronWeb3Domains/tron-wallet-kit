@@ -43,7 +43,7 @@ function resolveModalBodyModel(viewModel: ConnectModalViewModel): {
 } {
   const labels = { ...defaultConnectModalLabels, ...viewModel.labels };
   const view = viewModel.view ?? "featured";
-  const wallets = applyWalletListConfig(mergeWalletOptionsWithCatalog(viewModel.wallets, labels), viewModel.walletList);
+  const wallets = applyWalletListConfig(mergeWalletOptionsWithCatalog(viewModel.wallets, labels, viewModel.catalog), viewModel.walletList);
   const activeWallet = resolveActiveWallet(wallets, viewModel.activeWalletId ?? viewModel.selectedWalletId);
   const bodyModel: ConnectModalViewModel & { view: ConnectModalView; labels: ConnectModalLabels } = {
     ...viewModel,
@@ -126,7 +126,11 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
   let allWalletsTimer: number | undefined;
 
   const getWalletOptions = () =>
-    mergeWalletOptionsWithCatalog(options.manager.getWallets().map((adapter) => mapAdapterToWalletOption(adapter, availability.get(adapter.metadata.id), config.labels.connectModal)), config.labels.connectModal);
+    mergeWalletOptionsWithCatalog(
+      options.manager.getWallets().map((adapter) => mapAdapterToWalletOption(adapter, availability.get(adapter.metadata.id), config.labels.connectModal)),
+      config.labels.connectModal,
+      config.catalog
+    );
 
   const primeAllWalletsSkeleton = () => {
     if (allWalletsPrimed) return;
@@ -158,6 +162,7 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
       ...(retryBusy ? { retryState: "busy" as const } : {}),
       ...(errorMessage ? { errorMessage } : {}),
       ...(allWalletsLoading && view === "all-wallets" ? { walletsLoading: true } : {}),
+      catalog: config.catalog,
       labels: { ...config.labels.connectModal, title: config.modal.title, subtitle: config.modal.subtitle },
       showCloseButton: config.modal.showCloseButton,
       showPoweredBy: config.modal.branding.showPoweredBy ?? true,
@@ -466,7 +471,11 @@ export function createWalletInline(options: { manager: WalletManager; ui?: Walle
   let allWalletsTimer: number | undefined;
 
   const getWalletOptions = () =>
-    mergeWalletOptionsWithCatalog(options.manager.getWallets().map((adapter) => mapAdapterToWalletOption(adapter, availability.get(adapter.metadata.id), config.labels.connectModal)), config.labels.connectModal);
+    mergeWalletOptionsWithCatalog(
+      options.manager.getWallets().map((adapter) => mapAdapterToWalletOption(adapter, availability.get(adapter.metadata.id), config.labels.connectModal)),
+      config.labels.connectModal,
+      config.catalog
+    );
 
   const primeAllWalletsSkeleton = () => {
     if (allWalletsPrimed) return;
@@ -497,6 +506,7 @@ export function createWalletInline(options: { manager: WalletManager; ui?: Walle
       ...(retryBusy ? { retryState: "busy" as const } : {}),
       ...(errorMessage ? { errorMessage } : {}),
       ...(allWalletsLoading && view === "all-wallets" ? { walletsLoading: true } : {}),
+      catalog: config.catalog,
       labels: { ...config.labels.connectModal, title: config.modal.title, subtitle: config.modal.subtitle },
       showCloseButton: config.modal.showCloseButton,
       showPoweredBy: config.modal.branding.showPoweredBy ?? true,

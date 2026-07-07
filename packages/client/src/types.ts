@@ -22,9 +22,10 @@ import type {
   WalletSessionBalance
 } from "@tron-wallet-kit/core";
 import type { ThemeConfig, WalletButton, WalletModal, WalletToast, WalletUiConfig } from "@tron-wallet-kit/ui";
+import type { WalletDescriptor } from "./wallets/types";
 
 export type DefaultAdaptersConfig = {
-  wallets?: "all" | Array<TronWalletRegistryId | string>;
+  wallets?: "all" | Array<TronWalletRegistryId | string | WalletDescriptor>;
   disabledWallets?: readonly string[];
   walletConnectProjectId?: string;
   walletConnectNetwork?: WalletConnectNetworkName | string;
@@ -80,7 +81,7 @@ export type InjectedTronProvider = {
       getBalance?(address: string): Promise<unknown> | unknown;
       getBlockByNumber?(blockNumber: number): Promise<{ blockID?: string }>;
       signMessageV2?(message: string): Promise<string>;
-      sign<TTransaction extends TransactionPayload>(transaction: TTransaction): Promise<TTransaction>;
+      sign?(payload: TransactionPayload | string): Promise<unknown>;
     };
   };
   request?: (args: { method: string; params?: unknown }) => Promise<unknown>;
@@ -96,6 +97,7 @@ export type InjectedTronAdapterConfig = {
   platforms?: WalletPlatform[];
   provider?: () => InjectedTronProvider | undefined;
   requestMethods?: readonly string[];
+  signMessageMode?: "signMessageV2" | "sign" | "request";
   metadata?: Partial<WalletMetadata>;
 };
 

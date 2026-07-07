@@ -1,5 +1,6 @@
 import { resolveMode, resolveTheme } from "./themes";
 import { resolveLabelPack } from "./locales";
+import { TRON_WALLET_CATALOG } from "./wallet-catalog";
 import type { ResolvedWalletUiConfig, WalletUiConfig } from "./types";
 
 const FEATURED_DEFAULT_LIMIT = 5;
@@ -13,6 +14,7 @@ export function resolveWalletUiConfig(config: WalletUiConfig = {}): ResolvedWall
   return {
     theme: resolveTheme({ themeName, ...(config.customTheme ? { tokens: config.customTheme } : {}) }),
     labels,
+    catalog: config.catalog ?? TRON_WALLET_CATALOG,
     modal: {
       title: config.modal?.title ?? labels.connectModal.title,
       subtitle: config.modal?.subtitle ?? labels.connectModal.subtitle,

@@ -68,9 +68,7 @@ export function createInjectedTronAdapter(config: InjectedTronAdapterConfig): Wa
     signMessage: async ({ message }) => {
       const activeProvider = provider ?? resolveProvider();
       if (!activeProvider) throw new WalletKitError("NO_SESSION", `${metadata.name} is not connected.`);
-      const signature =
-        (await activeProvider.tronWeb?.trx?.signMessageV2?.(message)) ??
-        (await requestOptionalString(activeProvider, "tron_signMessage", { message }));
+      const signature = await signInjectedMessage(activeProvider, message, config.signMessageMode);
       if (!signature) throw new WalletKitError("SIGN_MESSAGE_FAILED", `${metadata.name} did not return a signature.`);
       return { signatureKind: "signature" as const, signature, proof: signature, raw: signature };
     },
@@ -78,10 +76,29 @@ export function createInjectedTronAdapter(config: InjectedTronAdapterConfig): Wa
       const activeProvider = provider ?? resolveProvider();
       if (!activeProvider) throw new WalletKitError("NO_SESSION", `${metadata.name} is not connected.`);
       const signedTransaction =
-        (await activeProvider.tronWeb?.trx?.sign?.(transaction)) ??
+        (normalizeSignedTransaction(await activeProvider.tronWeb?.trx?.sign?.(transaction)) as TransactionPayload | undefined) ??
         ((await activeProvider.request?.({ method: "tron_signTransaction", params: { transaction } })) as TransactionPayload | undefined);
       if (!signedTransaction) throw new WalletKitError("SIGN_TRANSACTION_FAILED", `${metadata.name} did not return a signed transaction.`);
       return { transaction: signedTransaction, signedTransaction, signed: true, raw: signedTransaction };
     }
   };
+}
+
+async function signInjectedMessage(provider: InjectedTronProvider, message: string, mode?: InjectedTronAdapterConfig["signMessageMode"]): Promise<string | undefined> {
+  if (mode === "sign") return normalizeSignature(await provider.tronWeb?.trx?.sign?.(message));
+  if (mode === "request") return requestOptionalString(provider, "tron_signMessage", { message });
+  if (mode === "signMessageV2") return normalizeSignature(await provider.tronWeb?.trx?.signMessageV2?.(message));
+  return (
+    normalizeSignature(await provider.tronWeb?.trx?.signMessageV2?.(message)) ??
+    (await requestOptionalString(provider, "tron_signMessage", { message })) ??
+    normalizeSignature(await provider.tronWeb?.trx?.sign?.(message))
+  );
+}
+
+function normalizeSignature(signature: unknown): string | undefined {
+  return typeof signature === "string" && signature.length > 0 ? signature : undefined;
+}
+
+function normalizeSignedTransaction(transaction: unknown): TransactionPayload | undefined {
+  return typeof transaction === "object" && transaction !== null ? (transaction as TransactionPayload) : undefined;
 }

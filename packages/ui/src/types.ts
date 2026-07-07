@@ -84,6 +84,28 @@ export type WalletListConfig = {
   sortAvailableFirst?: boolean;
 };
 
+export type TronWalletCatalogItem = {
+  id: string;
+  name: string;
+  enabled?: boolean;
+  group?: string;
+  transport?: "extension" | "walletconnect" | "qr" | "hardware" | "mobile" | "embedded" | string;
+  platforms: readonly WalletPlatform[];
+  homepage?: string;
+  downloadUrl?: string;
+  icon?: string;
+  adapterId?: string;
+  providerPaths?: readonly string[];
+  conflictMarkers?: readonly string[];
+  mobileDeepLink?: {
+    scheme: string;
+    urlTemplate?: string;
+  };
+  supportsWalletConnect?: boolean;
+  featured?: number;
+  badge?: WalletOptionViewModel["badge"];
+};
+
 export type WalletUiConfig = {
   themeMode?: UiMode;
   mode?: UiMode;
@@ -91,6 +113,7 @@ export type WalletUiConfig = {
   customTheme?: Partial<ThemeTokens>;
   locale?: WalletKitLocale;
   labels?: WalletUiLabels;
+  catalog?: readonly TronWalletCatalogItem[];
   showRecentTransactions?: boolean;
   maxVisibleTransactions?: number;
   modal?: {
@@ -141,6 +164,7 @@ export type ResolvedTheme = {
 export type ResolvedWalletUiConfig = {
   theme: ResolvedTheme;
   labels: WalletKitLabelPack;
+  catalog: readonly TronWalletCatalogItem[];
   modal: Required<NonNullable<WalletUiConfig["modal"]>>;
   qr: Required<NonNullable<WalletUiConfig["qr"]>>;
   walletList: Required<NonNullable<WalletUiConfig["walletList"]>>;
@@ -169,6 +193,7 @@ export type WalletOptionViewModel = {
     urlTemplate?: string;
   };
   supportsWalletConnect?: boolean;
+  featured?: number;
   available?: boolean;
   readyState?: "found" | "notFound" | "unsupported" | "loading";
   status?: "idle" | "connecting" | "connected" | "error";
@@ -214,6 +239,7 @@ export type ConnectModalView = "featured" | "all-wallets" | "connecting" | "qr";
 export type ConnectModalViewModel = {
   labels?: Partial<ConnectModalLabels>;
   wallets: readonly WalletOptionViewModel[];
+  catalog?: readonly TronWalletCatalogItem[];
   view?: ConnectModalView;
   networkName?: string;
   networkType?: string;
