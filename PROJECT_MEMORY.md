@@ -1983,3 +1983,37 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - direct `vitest run` in `packages/client` (24 tests)
   - direct `tsc --noEmit` in `packages/react`
   - direct `tsc --noEmit` in `examples/react-basic`
+
+## 2026-07-07 Git Checkpoint After P2 Extension QA
+
+- User confirmed the phase-2 extension wallet group can connect successfully:
+  - TronLink
+  - TokenPocket
+  - OKX Wallet
+  - Bitget Wallet
+  - Trust Wallet
+  - Binance Web3 Wallet
+  - MetaMask TRON
+  - Guarda
+- Created git commit:
+  - `b04261c feat: harden tron wallet kit runtime and ui`
+
+## 2026-07-07 Wallet Descriptor Registry Phase 1
+
+- Decided the deeper descriptor-per-wallet registry is useful, but it should be introduced in phases because `core` and `ui` cannot safely import `client`.
+- Implemented phase 1 in `@tron-wallet-kit/client`:
+  - added `packages/client/src/wallets/types.ts`
+  - added one descriptor file per runtime wallet under `packages/client/src/wallets/entries/`
+  - added `_template.ts` for future wallet contributions
+  - added `packages/client/src/wallets/registry.ts`
+  - added `packages/client/src/wallets/build-adapters.ts`
+  - changed `createDefaultAdapters()` to build from descriptors
+  - removed the older duplicated `packages/client/src/adapters/defaults.ts`
+  - exported wallet descriptor APIs from `packages/client/src/index.ts`
+- Kept UI/core catalog unchanged in this phase to avoid reversing package dependencies. A later phase can either move descriptors to a shared package/core-safe manifest or generate core/UI catalog data from client descriptors at build time.
+- Verification passed:
+  - direct `tsc --noEmit` in `packages/client`
+  - direct `vitest run` in `packages/client` (25 tests)
+  - direct `tsc --noEmit` in `packages/react`
+  - direct `tsc --noEmit` in `packages/ui`
+  - direct `tsc --noEmit` in `examples/react-basic`

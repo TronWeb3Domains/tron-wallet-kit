@@ -43,8 +43,16 @@ Companion status for `IMPLEMENTATION_HANDOFF.md`.
   - `client.ts` owns default adapter assembly and `createWalletClient`
   - `kit.ts` owns `createWalletKit`
   - `index.ts` is now a barrel export
+- P3 wallet descriptor registry phase 1 is complete:
+  - added `packages/client/src/wallets/types.ts` descriptor union
+  - added one descriptor entry per current runtime wallet in `packages/client/src/wallets/entries/`
+  - added `packages/client/src/wallets/registry.ts`
+  - added `packages/client/src/wallets/build-adapters.ts`
+  - `createDefaultAdapters()` now builds default runtime adapters from wallet descriptors
+  - removed the older duplicated `adapters/defaults.ts` runtime list
+  - exported wallet descriptor APIs from the client barrel
 
 ## Pending
 
 - P2 remains code-complete at bridge level but still needs real wallet QA/docs/package decision.
-- P3 open wallet descriptor registry is not started; current core registry reduces duplication, but descriptor-per-wallet is still pending.
+- P3 wallet descriptor registry still needs a later UI/core unification phase if the package boundary is changed or a generated shared manifest is introduced.

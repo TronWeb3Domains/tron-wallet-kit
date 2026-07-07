@@ -89,6 +89,7 @@ Track expected wallet behavior for MVP and future adapters.
 | UI hardening P1.5 | Clipboard fallback only reports copied on success, wallet icon image failure falls back to initial, QR render errors show an error surface | UI/React type-tested and UI unit-tested on 2026-07-07 |
 | Client split P3 | Public types, injected detect/registry-map, adapter bridge/default/combinators, balance, identity, client factory, kit factory, and barrel index split into modules | Client typecheck/test plus React/example typecheck passed on 2026-07-07 |
 | Bitget parent TronWeb fallback | Bitget connect handles `{ code: 200 }` request responses and reads address/balance from `bitkeep.tronWeb` or Bitget-marked global `tronWeb` | Client unit-tested on 2026-07-07 |
+| Wallet descriptor registry P3 phase 1 | Default runtime adapters are built from one descriptor per wallet; descriptor IDs are unique and default adapter order is preserved | Client unit-tested on 2026-07-07 |
 | Clean adapter result shapes | TronLink and WalletConnect return `ConnectResult`, `SignMessageResult`, `SignTransactionResult`, and `TxResult` | Mock-tested |
 | React hooks | Provider and shared UI surfaces render with new kit hooks | Server-render tested |
 | Browser/CDN clean API | HTML/CDN example uses `createBrowserKit`, `kit.manager`, and `kit.openModal` | Build-tested |

@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TRON_MAINNET, TRON_NILE, type WalletAdapter } from "@tron-wallet-kit/core";
-import { createInjectedTronAdapter, createTronDomainIdentityResolver, createTronWeb3AdapterBridge, createWalletClient, createWalletKit } from "../src/index";
+import {
+  BUILTIN_WALLET_DESCRIPTORS,
+  createInjectedTronAdapter,
+  createTronDomainIdentityResolver,
+  createTronWeb3AdapterBridge,
+  createWalletClient,
+  createWalletKit
+} from "../src/index";
 
 function createMockAdapter(id = "mock"): WalletAdapter {
   return {
@@ -253,6 +260,30 @@ describe("client entrypoints", () => {
       "backpack",
       "walletconnect"
     ]);
+  });
+
+  it("keeps built-in wallet descriptors unique and adapter-backed", () => {
+    const ids = BUILTIN_WALLET_DESCRIPTORS.map((wallet) => wallet.id);
+
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toEqual([
+      "tronlink",
+      "tokenpocket",
+      "okx",
+      "bitget",
+      "trust",
+      "metamask",
+      "gate",
+      "foxwallet",
+      "bybit",
+      "imtoken",
+      "binance",
+      "guarda",
+      "onekey",
+      "backpack",
+      "walletconnect"
+    ]);
+    expect(BUILTIN_WALLET_DESCRIPTORS.every((wallet) => wallet.homepage && wallet.platforms.length > 0)).toBe(true);
   });
 
   it("allows default registry wallets to be disabled without removing adapter code", () => {

@@ -1,42 +1,22 @@
-import { createTronLinkAdapter } from "@tron-wallet-kit/adapter-tronlink";
-import { createWalletConnectAdapter } from "@tron-wallet-kit/adapter-walletconnect";
 import {
   createBrowserWalletStorage,
   NetworkRegistry,
   WalletManager,
-  getEnabledTronWalletRegistryItems,
   type WalletAdapter
 } from "@tron-wallet-kit/core";
-import { createDefaultTronwalletBridgeAdapter, createTronWeb3AdapterBridges } from "./adapters/bridge";
-import { defaultInjectedTronWallets, defaultTronwalletBridgeWallets } from "./adapters/defaults";
-import { createInjectedTronAdapter } from "./adapters/injected";
+import { createTronWeb3AdapterBridges } from "./adapters/bridge";
 import type { DefaultAdaptersConfig, WalletClientConfig } from "./types";
+import { buildAdapters } from "./wallets/build-adapters";
+import { getEnabledWalletDescriptors } from "./wallets/registry";
 
 export function createDefaultAdapters(config: DefaultAdaptersConfig = {}): WalletAdapter[] {
-  const defaultWallets = getEnabledTronWalletRegistryItems().map((wallet) => wallet.id);
+  const defaultWallets = getEnabledWalletDescriptors().map((wallet) => wallet.id);
   const requested = new Set(config.wallets === "all" || !config.wallets ? defaultWallets : config.wallets);
   for (const walletId of config.disabledWallets ?? []) requested.delete(walletId);
-  const adapters: WalletAdapter[] = [];
-  if (requested.has("tronlink")) adapters.push(createTronLinkAdapter(config.tronlink));
-  if (config.tronweb3Bridge?.enabled !== false) {
-    for (const bridgeConfig of defaultTronwalletBridgeWallets) {
-      if (requested.has(bridgeConfig.id)) adapters.push(createDefaultTronwalletBridgeAdapter(bridgeConfig, config));
-    }
-  }
-  for (const injectedConfig of defaultInjectedTronWallets) {
-    if (requested.has(injectedConfig.id)) adapters.push(createInjectedTronAdapter(injectedConfig));
-  }
-  if (requested.has("walletconnect") && config.walletConnectProjectId) {
-    adapters.push(
-      createWalletConnectAdapter({
-        projectId: config.walletConnectProjectId,
-        ...config.walletconnect,
-        ...(config.walletConnectNetwork ? { network: config.walletConnectNetwork } : {}),
-        ...(config.onWalletConnectUri ? { onUri: config.onWalletConnectUri } : {})
-      })
-    );
-  }
-  return adapters;
+  return buildAdapters(
+    getEnabledWalletDescriptors().filter((wallet) => requested.has(wallet.id)),
+    config
+  );
 }
 
 export function createWalletClient(config: WalletClientConfig = {}): WalletManager {
