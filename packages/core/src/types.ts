@@ -87,6 +87,7 @@ export interface ConnectOptions {
   appName?: string;
   onlyIfTrusted?: boolean;
   timeoutMs?: number;
+  signal?: AbortSignal;
   metadata?: Record<string, unknown>;
   onUri?: (uri: string) => void;
   onAccountChanged?: (address: string) => void;
@@ -199,6 +200,7 @@ export interface WalletManagerConfig {
   storage?: WalletStorage;
   storageKey?: string;
   autoReconnect?: boolean;
+  recoveryRetryDelaysMs?: number[];
   adapters?: WalletAdapter[];
 }
 

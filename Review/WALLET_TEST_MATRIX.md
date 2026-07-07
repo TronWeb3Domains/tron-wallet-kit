@@ -12,7 +12,7 @@ Track expected wallet behavior for MVP and future adapters.
 | WalletConnect TRON | `@tron-wallet-kit/adapter-walletconnect` | Mock-tested | Mock-tested | Pending | Mock-tested | Mock-tested | Conditional | Mock-tested | MVP wallet; needs real WalletConnect/TokenPocket QA |
 | TokenPocket | injected extension adapter or tronweb3 bridge | Extension wired + QR fallback tested | Mock-foundation | Default resolver path mapped | Mock-tested via injected adapter | Mock-tested via injected adapter | Backlog | Mock-tested | Extension/Mobile metadata; strongest WalletConnect mobile target |
 | Trust Wallet | injected extension adapter or tronweb3 bridge | Extension wired + QR fallback foundation | Backlog | Default resolver mock-tested | Backlog | Backlog | Backlog | Backlog | Extension PC path confirmed from upstream docs; mobile path is WalletConnect fallback only |
-| Bitget | injected extension adapter or tronweb3 bridge | Extension wired | Backlog | Pending | Backlog | Backlog | Backlog | Backlog | Extension/Mobile metadata; WalletConnect signing unsupported in reference |
+| Bitget | injected extension adapter or tronweb3 bridge | Extension wired + parent/global TronWeb fallback | Mock-tested via fallback | Mock-tested via parent `bitkeep.tronWeb` | Mock foundation | Mock foundation | Backlog | Mock foundation | Extension/Mobile metadata; WalletConnect signing unsupported in reference |
 | OKX Wallet | injected extension adapter or tronweb3 bridge | Extension wired | Backlog | Pending | Backlog | Backlog | Backlog | Backlog | Extension/Mobile metadata; WalletConnect unsupported in reference |
 | Bybit Wallet | tronweb3 bridge + injected fallback | Bridge wired + fallback mock-tested | Mock-tested via fallback | Pending | Mock foundation | Mock foundation | Backlog | Mock foundation | Extension/Mobile metadata; needs real extension/mobile QA |
 | Binance Wallet | tronweb3 bridge + injected fallback | Bridge wired + fallback mock-tested | Mock-tested via fallback | Pending | Mock foundation | Mock foundation | Backlog | Mock foundation | Extension/Mobile metadata; wallet-specific signAndSendTransaction still needs real QA |
@@ -79,9 +79,16 @@ Track expected wallet behavior for MVP and future adapters.
 | Toast foundation | Renders token-driven pending/success/failed transaction toast markup | Unit-tested |
 | React example QR/toast smoke | React basic route loads after QR/toast integration | Browser smoke passed on 2026-07-03 |
 | HTML/CDN example QR/toast smoke | HTML/CDN route and browser global bundle load after QR/toast integration | Browser smoke passed on 2026-07-03 |
-| TRX Domains identity resolver | Enriches connected account with `.trx` domain/displayName and ignores stale async lookups after account changes | Mock-tested on 2026-07-03 |
-| TRX Domains real lookup | Known wallet address resolves to expected default domain through `trondomainjs` | Pending |
+| TRX Domains identity resolver | Enriches connected account with `.trx` domain/displayName/avatar and ignores stale async lookups after account changes | Mock-tested on 2026-07-07 |
+| React basic identity controls | Shows `Resolve TRX Domains` toggle and Identity metric with safe no-domain fallback | Browser smoke passed on 2026-07-07 |
+| TRX Domains real lookup | Known wallet address resolves to expected domain through `trondomainjs` `getDomain` then `getDomains` fallback | Manual lookup passed on 2026-07-07: `TSFquXZoXtei19kDJ1Sy1YGjznz8gWhfKd` -> `trxdomains.trx` |
 | Core manager lifecycle | Connect/session/sign/submit/autoReconnect events with `session_restored` then `connected` | Unit-tested |
+| Core runtime hardening P0 | Connect/sign timeouts, pending connect cancellation, disconnect timeout cleanup, autoReconnect dedup/fallback, session expiry/legacy migration, recover-return, destroy cleanup, and error normalization | Unit-tested on 2026-07-07 |
+| UI i18n/config P1 | Locale/labels merge, localized wallet badges, modal behavior toggles, powered-by branding toggle, QR size/margin/error-correction config, account visible tx count | UI unit-tested on 2026-07-07 |
+| TRX Domains direct contract identity P1.5 | Mainnet-only resolver uses shared/lazy TronWeb, reverseOf fallback to first owned domain, multi-TLD preservation, metadata enrichment, timeout fallback | Client unit-tested on 2026-07-07 |
+| UI hardening P1.5 | Clipboard fallback only reports copied on success, wallet icon image failure falls back to initial, QR render errors show an error surface | UI/React type-tested and UI unit-tested on 2026-07-07 |
+| Client split P3 | Public types, injected detect/registry-map, adapter bridge/default/combinators, balance, identity, client factory, kit factory, and barrel index split into modules | Client typecheck/test plus React/example typecheck passed on 2026-07-07 |
+| Bitget parent TronWeb fallback | Bitget connect handles `{ code: 200 }` request responses and reads address/balance from `bitkeep.tronWeb` or Bitget-marked global `tronWeb` | Client unit-tested on 2026-07-07 |
 | Clean adapter result shapes | TronLink and WalletConnect return `ConnectResult`, `SignMessageResult`, `SignTransactionResult`, and `TxResult` | Mock-tested |
 | React hooks | Provider and shared UI surfaces render with new kit hooks | Server-render tested |
 | Browser/CDN clean API | HTML/CDN example uses `createBrowserKit`, `kit.manager`, and `kit.openModal` | Build-tested |

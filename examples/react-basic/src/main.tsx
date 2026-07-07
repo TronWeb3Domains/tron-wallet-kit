@@ -1,21 +1,48 @@
 import { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { TronWalletProvider, WalletButton, useWalletKit, useWalletSession, useWalletStatus } from "@tron-wallet-kit/react";
-import { createQrDataUrl, createThemeStyleProperties, createTransactionToastContainerHtml, getThemeNames, type ThemeName } from "@tron-wallet-kit/ui";
+import { createQrDataUrl, createThemeStyleProperties, createTransactionToastContainerHtml, getThemeNames, type ThemeName, type WalletListConfig } from "@tron-wallet-kit/ui";
 
 const walletConnectProjectId = "a4109c95d50e5c136cdafaf9fc44c105";
 const kitFontFamily = 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 
 type ButtonVariant = "default" | "pill" | "minimal";
 type AccountPanelMode = "dropdown" | "modal";
+type FeaturedPreset = "default" | "extended" | "max";
+type AllWalletsPreset = "all" | "core";
+
+const featuredWalletPresets: Record<FeaturedPreset, string[]> = {
+  default: ["tronlink", "tokenpocket", "okx", "bitget", "walletconnect"],
+  extended: ["tronlink", "tokenpocket", "okx", "bitget", "trust", "binance", "metamask", "gate", "walletconnect"],
+  max: ["tronlink", "tokenpocket", "okx", "bitget", "trust", "binance", "walletconnect", "metamask", "gate", "bybit"]
+};
+
+const allWalletPresets: Record<AllWalletsPreset, "all" | string[]> = {
+  all: "all",
+  core: ["tronlink", "tokenpocket", "okx", "bitget", "trust", "walletconnect"]
+};
 
 function ExampleApp() {
   const [themeName, setThemeName] = useState<ThemeName>("default");
   const [buttonVariant, setButtonVariant] = useState<ButtonVariant>("pill");
   const [accountPanelMode, setAccountPanelMode] = useState<AccountPanelMode>("modal");
   const [showBalance, setShowBalance] = useState(true);
+  const [resolveIdentity, setResolveIdentity] = useState(true);
   const [showRecentTransactions, setShowRecentTransactions] = useState(true);
+  const [featuredPreset, setFeaturedPreset] = useState<FeaturedPreset>("default");
+  const [allWalletsPreset, setAllWalletsPreset] = useState<AllWalletsPreset>("all");
+  const [showUnavailableWallets, setShowUnavailableWallets] = useState(true);
   const [walletConnectUri, setWalletConnectUri] = useState("");
+  const walletList = useMemo<WalletListConfig>(() => {
+    const featuredWallets = featuredWalletPresets[featuredPreset];
+    return {
+      featuredLimit: featuredWallets.length,
+      featuredWallets,
+      wallets: allWalletPresets[allWalletsPreset],
+      showUnavailable: showUnavailableWallets,
+      sortAvailableFirst: true
+    };
+  }, [allWalletsPreset, featuredPreset, showUnavailableWallets]);
 
   return (
     <TronWalletProvider
@@ -23,10 +50,16 @@ function ExampleApp() {
       network="mainnet"
       walletConnectNetwork="mainnet"
       onWalletConnectUri={setWalletConnectUri}
+      identity={{
+        enabled: resolveIdentity,
+        failSilently: true,
+        cacheTtlMs: 10 * 60 * 1000
+      }}
       ui={{
         themeName,
         toast: true,
         showRecentTransactions,
+        walletList,
         modal: { subtitle: "" },
         accountPanel: { mode: accountPanelMode === "modal" ? "modal" : "inline", showRecentTransactions }
       }}
@@ -36,13 +69,21 @@ function ExampleApp() {
         accountPanelMode={accountPanelMode}
         buttonVariant={buttonVariant}
         showBalance={showBalance}
+        resolveIdentity={resolveIdentity}
         showRecentTransactions={showRecentTransactions}
+        featuredPreset={featuredPreset}
+        allWalletsPreset={allWalletsPreset}
+        showUnavailableWallets={showUnavailableWallets}
         themeName={themeName}
         walletConnectUri={walletConnectUri}
         onAccountPanelModeChange={setAccountPanelMode}
         onButtonVariantChange={setButtonVariant}
         onShowBalanceChange={setShowBalance}
+        onResolveIdentityChange={setResolveIdentity}
         onShowRecentTransactionsChange={setShowRecentTransactions}
+        onFeaturedPresetChange={setFeaturedPreset}
+        onAllWalletsPresetChange={setAllWalletsPreset}
+        onShowUnavailableWalletsChange={setShowUnavailableWallets}
         onThemeChange={setThemeName}
       />
     </TronWalletProvider>
@@ -53,13 +94,21 @@ type ExampleWorkspaceProps = {
   accountPanelMode: AccountPanelMode;
   buttonVariant: ButtonVariant;
   showBalance: boolean;
+  resolveIdentity: boolean;
   showRecentTransactions: boolean;
+  featuredPreset: FeaturedPreset;
+  allWalletsPreset: AllWalletsPreset;
+  showUnavailableWallets: boolean;
   themeName: ThemeName;
   walletConnectUri: string;
   onAccountPanelModeChange: (mode: AccountPanelMode) => void;
   onButtonVariantChange: (variant: ButtonVariant) => void;
   onShowBalanceChange: (showBalance: boolean) => void;
+  onResolveIdentityChange: (resolveIdentity: boolean) => void;
   onShowRecentTransactionsChange: (showRecentTransactions: boolean) => void;
+  onFeaturedPresetChange: (preset: FeaturedPreset) => void;
+  onAllWalletsPresetChange: (preset: AllWalletsPreset) => void;
+  onShowUnavailableWalletsChange: (showUnavailable: boolean) => void;
   onThemeChange: (themeName: ThemeName) => void;
 };
 
@@ -141,6 +190,7 @@ function ExampleWorkspace(props: ExampleWorkspaceProps) {
     ? {
         wallet: session.walletName,
         address: session.account.address,
+        identity: session.account.domain ?? session.account.displayName ?? "not resolved",
         network: session.network.name,
         balance: session.balance?.formatted ?? "loading"
       }
@@ -193,6 +243,10 @@ function ExampleWorkspace(props: ExampleWorkspaceProps) {
                 <strong>{sessionSummary?.address ?? "No account"}</strong>
               </div>
               <div>
+                <span>Identity</span>
+                <strong>{sessionSummary?.identity ?? "No domain"}</strong>
+              </div>
+              <div>
                 <span>Balance</span>
                 <strong>{sessionSummary?.balance ?? "0 TRX"}</strong>
               </div>
@@ -241,6 +295,21 @@ function ExampleWorkspace(props: ExampleWorkspaceProps) {
                   <option value="dropdown">dropdown</option>
                 </select>
               </label>
+              <label className="field">
+                <span>Featured wallets</span>
+                <select aria-label="Featured wallets" className="select" value={props.featuredPreset} onChange={(event) => props.onFeaturedPresetChange(event.target.value as FeaturedPreset)}>
+                  <option value="default">5 recommended</option>
+                  <option value="extended">9 compact</option>
+                  <option value="max">10 compact max</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>All wallets</span>
+                <select aria-label="All wallets preset" className="select" value={props.allWalletsPreset} onChange={(event) => props.onAllWalletsPresetChange(event.target.value as AllWalletsPreset)}>
+                  <option value="all">all enabled</option>
+                  <option value="core">core only</option>
+                </select>
+              </label>
             </div>
             <div className="toggle-list">
               <label>
@@ -248,8 +317,16 @@ function ExampleWorkspace(props: ExampleWorkspaceProps) {
                 <span>Show balance on button</span>
               </label>
               <label>
+                <input aria-label="Resolve TRX Domains" type="checkbox" checked={props.resolveIdentity} onChange={(event) => props.onResolveIdentityChange(event.target.checked)} />
+                <span>Resolve TRX Domains</span>
+              </label>
+              <label>
                 <input aria-label="Show recent transactions" type="checkbox" checked={props.showRecentTransactions} onChange={(event) => props.onShowRecentTransactionsChange(event.target.checked)} />
                 <span>Show recent transactions</span>
+              </label>
+              <label>
+                <input aria-label="Show unavailable wallets" type="checkbox" checked={props.showUnavailableWallets} onChange={(event) => props.onShowUnavailableWalletsChange(event.target.checked)} />
+                <span>Show unavailable wallets</span>
               </label>
             </div>
           </section>

@@ -1640,3 +1640,346 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/ui typecheck`
   - `pnpm --filter @tron-wallet-kit/ui test`
   - `pnpm --filter @tron-wallet-kit/client test`
+
+## 2026-07-07 Phase 2 Extension Wallet QA Pass
+
+- Ran rendered QA on `http://127.0.0.1:5174/react-basic/` with the in-app browser.
+- Flow checked: React basic page loads -> open wallet modal -> All Wallets -> search Guarda.
+- Browser QA results:
+  - Page title: `TRON Wallet Kit React Example`.
+  - Console warnings/errors: none captured during modal, All Wallets, or Guarda search.
+  - All Wallets rendered 17 wallet cards with stable card dimensions around `112x116`.
+  - Bitget and Guarda icons render as `data:image/svg+xml` from the generated icon map; Bitget uses the new `512x512` local override and Guarda uses the new local shield icon.
+  - Search input filters to Guarda correctly and keeps the card/icon visible.
+  - On this machine, extension-native wallets are unavailable because the relevant browser extensions are not installed in the in-app browser profile.
+- Observed status model:
+  - TokenPocket, Trust, Binance, and WalletConnect show QR-capable routes through WalletConnect fallback where configured.
+  - OKX, Bitget, Gate, Bybit, Guarda, Backpack, OneKey, MetaMask, TronLink show unavailable without their installed extension/provider.
+  - FoxWallet, imToken, and Tomo remain mobile/app-oriented in the catalog.
+- Verification passed:
+  - `pnpm --filter @tron-wallet-kit/ui test`
+  - `pnpm --filter @tron-wallet-kit/client test`
+- Still pending:
+  - Real extension QA for Trust, OKX, Bitget, Gate, Bybit, Guarda, Backpack, OneKey, Binance, MetaMask TRON, and TronLink in a browser profile where each extension is actually installed.
+  - Real connect/sign/balance tests must be done with wallet extensions because the current in-app browser only proves unavailable/QR/UI states.
+
+## 2026-07-07 Trust Wallet vs TronLink Collision Fix
+
+- Fixed a provider detection collision where Trust Wallet globals could be treated as TronLink, similar to the earlier TokenPocket collision.
+- Updated `@tron-wallet-kit/adapter-tronlink` detection:
+  - added `trustwallet.tron` and `trustwallet.tronLink` to known non-TronLink provider paths.
+  - generalized shared `tronWeb` collision detection across known wallet roots instead of only TokenPocket.
+  - a provider marked `isTronLink: true` is still rejected if it is linked to Trust Wallet or another known non-TronLink wallet root.
+- Added regression tests for Trust-linked legacy `window.tronLink` and Trust-linked TIP-1193 `window.tron`.
+- Verification passed:
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink test`
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink typecheck`
+  - `pnpm --filter @tron-wallet-kit/client test`
+- Still pending:
+  - Real browser QA with Trust Wallet extension installed together with TronLink extension to confirm actual injection order matches the mocked collision cases.
+
+## 2026-07-07 Adapter Flow Cancellation and Upstream Injection Audit
+
+- Fixed the Trust row routing in `@tron-wallet-kit/client` by adding a Trust-specific injected fallback:
+  - `trustwallet.tronLink`
+  - `trustwallet.tron`
+  - This prevents Trust Wallet clicks from falling through to shared/legacy TronLink globals.
+- Fixed stale QR/connect side effects in `@tron-wallet-kit/ui`:
+  - modal and inline connect flows now use a monotonically increasing flow id.
+  - late QR URI events, QR image rendering, connect errors, and retry timers are ignored after back, close, or selecting another wallet.
+  - retry timers are explicitly cleared when a flow is cancelled.
+- Fixed Guarda injected fallback shape:
+  - upstream Guarda exposes request under `window.guarda.tron`.
+  - TRON web helpers can live on parent `window.guarda.tronWeb`.
+  - the local fallback now merges `guarda.tron` with parent `guarda.tronWeb` and tries request methods before falling back to `defaultAddress`.
+- Added regression tests for:
+  - Trust-specific provider winning over shared TronLink globals.
+  - Guarda returning address from `eth_requestAccounts` while using parent `tronWeb`.
+- Added upstream adapter audit notes in `Review/ADAPTER_BEHAVIOR_NOTES.md` covering platform and injection paths for TronLink, TokenPocket, OKX, Bitget, Trust, Gate, Bybit, Binance, Guarda, OneKey, Backpack, FoxWallet, imToken, and MetaMask TRON.
+- Verification passed:
+  - `pnpm --filter @tron-wallet-kit/client test`
+  - `pnpm --filter @tron-wallet-kit/client typecheck`
+  - `pnpm --filter @tron-wallet-kit/ui typecheck`
+  - `pnpm --filter @tron-wallet-kit/ui test`
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink test`
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink typecheck`
+- Notes:
+  - During recovery, `packages/client/src/index.ts` was restored from Git after a null-byte write issue, then the Trust/Guarda changes were re-applied and verified.
+  - Real extension QA is still required for mixed installed-wallet cases: Trust + TronLink, TokenPocket + TronLink, Guarda, Bitget, OKX, Binance, Gate, Bybit, OneKey, Backpack, and MetaMask TRON.
+
+## 2026-07-07 Shared Wallet Registry and Default Wallet Controls
+
+- Added `packages/core/src/wallet-registry.ts` and exported it from `@tron-wallet-kit/core`.
+- `TRON_WALLET_REGISTRY` now stores wallet support metadata in one place:
+  - `enabled`
+  - `platforms`
+  - `providerPaths`
+  - `conflictMarkers`
+  - `mobileDeepLink`
+  - `supportsWalletConnect`
+  - `upstreamPackage`
+- `@tron-wallet-kit/ui` catalog now derives from enabled registry entries instead of repeating wallet platform/homepage/provider assumptions.
+- `WalletOptionViewModel` now carries registry metadata forward so future PC/mobile UI can choose extension-first, QR-first, or deep-link-first presentation without adding more hardcoded rules.
+- `@tron-wallet-kit/client` default adapter list now comes from `getEnabledTronWalletRegistryItems()`.
+- Added `disabledWallets` to `DefaultAdaptersConfig`; a release/app can remove wallets from the generated default adapter list without deleting adapter code.
+- Ledger is intentionally present in the registry but `enabled: false`, so the hardware wallet metadata is preserved while the wallet is removed from default All Wallets output until the hardware flow is ready.
+- Bridge wallet configs now consume registry metadata through helper functions; importer functions remain adapter-specific because upstream packages expose different class names.
+- Added tests for:
+  - disabled default wallets in client config.
+  - registry metadata flowing into UI wallet options.
+  - disabled Ledger no longer appearing in default catalog output.
+- Verification passed:
+  - `pnpm --filter @tron-wallet-kit/core typecheck`
+  - `pnpm --filter @tron-wallet-kit/ui typecheck`
+  - `pnpm --filter @tron-wallet-kit/ui test`
+  - `pnpm --filter @tron-wallet-kit/client typecheck`
+  - `pnpm --filter @tron-wallet-kit/client test`
+  - `pnpm --filter @tron-wallet-kit/core build`
+  - `pnpm --filter @tron-wallet-kit/ui build`
+  - `pnpm --filter @tron-wallet-kit/client build`
+- Note:
+  - Previous browser QA memory mentioned 17 wallet cards. With Ledger disabled by registry, default All Wallets should now be rechecked visually with the updated expected count.
+
+## 2026-07-07 Advanced Featured and All Wallets Configuration
+
+- Added advanced wallet list config in `@tron-wallet-kit/ui`:
+  - `walletList.featuredLimit`
+  - `walletList.featuredWallets`
+  - `walletList.wallets`
+  - `walletList.disabledWallets`
+  - `walletList.showUnavailable`
+  - `walletList.sortAvailableFirst`
+- UX guardrails:
+  - default recommended featured limit remains 5 and renders as the original wallet row list.
+  - compact preset uses 9 wallets so compact mode opens as a balanced 3x3 wallet grid.
+  - featured config is clamped to max 10.
+  - 7-10 featured wallets automatically render as compact 3-column wallet cards instead of full-width rows.
+  - WalletConnect remains last in featured when selected.
+  - All Wallets can sort available/supported wallets first without changing registry order permanently.
+- `ConnectModalViewModel` now accepts `walletList`, and React `ConnectModal` forwards the prop.
+- `react-basic` now includes test controls:
+  - Featured wallets: 5 recommended, 9 compact, 10 compact max.
+  - All wallets: all enabled or core only.
+  - Show unavailable wallets toggle.
+- Added unit coverage for:
+  - featured max clamp.
+  - compact featured layout.
+  - allowlist + disabled wallet filtering.
+  - available/QR wallets sorting above unavailable wallets.
+- Added compact featured status indicators:
+  - installed: small dot from `--twk-success`.
+  - QR: mini QR icon from `--twk-badge-qr-fg` on the neutral badge surface.
+  - connecting: existing token-driven spinner.
+  - error: token-driven danger indicator.
+  - not installed: no indicator, relying on disabled opacity.
+- Compact indicators are intentionally icon/dot based, not text badges, to avoid cramped 7-10 wallet layouts.
+- Follow-up polish:
+  - compact wallet icons increased from 34px to 40px.
+  - compact status indicators increased from 16px to 18px.
+  - QR transport now takes priority over installed/available state, so WalletConnect shows the QR icon instead of the installed dot.
+- QR badge polish:
+  - compact wallet icons increased again from 40px to 44px after rendered review.
+  - compact status indicators were reduced back to 18px with a 1.5px surface border after the 21px version felt too heavy.
+  - installed dot is 8px; QR glyph is 12px and simplified to remain recognizable inside the compact badge.
+  - QR compact badge no longer sets `background: var(--twk-badge-qr-bg)` on the badge container; it keeps the neutral surface background and only colors the QR glyph with `--twk-badge-qr-fg`.
+  - Rendered QA on `http://127.0.0.1:5174/react-basic/` confirmed WalletConnect uses `data-status="qr"` with a visible QR icon in the 8-wallet compact layout.
+- Featured compact mode was refactored to reuse the All Wallets card surface:
+  - >6 featured wallets now render as `twk-wallet-card` in a 3-column grid instead of a separate `twk-wallet-compact` button.
+  - `twk-wallet-status` is the shared card status indicator for Featured compact and All Wallets cards.
+  - Rendered QA confirmed the visible modal has 8 card items, 0 compact items, 3 equal grid columns, and WalletConnect renders as a QR card.
+- Default recommended featured wallets remain 5 items in the original row list.
+- The compact preset now uses 9 items for a full 3x3 compact grid.
+- Browser QA confirmed `react-basic` default opens 5 wallet rows (`data-featured-layout="rows"`), while selecting `9 compact` opens 9 wallet cards (`data-featured-layout="compact"`) with WalletConnect last and QR status.
+- Verification passed:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck`
+  - `pnpm --filter @tron-wallet-kit/ui test`
+  - `pnpm --filter @tron-wallet-kit/react typecheck`
+  - `pnpm --filter @tron-wallet-kit/examples typecheck`
+- Additional verification after compact indicators:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck`
+  - `pnpm --filter @tron-wallet-kit/ui test`
+  - `pnpm --filter @tron-wallet-kit/examples typecheck`
+- Local server:
+  - `http://127.0.0.1:5174/react-basic/` returned HTTP 200 after the changes.
+
+## 2026-07-07 TRX Domains Identity Lifecycle
+
+- `react-basic` now enables identity resolution by default through `identity.enabled: true` and `trondomainjs` config `{ defaultNetwork: "mainnet" }`.
+- Added a `Resolve TRX Domains` toggle in the example configuration panel.
+- Added an `Identity` metric in the example kit panel so testers can see `domain/displayName` enrichment or the `No domain` fallback.
+- The existing React `WalletButton` lifecycle already calls `kit.refreshIdentity()` after connect and ignores stale async results when the account/network changes.
+- Added client unit coverage proving `refreshIdentity()` enriches the connected session account with `domain`, `displayName`, and `avatar` from a resolver.
+- Browser QA confirmed the React basic route renders the identity metric and the `Resolve TRX Domains` toggle checked by default without console warnings/errors.
+- Verification passed:
+  - `pnpm --filter @tron-wallet-kit/client typecheck`
+  - `pnpm --filter @tron-wallet-kit/client test`
+  - `pnpm --filter @tron-wallet-kit/react typecheck`
+  - `pnpm --filter @tron-wallet-kit/examples typecheck`
+
+## 2026-07-07 TRX Domains getDomains Fallback
+
+- Updated `createTronDomainIdentityResolver` so it tries `sdk.getDomain(address)` first, then falls back to `sdk.getDomains(address)` and uses the first normalized domain when no default reverse domain is set.
+- Added a test hook for the TRX Domains SDK and unit coverage for the fallback path using `TSFquXZoXtei19kDJ1Sy1YGjznz8gWhfKd -> trxdomains.trx`.
+- Normalized the `trondomainjs` config before calling `SDK`, so simple app config such as `{ defaultNetwork: "mainnet" }` still gets the mainnet RPC and contract address.
+- Added a compatible SDK fallback for the current `trondomainjs@1.0.8` + `tronweb@6` runtime mismatch where the package throws `TronWeb is not a constructor`; the fallback preserves the same `getDomain`, `getDomains`, and `getMetadatas` API shape.
+- Manual lookup through the built client export passed on 2026-07-07:
+  - `TSFquXZoXtei19kDJ1Sy1YGjznz8gWhfKd`
+  - `trxdomains.trx`
+- Verification passed:
+  - `pnpm --filter @tron-wallet-kit/client typecheck`
+  - `pnpm --filter @tron-wallet-kit/client test`
+  - `pnpm --filter @tron-wallet-kit/examples typecheck`
+  - `pnpm --filter @tron-wallet-kit/client build`
+
+## 2026-07-07 Review Handoff Packet
+
+- Clarified `Review/IMPLEMENTATION_HANDOFF.md` as the root work-order entry point for coder handoff.
+- The handoff packet should be sent as the full `Review/` spec cluster, not as handoff alone:
+  - `IMPLEMENTATION_HANDOFF.md`
+  - `CORE_RUNTIME_SPEC.md`
+  - `UI_CONFIG_GAPS_SPEC.md`
+  - `IDENTITY_DIRECT_CONTRACT_SPEC.md`
+  - `TRONWALLET_ADAPTER_BRIDGE_SPEC.md`
+  - `WALLET_REGISTRY_SPEC.md`
+  - `ADD_NEW_WALLET_GUIDE.md`
+- Coder instruction: read `IMPLEMENTATION_HANDOFF.md` first, then work P0 -> P3 and open the spec named by each row.
+
+## 2026-07-07 P0 Core Runtime Hardening
+
+- Implemented P0 from `Review/CORE_RUNTIME_SPEC.md` in `@tron-wallet-kit/core`.
+- Added core error helpers:
+  - `WalletKitErrorCode`
+  - `createWalletError`
+  - `normalizeWalletError`
+- Added runtime lifecycle support to `WalletManager`:
+  - connect timeout with `AbortController`
+  - `cancelPendingConnection()`
+  - disconnect timeout cleanup
+  - sign/submit timeout wrapping
+  - autoReconnect dedup guard
+  - stored session validation, expiry, and legacy unversioned migration
+  - fallback reconnect when adapter has no `restoreSession`
+  - pending return recovery through `canRecoverSession` / `recoverSession`
+  - `session_expired`, `session_stale.reason`, `session_restored.stale`, and `connecting.recovering`
+  - `destroy()` cleanup for SPA unmounts
+- Added `ConnectOptions.signal` and `WalletManagerConfig.recoveryRetryDelaysMs`.
+- React provider now calls `kit.manager.autoReconnect()` on mount and `kit.manager.destroy()` on unmount.
+- Added unit coverage for timeout, cancellation, disconnect timeout, autoReconnect dedup/fallback, session expiry, legacy migration, recover-return, destroy cleanup, and error normalization.
+- Updated `Review/IMPLEMENTATION_HANDOFF.md` P0 status and `Review/WALLET_TEST_MATRIX.md`.
+- Verification passed:
+  - `pnpm --filter @tron-wallet-kit/core typecheck`
+  - `pnpm --filter @tron-wallet-kit/core test`
+  - `pnpm --filter @tron-wallet-kit/react typecheck`
+  - `pnpm --filter @tron-wallet-kit/client typecheck`
+  - `pnpm --filter @tron-wallet-kit/examples typecheck`
+  - `pnpm --filter @tron-wallet-kit/client test`
+  - `pnpm --filter @tron-wallet-kit/react test`
+  - `pnpm --filter @tron-wallet-kit/core build`
+- Remaining handoff order:
+  - P1 UI i18n/config
+  - P1.5 UI hardening
+  - P1.5 identity direct contract
+  - P2 bridge QA/docs
+  - P3 client split and wallet registry
+
+## 2026-07-07 P1 UI Config + P1.5 Direct Identity
+
+- Continued the `IMPLEMENTATION_HANDOFF.md` work order after P0.
+- Implemented P1 UI i18n/config in `@tron-wallet-kit/ui`:
+  - added built-in `en` and `vi` label packs plus app-level `labels` overrides
+  - plumbed labels into modal, wallet badges, account panel, wallet button, and transaction toast
+  - added modal behavior/branding config (`showCloseButton`, `closeOnBackdropClick`, `closeOnSelect`, `disableAnimations`, powered-by text/toggle)
+  - added resolved QR config (`size`, `addressSize`, `margin`, `includeWalletLogo`, `errorCorrectionLevel`) and used it in connect QR rendering
+  - wired account panel `maxVisibleTransactions` / explorer config support in shared UI models
+- Implemented P1.5 direct TRX Domains identity in `@tron-wallet-kit/client`:
+  - removed `trondomainjs` from `@tron-wallet-kit/client` dependencies and updated `pnpm-lock.yaml`
+  - replaced the SDK resolver with `createTronDomainIdentityResolver()` that calls the TRX Domains contract directly (`reverseOf`, optional first-owned fallback, optional metadata)
+  - resolver is mainnet-only, preserves multi-TLD domains exactly, sets wallet address on TronWeb for read-only calls, and times out safely by default
+  - added test hook `__tronWalletKitTronWebForTest` and unit coverage for reverse lookup, owned-domain fallback, multi-TLD, non-mainnet skip, and timeout
+- Added `Review/IMPLEMENTATION_STATUS_2026-07-07.md` because `IMPLEMENTATION_HANDOFF.md` has legacy mojibake encoding that resisted safe targeted patching.
+- P1.5 UI hardening is still partial: copy fallback, wallet image fallback, and QR render error surfacing remain open.
+- P3 client module split / wallet descriptor registry was read and assessed but not started; current core registry reduces duplication, but the open descriptor-per-wallet refactor remains a separate mechanical phase.
+- Verification passed:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck`
+  - `pnpm --filter @tron-wallet-kit/ui test`
+  - direct `tsc --noEmit` in `packages/client`
+  - direct `vitest run` in `packages/client`
+  - direct `tsc --noEmit` in `packages/react`
+  - direct `tsc --noEmit` in `packages/ui`
+  - direct `tsc --noEmit` in `packages/core`
+- Note: after removing `trondomainjs`, running PNPM scripts triggered an install/prune path and hit Windows/PNPM build approval/hoist issues (`@reown/appkit` ignored builds and transient unlink errors). Code verification was completed via direct `node_modules/.bin` tools.
+
+## 2026-07-07 P1.5 UI Hardening + P3 Client Split Start
+
+- Completed the remaining P1.5 UI hardening items from `Review/UI_CONFIG_GAPS_SPEC.md`:
+  - added shared `copyToClipboard()` in `@tron-wallet-kit/ui`
+  - modal QR copy and React account-panel copy now only show copied state after a successful copy
+  - clipboard fallback uses a hidden textarea plus `document.execCommand("copy")`
+  - wallet icon images now include an `onerror` fallback that removes the broken image and reveals the wallet initial
+  - QR render failures now set a visible error slot and message instead of leaving a blank QR area
+  - added token-driven CSS for QR render error state and icon fallback visibility
+- Started P3 mechanical client split:
+  - added `packages/client/src/tronweb.ts` for shared TronWeb loading, test injection, and wallet-specific balance provider detection
+  - added `packages/client/src/utils.ts` for `toThemeConfig`
+  - `packages/client/src/index.ts` now imports those helpers instead of owning the code inline
+- Updated `Review/IMPLEMENTATION_STATUS_2026-07-07.md` and `Review/WALLET_TEST_MATRIX.md`.
+- Verification passed:
+  - direct `tsc --noEmit` in `packages/ui`
+  - direct `vitest run` in `packages/ui` (37 tests)
+  - direct `tsc --noEmit` in `packages/react`
+  - direct `tsc --noEmit` in `packages/client`
+  - direct `vitest run` in `packages/client` (22 tests)
+  - direct `tsc --noEmit` in `examples/react-basic`
+- Remaining P3 split order:
+  - public types
+  - injected detect/registry-map
+  - adapter bridge/default/combinators
+  - balance
+  - identity
+  - client factory
+  - kit factory
+  - barrel `index.ts`
+
+## 2026-07-07 P3 Client Split Complete
+
+- Completed the low-risk P3 split order requested after the P1.5 UI hardening pass:
+  - public types moved to `packages/client/src/types.ts`
+  - injected provider detection/request helpers moved to `packages/client/src/injected/detect.ts`
+  - registry-to-config helpers moved to `packages/client/src/injected/registry-map.ts`
+  - injected adapter factory moved to `packages/client/src/adapters/injected.ts`
+  - bridge adapter factories moved to `packages/client/src/adapters/bridge.ts`
+  - availability/fallback wrappers moved to `packages/client/src/adapters/combinators.ts`
+  - default tronweb3 bridge wallet descriptors/importers moved to `packages/client/src/adapters/defaults.ts`
+  - TRX balance resolver and SUN normalization moved to `packages/client/src/balance.ts`
+  - TRX Domains direct contract resolver moved to `packages/client/src/identity.ts`
+  - `createDefaultAdapters` and `createWalletClient` moved to `packages/client/src/client.ts`
+  - `createWalletKit` moved to `packages/client/src/kit.ts`
+  - `packages/client/src/index.ts` is now a barrel export
+- Kept behavior unchanged during the split; the work was mechanical and verified after each risky boundary.
+- Updated `Review/IMPLEMENTATION_STATUS_2026-07-07.md` and `Review/WALLET_TEST_MATRIX.md`.
+- Verification passed:
+  - direct `tsc --noEmit` in `packages/client`
+  - direct `vitest run` in `packages/client` (22 tests)
+  - direct `tsc --noEmit` in `packages/react`
+  - direct `tsc --noEmit` in `packages/ui`
+  - direct `tsc --noEmit` in `examples/react-basic`
+- Remaining P3-adjacent work:
+  - descriptor-per-wallet registry from `Review/WALLET_REGISTRY_SPEC.md` is still a separate deeper refactor if needed
+  - P2 still needs real-wallet QA/docs/package decisions
+
+## 2026-07-07 Bitget Parent TronWeb Fallback Fix
+
+- Fixed Bitget injected fallback for the real extension shape where the request provider can return `{ code: 200 }` while the selected address lives on parent/global TronWeb:
+  - added `getBitgetInjectedProvider()` in `packages/client/src/injected/detect.ts`
+  - Bitget default fallback now uses this provider resolver instead of only direct `providerPaths`
+  - resolver merges `bitkeep.tronLink` / `bitkeep.tron` with parent `bitkeep.tronWeb`
+  - resolver also supports Bitget-marked global `window.tronLink` + `window.isBitKeep` with `window.tronWeb`
+  - added `bitkeep.tronWeb` to default TRX balance lookup paths
+- Added regression tests for:
+  - Bitget request returning `{ code: 200 }` while address/balance come from `bitkeep.tronWeb`
+  - Bitget exposing TronLink-shaped globals guarded by `isBitKeep`
+- Verification passed:
+  - direct `tsc --noEmit` in `packages/client`
+  - direct `vitest run` in `packages/client` (24 tests)
+  - direct `tsc --noEmit` in `packages/react`
+  - direct `tsc --noEmit` in `examples/react-basic`

@@ -3,7 +3,7 @@ import type { WalletAccount, WalletNetwork, WalletSession, WalletTransaction } f
 export type WalletEventName = keyof WalletEvents;
 
 export interface WalletEvents {
-  connecting: { adapterId: string };
+  connecting: { adapterId: string; recovering?: boolean };
   connected: { session: WalletSession };
   disconnected: { adapterId?: string; session?: WalletSession };
   error: { error: unknown; adapterId?: string };
@@ -16,8 +16,8 @@ export interface WalletEvents {
   tx_submitted: { transaction: WalletTransaction };
   tx_confirmed: { transaction: WalletTransaction };
   tx_failed: { transaction: WalletTransaction; error?: unknown };
-  session_restored: { session: WalletSession };
-  session_stale: { session?: WalletSession };
+  session_restored: { session: WalletSession; stale?: boolean };
+  session_stale: { session?: WalletSession; reason?: string; attempts?: number };
   session_expired: { session?: WalletSession };
 }
 

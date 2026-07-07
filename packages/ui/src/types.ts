@@ -72,12 +72,25 @@ export type ThemeConfig = {
 export type WalletListLayout = "list" | "grid";
 export type AccountPanelMode = "inline" | "modal";
 export type ToastPosition = "bottom-right" | "bottom-left" | "bottom-center";
+export type WalletKitLocale = "en" | "vi" | (string & {});
+
+export type WalletListConfig = {
+  layout?: WalletListLayout;
+  wallets?: "all" | string[];
+  disabledWallets?: string[];
+  showUnavailable?: boolean;
+  featuredLimit?: number;
+  featuredWallets?: string[];
+  sortAvailableFirst?: boolean;
+};
 
 export type WalletUiConfig = {
   themeMode?: UiMode;
   mode?: UiMode;
   themeName?: ThemeName;
   customTheme?: Partial<ThemeTokens>;
+  locale?: WalletKitLocale;
+  labels?: WalletUiLabels;
   showRecentTransactions?: boolean;
   maxVisibleTransactions?: number;
   modal?: {
@@ -85,18 +98,31 @@ export type WalletUiConfig = {
     subtitle?: string;
     width?: "default" | "wide";
     footerText?: string;
+    showCloseButton?: boolean;
+    closeOnBackdropClick?: boolean;
+    closeOnSelect?: boolean;
+    disableAnimations?: boolean;
+    branding?: {
+      showPoweredBy?: boolean;
+      poweredByText?: string;
+    };
   };
-  walletList?: {
-    layout?: WalletListLayout;
-    wallets?: "all" | string[];
-    showUnavailable?: boolean;
+  qr?: {
+    size?: number;
+    addressSize?: number;
+    margin?: number;
+    includeWalletLogo?: boolean;
+    errorCorrectionLevel?: "L" | "M" | "Q" | "H";
   };
+  walletList?: WalletListConfig;
   accountPanel?: {
     mode?: AccountPanelMode;
     copyAddress?: boolean;
     showAddressQr?: boolean;
     showRecentTransactions?: boolean;
     disconnect?: boolean;
+    maxVisibleTransactions?: number;
+    explorerAccountUrl?: string;
   };
   toast?:
     | boolean
@@ -114,7 +140,9 @@ export type ResolvedTheme = {
 
 export type ResolvedWalletUiConfig = {
   theme: ResolvedTheme;
+  labels: WalletKitLabelPack;
   modal: Required<NonNullable<WalletUiConfig["modal"]>>;
+  qr: Required<NonNullable<WalletUiConfig["qr"]>>;
   walletList: Required<NonNullable<WalletUiConfig["walletList"]>>;
   accountPanel: Required<NonNullable<WalletUiConfig["accountPanel"]>>;
   toast: false | {
@@ -134,6 +162,13 @@ export type WalletOptionViewModel = {
   group?: string;
   transport?: "extension" | "walletconnect" | "qr" | "hardware" | "mobile" | "embedded" | string;
   platforms?: readonly WalletPlatform[];
+  providerPaths?: readonly string[];
+  conflictMarkers?: readonly string[];
+  mobileDeepLink?: {
+    scheme: string;
+    urlTemplate?: string;
+  };
+  supportsWalletConnect?: boolean;
   available?: boolean;
   readyState?: "found" | "notFound" | "unsupported" | "loading";
   status?: "idle" | "connecting" | "connected" | "error";
@@ -168,6 +203,10 @@ export type ConnectModalLabels = {
   tron: string;
   scanQr: string;
   dontHave: string;
+  checking: string;
+  connectionDeclined: string;
+  copyLink: string;
+  qrRenderFailed: string;
 };
 
 export type ConnectModalView = "featured" | "all-wallets" | "connecting" | "qr";
@@ -183,11 +222,15 @@ export type ConnectModalViewModel = {
   searchQuery?: string;
   qrUri?: string;
   qrImageSrc?: string;
+  qrRenderState?: "error";
   qrCopyState?: "idle" | "copied";
   retryState?: "idle" | "busy";
   errorMessage?: string;
   showCloseButton?: boolean;
+  showPoweredBy?: boolean;
+  poweredByText?: string;
   walletsLoading?: boolean;
+  walletList?: WalletListConfig;
 };
 
 export type RecentTransactionViewModel = {
@@ -235,6 +278,7 @@ export type AccountPanelViewModel = {
   showExplorerButton?: boolean;
   copyState?: "idle" | "copied";
   recentTransactions?: readonly RecentTransactionViewModel[];
+  maxVisibleTransactions?: number;
   showRecentTransactions?: boolean;
   showSendButton?: boolean;
   showDisconnectButton?: boolean;
@@ -252,6 +296,28 @@ export type WalletButtonLabels = {
   connect: string;
   connecting: string;
   openAccount: string;
+};
+
+export type ToastLabels = {
+  txSubmitted: string;
+  txConfirmed: string;
+  txFailed: string;
+  viewOnExplorer: string;
+  dismiss: string;
+};
+
+export type WalletKitLabelPack = {
+  connectModal: ConnectModalLabels;
+  accountPanel: AccountPanelLabels;
+  walletButton: WalletButtonLabels;
+  toast: ToastLabels;
+};
+
+export type WalletUiLabels = {
+  connectModal?: Partial<ConnectModalLabels>;
+  accountPanel?: Partial<AccountPanelLabels>;
+  walletButton?: Partial<WalletButtonLabels>;
+  toast?: Partial<ToastLabels>;
 };
 
 export type WalletButtonViewModel = {
@@ -282,6 +348,7 @@ export type QrCodeOptions = {
 };
 
 export type TransactionToastViewModel = {
+  labels?: Partial<ToastLabels>;
   id: string;
   label: string;
   status: "pending" | "success" | "failed" | "unknown";

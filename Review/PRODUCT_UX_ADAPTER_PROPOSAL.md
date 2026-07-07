@@ -151,7 +151,7 @@ Connect / Account button (was missing; ported from XRPL Wallet Kit `packages/ui/
 
 Recommended modal views:
 
-- `featured`: first screen showing ~5-6 wallets then Search. Order: **TronLink first (default)** → 3-4 popular TRON wallets (OKX, Bitget, TokenPocket, Trust) → **WalletConnect at the end of the featured group** → `Search wallet`. MetaMask TRON is not in the default featured list until its adapter is audited.
+- `featured`: first screen keeps 5 recommended wallets in the original row list, then Search. Compact mode uses 9 wallets as a balanced 3x3 grid. Order: **TronLink first (default)** → popular TRON wallets → **WalletConnect at the end of the featured group** → `Search wallet`.
 - `all-wallets`: searchable wallet grid with wallet icons and status badges. No third-party "certified" filter; the catalog is the TRON adapter scope.
 - `connecting`: detail screen showing the selected wallet icon, progress state, retry action, and install action when needed.
 - `qr`: QR view for mobile connection (WalletConnect transport, shown per wallet).

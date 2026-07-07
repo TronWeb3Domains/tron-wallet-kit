@@ -4,6 +4,7 @@ import {
   createAddressQrPanelHtml,
   createConnectModalHtml,
   createDefaultWalletUiConfig,
+  copyToClipboard,
   createQrDataUrl,
   createThemeStyleProperties,
   createThemeStyleText,
@@ -13,6 +14,7 @@ import {
   createWalletInlineHtml,
   createWalletButtonHtml,
   createWalletKitStyles,
+  applyWalletListConfig,
   filterWalletOptions,
   getFeaturedWalletOptions,
   getThemeNames,
@@ -193,7 +195,7 @@ describe("wallet kit surfaces", () => {
     expect(html).toContain('data-tone="danger"');
   });
 
-  it("reserves wallet row name and badge space while readiness is loading", () => {
+  it("reserves wallet card icon and name space while readiness is loading", () => {
     const html = createConnectModalHtml({
       wallets: [
         {
@@ -206,7 +208,7 @@ describe("wallet kit surfaces", () => {
 
     expect(html).toContain('class="twk-wallet-icon" data-loading="true"');
     expect(html).toContain('class="twk-wallet-name" data-loading="true"');
-    expect(html).toContain('class="twk-badge" data-loading="true"');
+    expect(html).toContain('data-loading="true"');
     expect(html).toContain("TronLink");
   });
 
@@ -290,6 +292,7 @@ describe("wallet kit surfaces", () => {
     expect(wallets.find((wallet) => wallet.id === "okx")?.adapterId).toBe("okx");
     expect(wallets.find((wallet) => wallet.id === "bitget")?.adapterId).toBe("bitget");
     expect(filterWalletOptions(wallets, "trust").map((wallet) => wallet.id)).toEqual(["trust"]);
+    expect(getFeaturedWalletOptions(wallets)).toHaveLength(5);
     expect(getFeaturedWalletOptions(wallets).at(0)?.id).toBe("tronlink");
     expect(getFeaturedWalletOptions(wallets).at(-1)?.id).toBe("walletconnect");
   });
@@ -353,12 +356,85 @@ describe("wallet kit surfaces", () => {
       "guarda",
       "backpack",
       "onekey",
-      "ledger",
     ];
 
     for (const walletId of expectedIconWallets) {
       expect(wallets.find((wallet) => wallet.id === walletId)?.icon, walletId).toMatch(/^data:image\/svg\+xml,/);
     }
+    expect(wallets.some((wallet) => wallet.id === "ledger")).toBe(false);
+  });
+
+  it("carries registry metadata for future platform-specific wallet UX", () => {
+    const wallets = mergeWalletOptionsWithCatalog([]);
+    const trust = wallets.find((wallet) => wallet.id === "trust");
+    const binance = wallets.find((wallet) => wallet.id === "binance");
+
+    expect(trust).toMatchObject({
+      providerPaths: ["trustwallet.tronLink", "trustwallet.tron"],
+      supportsWalletConnect: true,
+      mobileDeepLink: { scheme: "https" },
+    });
+    expect(binance?.conflictMarkers).toContain("isBinance");
+  });
+
+  it("supports advanced wallet list controls without overgrowing featured rows", () => {
+    const wallets = mergeWalletOptionsWithCatalog([
+      { id: "tronlink", name: "TronLink", readyState: "found" },
+      { id: "tokenpocket", name: "TokenPocket", readyState: "notFound", transport: "extension" },
+      { id: "walletconnect", name: "WalletConnect", readyState: "found", transport: "walletconnect", capabilities: ["qr"] },
+      { id: "okx", name: "OKX Wallet", readyState: "notFound" },
+      { id: "bitget", name: "Bitget Wallet", readyState: "notFound" },
+      { id: "trust", name: "Trust Wallet", readyState: "notFound" },
+      { id: "binance", name: "Binance Web3 Wallet", readyState: "notFound" },
+      { id: "metamask", name: "MetaMask", readyState: "notFound" },
+      { id: "gate", name: "Gate Wallet", readyState: "notFound" },
+      { id: "bybit", name: "Bybit Wallet", readyState: "notFound" },
+      { id: "guarda", name: "Guarda", readyState: "notFound" },
+    ]);
+    const featuredWallets = getFeaturedWalletOptions(wallets, {
+      featuredLimit: 99,
+      featuredWallets: ["tronlink", "tokenpocket", "okx", "bitget", "trust", "binance", "walletconnect", "metamask", "gate", "bybit", "guarda"],
+    });
+    const compactNineWallets = getFeaturedWalletOptions(wallets, {
+      featuredLimit: 9,
+      featuredWallets: ["tronlink", "tokenpocket", "okx", "bitget", "trust", "binance", "walletconnect", "metamask", "gate"],
+    });
+
+    expect(featuredWallets.map((wallet) => wallet.id)).toEqual(["tronlink", "tokenpocket", "okx", "bitget", "trust", "binance", "metamask", "gate", "bybit", "walletconnect"]);
+    expect(compactNineWallets.map((wallet) => wallet.id)).toEqual(["tronlink", "tokenpocket", "okx", "bitget", "trust", "binance", "metamask", "gate", "walletconnect"]);
+
+    const html = createConnectModalHtml({
+      wallets,
+      walletList: {
+        featuredLimit: 10,
+        featuredWallets: featuredWallets.map((wallet) => wallet.id),
+      },
+    });
+    expect(html).toContain('data-featured-layout="compact"');
+    expect(html).toContain("twk-wallet-card");
+    expect(html).not.toContain("twk-wallet-compact");
+    expect(html).toContain('data-status="installed"');
+    expect(html).toContain('data-status="qr"');
+    expect(html).toContain('data-twk-wallet-id="walletconnect"');
+    expect(html).toMatch(/data-twk-wallet-id="walletconnect"[\s\S]*?data-status="qr"/);
+
+    const styles = createWalletKitStyles("[data-twk-root]");
+    expect(styles).toContain(".twk-wallet-status");
+    expect(styles).toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
+    expect(styles).toContain("height: 56px");
+    expect(styles).toContain("height: 18px");
+    expect(styles).toContain("height: 12px");
+    expect(styles).toContain("border: 1.5px solid var(--twk-surface)");
+    expect(styles).toContain("background: var(--twk-success)");
+    expect(styles).not.toContain('data-status="qr"] {\n  background: var(--twk-badge-qr-bg)');
+    expect(styles).toContain("color: var(--twk-badge-qr-fg)");
+
+    const filtered = applyWalletListConfig(wallets, {
+      wallets: ["walletconnect", "tronlink", "okx", "trust"],
+      disabledWallets: ["trust"],
+      sortAvailableFirst: true,
+    });
+    expect(filtered.map((wallet) => wallet.id)).toEqual(["tronlink", "walletconnect", "okx"]);
   });
 
   it("renders all-wallets search, connecting detail, and QR views", () => {
@@ -519,6 +595,66 @@ describe("wallet kit surfaces", () => {
     expect(walletConnectQrHtml).toContain("Copy link");
     expect(walletConnectQrHtml).toContain('data-state="success"');
     expect(walletConnectQrHtml).not.toContain("Don&#39;t have TokenPocket?");
+  });
+
+  it("surfaces QR render failures and wallet icon image fallbacks", () => {
+    const html = createConnectModalHtml({
+      view: "qr",
+      qrUri: "wc:broken",
+      qrRenderState: "error",
+      activeWalletId: "walletconnect",
+      wallets: [
+        {
+          id: "walletconnect",
+          name: "WalletConnect",
+          icon: "https://example.invalid/icon.svg",
+          readyState: "found",
+          capabilities: ["qr"],
+        },
+      ],
+    });
+
+    expect(html).toContain('data-twk-qr-renderer="error"');
+    expect(html).toContain("Unable to render QR code");
+
+    const walletHtml = createConnectModalHtml({
+      wallets: [
+        {
+          id: "walletconnect",
+          name: "WalletConnect",
+          icon: "https://example.invalid/icon.svg",
+          readyState: "found",
+          capabilities: ["qr"],
+        },
+      ],
+    });
+    expect(walletHtml).toContain('onerror="this.remove()"');
+    expect(walletHtml).toContain("twk-wallet-icon-fallback");
+  });
+
+  it("falls back to execCommand for clipboard copy results", async () => {
+    let copiedValue = "";
+    const textarea = {
+      value: "",
+      style: {},
+      setAttribute: () => undefined,
+      select: () => undefined,
+      setSelectionRange: () => undefined,
+      remove: () => undefined,
+    };
+    const documentRef = {
+      defaultView: { navigator: {} },
+      body: {
+        append: () => {
+          copiedValue = textarea.value;
+        },
+      },
+      createElement: () => textarea,
+      execCommand: (command: string) => command === "copy",
+    } as unknown as Document;
+
+    await expect(copyToClipboard("tron-value", documentRef)).resolves.toBe(true);
+    expect(copiedValue).toBe("tron-value");
   });
 
   it("keeps technical connection errors compact inside detail panels", () => {
@@ -789,6 +925,40 @@ describe("wallet kit surfaces", () => {
     expect(config.walletList.layout).toBe("grid");
     expect(config.toast && config.toast.position).toBe("bottom-right");
     expect(createDefaultWalletUiConfig().accountPanel.showAddressQr).toBe(true);
+  });
+
+  it("resolves built-in locales and app label overrides", () => {
+    const viConfig = resolveWalletUiConfig({ locale: "vi" });
+    expect(viConfig.labels.connectModal.title).toBe("Ket noi vi");
+    expect(viConfig.modal.title).toBe("Ket noi vi");
+
+    const overridden = resolveWalletUiConfig({
+      locale: "vi",
+      modal: { title: "Ket noi TRON" },
+      labels: {
+        connectModal: {
+          tryAgain: "Lam lai"
+        }
+      }
+    });
+    expect(overridden.modal.title).toBe("Ket noi TRON");
+    expect(overridden.labels.connectModal.tryAgain).toBe("Lam lai");
+    expect(overridden.labels.connectModal.qrCode).toBe("Ma QR");
+
+    const html = createConnectModalHtml({
+      labels: overridden.labels.connectModal,
+      wallets: [
+        {
+          id: "walletconnect",
+          name: "WalletConnect",
+          readyState: "found",
+          capabilities: ["qr"],
+        },
+      ],
+    });
+    expect(html).toContain("Ket noi vi");
+    expect(html).toContain("Tat ca vi");
+    expect(html).toContain("MA QR");
   });
 
   it("creates accessible transaction toasts with explorer and dismiss actions", () => {

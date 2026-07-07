@@ -342,6 +342,55 @@ describe("TronLinkAdapter", () => {
     }
   });
 
+  it("does not treat Trust Wallet-linked tronLink globals as TronLink", async () => {
+    const globalObject = globalThis as typeof globalThis & {
+      tronLink?: unknown;
+      trustwallet?: unknown;
+    };
+    const previousTronLink = globalObject.tronLink;
+    const previousTrustWallet = globalObject.trustwallet;
+    const trustTronWeb = createTronWeb();
+    const trustProvider = {
+      request: async () => ({ code: 200 as const, message: "ok" }),
+      tronWeb: trustTronWeb
+    };
+
+    globalObject.tronLink = trustProvider;
+    globalObject.trustwallet = { tronLink: trustProvider, tronWeb: trustTronWeb };
+
+    try {
+      await expect(createTronLinkAdapter({ checkTimeoutMs: 0 }).isAvailable()).resolves.toBe(false);
+    } finally {
+      globalObject.tronLink = previousTronLink;
+      globalObject.trustwallet = previousTrustWallet;
+    }
+  });
+
+  it("does not treat Trust Wallet-linked tip1193 tron globals as TronLink even with a marker", async () => {
+    const globalObject = globalThis as typeof globalThis & {
+      tron?: unknown;
+      trustwallet?: unknown;
+    };
+    const previousTron = globalObject.tron;
+    const previousTrustWallet = globalObject.trustwallet;
+    const trustTronWeb = createTronWeb();
+    const trustProvider = {
+      isTronLink: true,
+      request: async () => ["TTrustWallet"],
+      tronWeb: trustTronWeb
+    };
+
+    globalObject.tron = trustProvider;
+    globalObject.trustwallet = { tronLink: trustProvider, tronWeb: trustTronWeb };
+
+    try {
+      await expect(createTronLinkAdapter({ checkTimeoutMs: 0 }).isAvailable()).resolves.toBe(false);
+    } finally {
+      globalObject.tron = previousTron;
+      globalObject.trustwallet = previousTrustWallet;
+    }
+  });
+
   it("does not treat generic tron globals as legacy TronLink without a TronLink provider path", async () => {
     const globalObject = globalThis as typeof globalThis & {
       tron?: unknown;

@@ -2,12 +2,14 @@ import type { WalletManager, WalletTransaction } from "@tron-wallet-kit/core";
 import { resolveWalletUiConfig } from "./config";
 import { applyThemeToElement, createWalletKitRoot, ensureWalletKitStyles } from "./dom";
 import { checkIcon, closeIcon, externalIcon } from "./icons";
+import { en } from "./locales/en";
 import { escapeAttribute, escapeHtml, shortenAddress } from "./utils";
-import type { ThemeConfig, ToastPosition, TransactionToastViewModel, WalletToast, WalletUiConfig } from "./types";
+import type { ThemeConfig, ToastLabels, ToastPosition, TransactionToastViewModel, WalletToast, WalletUiConfig } from "./types";
 
 export function createTransactionToastHtml(toast: TransactionToastViewModel): string {
+  const labels: ToastLabels = { ...en.toast, ...toast.labels };
   const link = toast.explorerUrl
-    ? `<a class="twk-toast-link" href="${escapeAttribute(toast.explorerUrl)}" target="_blank" rel="noopener">View ${externalIcon()}</a>`
+    ? `<a class="twk-toast-link" href="${escapeAttribute(toast.explorerUrl)}" target="_blank" rel="noopener">${escapeHtml(labels.viewOnExplorer)} ${externalIcon()}</a>`
     : "";
   const icon =
     toast.status === "pending"
@@ -24,7 +26,7 @@ export function createTransactionToastHtml(toast: TransactionToastViewModel): st
     <span class="twk-toast-hash">${escapeHtml(toast.txHash ? shortenAddress(toast.txHash) : toast.status)}</span>
   </span>
   ${link}
-  <button class="twk-toast-dismiss" type="button" data-twk-toast-dismiss="${escapeAttribute(toast.id)}" aria-label="Dismiss notification">${closeIcon()}</button>
+  <button class="twk-toast-dismiss" type="button" data-twk-toast-dismiss="${escapeAttribute(toast.id)}" aria-label="${escapeAttribute(labels.dismiss)}">${closeIcon()}</button>
 </div>`;
 }
 
@@ -66,7 +68,8 @@ export function createWalletToast(options: { manager: WalletManager; ui?: Wallet
   const push = (transaction: WalletTransaction, status: TransactionToastViewModel["status"]) => {
     const nextToast: TransactionToastViewModel = {
       id: transaction.id,
-      label: status === "pending" ? "Transaction submitted" : status === "success" ? "Transaction confirmed" : "Transaction failed",
+      label: status === "pending" ? config.labels.toast.txSubmitted : status === "success" ? config.labels.toast.txConfirmed : config.labels.toast.txFailed,
+      labels: config.labels.toast,
       status,
       txHash: transaction.hash,
       ...(transaction.explorerUrl ? { explorerUrl: transaction.explorerUrl } : {})

@@ -270,6 +270,7 @@ function getGlobalTronLinkProvider(): TronLinkProvider | undefined {
     bybitWallet?: unknown;
     gatewallet?: unknown;
     binancew3w?: unknown;
+    trustwallet?: unknown;
     backpack?: unknown;
     $onekey?: unknown;
   };
@@ -330,6 +331,7 @@ type TronProviderGlobals = {
   bybitWallet?: unknown;
   gatewallet?: unknown;
   binancew3w?: unknown;
+  trustwallet?: unknown;
   backpack?: unknown;
   $onekey?: unknown;
 };
@@ -344,12 +346,13 @@ function isLikelyTronLinkGlobal(globalObject: {
   bybitWallet?: unknown;
   gatewallet?: unknown;
   binancew3w?: unknown;
+  trustwallet?: unknown;
   backpack?: unknown;
   $onekey?: unknown;
 }): boolean {
   if (globalObject.tronLink?.isTronLink && !isKnownNonTronLinkProvider(globalObject.tronLink, globalObject)) return true;
   if (isNestedKnownWalletProvider(globalObject.tronLink, globalObject)) return false;
-  if (isLinkedToTokenPocketProvider(globalObject.tronLink, globalObject)) return false;
+  if (isLinkedToKnownWalletProvider(globalObject.tronLink, globalObject)) return false;
   if (hasExplicitLegacyTronLinkSignal(globalObject.tronLink, globalObject.tronWeb)) return true;
   if (globalObject.tron && !globalObject.tron.isTronLink) return false;
   const knownNonTronLinkProviderExists = Boolean(
@@ -359,6 +362,7 @@ function isLikelyTronLinkGlobal(globalObject: {
       globalObject.bybitWallet ||
       globalObject.gatewallet ||
       globalObject.binancew3w ||
+      globalObject.trustwallet ||
       globalObject.backpack ||
       globalObject.$onekey
   );
@@ -392,7 +396,7 @@ function isNestedKnownWalletProvider(provider: LegacyTronLinkProvider | undefine
 function isKnownNonTronLinkProvider(provider: unknown, globalObject: TronProviderGlobals): boolean {
   if (!provider) return false;
   if (KNOWN_NON_TRONLINK_PROVIDER_PATHS.some((path) => readPath(globalObject, path) === provider)) return true;
-  return isLinkedToTokenPocketProvider(provider, globalObject);
+  return isLinkedToKnownWalletProvider(provider, globalObject);
 }
 
 const KNOWN_NON_TRONLINK_PROVIDER_PATHS = [
@@ -408,18 +412,35 @@ const KNOWN_NON_TRONLINK_PROVIDER_PATHS = [
   ["gatewallet", "tronLink"],
   ["binancew3w", "tron"],
   ["binancew3w", "tronLink"],
+  ["trustwallet", "tron"],
+  ["trustwallet", "tronLink"],
   ["backpack", "tron"],
   ["backpack", "tronLink"],
   ["$onekey", "tron"],
   ["$onekey", "tronLink"]
 ] as const;
 
-function isLinkedToTokenPocketProvider(provider: unknown, globalObject: TronProviderGlobals): boolean {
-  if (!provider || !globalObject.tokenpocket || typeof globalObject.tokenpocket !== "object") return false;
-  const tokenPocket = globalObject.tokenpocket as Record<string, unknown>;
-  const tokenPocketTronWeb = tokenPocket.tronWeb ?? readPath(tokenPocket.tron, ["tronWeb"]);
+const KNOWN_NON_TRONLINK_PROVIDER_ROOTS = [
+  "tokenpocket",
+  "bitkeep",
+  "okxwallet",
+  "bybitWallet",
+  "gatewallet",
+  "binancew3w",
+  "trustwallet",
+  "backpack",
+  "$onekey"
+] as const;
+
+function isLinkedToKnownWalletProvider(provider: unknown, globalObject: TronProviderGlobals): boolean {
+  if (!provider) return false;
   const providerTronWeb = readPath(provider, ["tronWeb"]);
-  return Boolean(tokenPocketTronWeb && providerTronWeb === tokenPocketTronWeb);
+  if (!providerTronWeb) return false;
+  return KNOWN_NON_TRONLINK_PROVIDER_ROOTS.some((root) => {
+    const wallet = readPath(globalObject, [root]);
+    const walletTronWeb = readPath(wallet, ["tronWeb"]) ?? readPath(wallet, ["tron", "tronWeb"]) ?? readPath(wallet, ["tronLink", "tronWeb"]);
+    return Boolean(walletTronWeb && providerTronWeb === walletTronWeb);
+  });
 }
 
 function readPath(source: unknown, path: readonly string[]): unknown {

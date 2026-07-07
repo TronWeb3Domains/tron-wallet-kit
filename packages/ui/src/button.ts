@@ -1,14 +1,11 @@
 import type { WalletManager } from "@tron-wallet-kit/core";
 import { applyThemeToElement, createWalletKitRoot, ensureWalletKitStyles } from "./dom";
 import { walletIcon } from "./icons";
+import { en } from "./locales/en";
 import { escapeAttribute, escapeHtml, shortenAddress } from "./utils";
 import type { ThemeConfig, WalletButton, WalletButtonLabels, WalletButtonViewModel, WalletModal } from "./types";
 
-const defaultWalletButtonLabels: WalletButtonLabels = {
-  connect: "Connect Wallet",
-  connecting: "Connecting",
-  openAccount: "Open account"
-};
+const defaultWalletButtonLabels: WalletButtonLabels = en.walletButton;
 
 export function createWalletButtonHtml(viewModel: WalletButtonViewModel = {}): string {
   const labels = { ...defaultWalletButtonLabels, ...viewModel.labels };

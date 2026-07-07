@@ -355,3 +355,90 @@ Implications for TRON Wallet Kit:
   - FoxWallet: `foxwallet.tronLink.tronWeb`
   - Other mapped paths include TronLink, TokenPocket, OKX, Bitget, GateWallet, Bybit, imToken, Binance, Guarda, OneKey, and Backpack.
   - MetaMask TRON is not mapped until the TRON-specific adapter exposes a stable balance provider path.
+
+## 2026-07-07 Trust Wallet vs TronLink Global Collision
+
+- Trust Wallet can expose TRON globals that look close to legacy TronLink, especially through `window.trustwallet.tronLink` and shared `tronWeb` references.
+- The TronLink adapter now treats `trustwallet.tron` and `trustwallet.tronLink` as known non-TronLink provider paths.
+- The prior TokenPocket-only shared `tronWeb` guard is now generalized across known wallet roots, including Trust. If `window.tronLink.tronWeb` or marked `window.tron.tronWeb` is the same object as a known wallet provider, TronLink must report unavailable instead of connecting to that wallet.
+- Regression tests cover:
+  - Trust-linked `window.tronLink`
+  - Trust-linked TIP-1193 `window.tron` even when `isTronLink: true`
+
+## 2026-07-07 Upstream Adapter Platform and Injection Audit
+
+Source checked: `tronweb3/tronwallet-adapter` adapter directory on GitHub and the installed `@tronweb3/tronwallet-adapter-*` packages under local `node_modules`.
+
+| Wallet | Upstream package | Primary platform | Injected/provider path | Connect request shape | Mobile/deep-link / WalletConnect note |
+| --- | --- | --- | --- | --- | --- |
+| TronLink | `tronlink` | Extension + TronLink app | `window.tronLink`; legacy `window.tron` only when `isTronLink`; mobile may pair `window.tronLink` with `window.tronWeb` | desktop uses `eth_requestAccounts`; mobile/modern path can use `tron_requestAccounts` | Deep link via `tronlinkoutside://pull.activity`; broad globals make collision guards mandatory |
+| TokenPocket | `tokenpocket` | Extension + mobile app | desktop `window.tokenpocket.tron`; mobile can use `window.tokenpocket.tronWeb` / `window.tronWeb`; TIP-6963 provider support exists | desktop uses `eth_requestAccounts`; provider state reads `tronWeb.defaultAddress.base58` | Deep link via `tpdapp://open`; must not be routed through TronLink globals |
+| OKX Wallet | `okxwallet` | Extension + OKX app | `window.okxwallet.tronLink` | `tron_requestAccounts` | Deep link `okx://wallet/dapp/url?...`; keep extension fallback path narrow |
+| Bitget Wallet / BitKeep | `bitkeep` | Extension + mobile app | mobile `window.bitkeep.tronLink` + `window.bitkeep.tronWeb`; extension support probe also checks `window.tronLink && window.isBitKeep` | desktop uses `wallet.tron.request({ method: "tron_requestAccounts" })`; address from wallet/global `tronWeb` | Deep link `https://bkcode.vip?action=dapp&url=...`; generic `window.tronLink` must be paired with Bitget marker before using |
+| Trust Wallet | `trust` | Extension + Trust app | `window.trustwallet.tronLink` | `tron_requestAccounts` | Deep link `https://link.trustwallet.com/open_url?...`; must use Trust-specific fallback before TronLink |
+| Gate Wallet | `gatewallet` | Extension + Gate app | extension `window.gatewallet.tron`; Gate app `window.gatewallet.tronLink` | extension uses `eth_requestAccounts`; Gate app uses `tron_requestAccounts` | Deep link to Gate Web3; fallback should prefer app/extension-specific root, not generic globals |
+| Bybit Wallet | `bybit` | Extension + Bybit app | `window.bybitWallet.tronLink` | `tron_requestAccounts` | Deep link through Bybit app URL; extension fallback path is wallet-specific |
+| Binance Web3 Wallet | `binance` | Extension + mobile / WC-capable upstream | `window.binancew3w.tron`; support probe also checks `window.isBinance` | extension uses provider; upstream can instantiate `WalletConnectAdapter` when no injected provider | This is a true mixed adapter: extension first, WalletConnect fallback only through upstream Binance config |
+| Guarda | `guarda` | Extension | root `window.guarda`; request object is `window.guarda.tron`; TRON web helper can be parent `window.guarda.tronWeb` | `window.guarda.tron.request({ method: "eth_requestAccounts" })` returns array address | Needs custom local fallback that merges `guarda.tron` with parent `guarda.tronWeb`; generic injected fallback can miss address |
+| OneKey | `onekey` | Extension | `window.$onekey.tron` | `tron_requestAccounts` | Extension-focused |
+| Backpack | `backpack` | Extension | `window.backpack.tron`; fallback `window.tron` only when `isBackpack` | `tron_requestAccounts`; chain via `tron_chainId` | Needs wallet-specific fallback; avoid generic `window.tron` unless `isBackpack` |
+| FoxWallet | `foxwallet` | Mobile app first | `window.foxwallet.tronLink` inside mobile browser | `tron_requestAccounts` | Deep link `foxwallet://dapp?...`; upstream marks NotFound outside mobile, so keep bridge-only/mobile for now |
+| imToken | `imtoken` | Mobile app first | `window.imToken` + `window.tronWeb` | address from `window.tronWeb.defaultAddress.base58`; no request call in connect path | Deep link `imtokenv2://navigate/DappView?...`; keep mobile/app route, no extension assumption |
+| MetaMask TRON | `metamask-tron` | Extension + MetaMask mobile webview | `window.ethereum` MetaMask provider; TRON handled through MetaMask TRON adapter/snap flow, not TRON `tronWeb` injection | adapter-specific MetaMask request flow | Do not display as generic EVM connect; only expose TRON-capable adapter behavior and normalized errors |
+
+Implementation implications:
+
+- Default featured extension QA should prioritize wallet-specific roots: TronLink, TokenPocket, OKX, Bitget, Trust, Gate, Bybit, Binance, Guarda, OneKey, Backpack, MetaMask TRON.
+- Mobile-first routes should stay separate from generic WalletConnect: FoxWallet and imToken are app/deep-link adapters, not automatic QR fallback wallets.
+- WalletConnect remains the common QR route; Binance is the only checked upstream adapter here that explicitly embeds `WalletConnectAdapter` as an adapter-level fallback.
+- Collision policy: never accept generic `window.tronLink`, `window.tron`, or `window.tronWeb` for a wallet row unless the selected wallet's own root or marker proves ownership.
+- For connect cancellation, UI must treat QR URI generation, QR image rendering, retry timers, and late connect errors as flow-scoped side effects; stale side effects are ignored after back, close, or selecting another wallet.
+
+## 2026-07-07 Shared Wallet Registry
+
+- Added `TRON_WALLET_REGISTRY` in `@tron-wallet-kit/core` as the source of truth for supported TRON wallet metadata.
+- Registry fields:
+  - `enabled`: controls whether the wallet appears in default catalog/list generation.
+  - `platforms`: `extension`, `mobile`, or both.
+  - `providerPaths`: wallet-specific injected paths.
+  - `conflictMarkers`: provider markers used to reason about global collisions.
+  - `mobileDeepLink`: scheme/template metadata for future mobile-first UI.
+  - `supportsWalletConnect`: explicit QR/WC fallback eligibility, not inferred from being mobile.
+  - `upstreamPackage`: upstream adapter package reference for maintenance.
+- UI catalog now derives from enabled registry entries and only adds presentation-specific values such as badges/icons.
+- Client default adapter creation now derives the default wallet id list from enabled registry entries and supports `disabledWallets` for release/app-level opt-out without deleting adapter code.
+- Ledger is kept in the registry with `enabled: false`; this preserves metadata for a future hardware phase while removing it from the default All Wallets list.
+- Bridge adapter configs now consume registry name/homepage/platform/provider-path metadata. Importer functions remain adapter-specific by design because each upstream package has different class exports.
+
+## 2026-07-07 Advanced Wallet List Configuration
+
+- Added advanced `walletList` controls at the UI config layer:
+  - `featuredLimit`: default 5, clamped to 1-10.
+  - `featuredWallets`: explicit featured wallet id order, clamped to 10.
+  - `wallets`: `all` or an allowlist for All Wallets/default rendered list.
+  - `disabledWallets`: display-level denylist.
+  - `showUnavailable`: hide unavailable wallets when false.
+  - `sortAvailableFirst`: defaults true so installed/supported wallets float to the top of All Wallets.
+- Featured UX rule:
+  - 1-6 wallets render as full rows.
+  - 7-10 wallets render as compact 3-column wallet cards to avoid an overlong row list.
+  - WalletConnect stays last in featured when present.
+- React surfaces now forward `walletList` through `ConnectModalProps`.
+- `react-basic` exposes presets for 5 recommended, 9 compact, and 10 compact max, plus All Wallets preset and unavailable-wallet toggle.
+- Compact grid status indicators:
+  - text badges are intentionally hidden in compact featured cards.
+  - installed uses a small dot from `--twk-success`.
+  - QR uses a mini QR icon with `--twk-badge-qr-fg` on the neutral badge surface.
+  - connecting uses the existing spinner styled by token variables.
+  - error uses `--twk-danger` with token-driven foreground/background.
+  - not installed has no dot/icon; disabled opacity communicates unavailable state.
+- Compact polish:
+  - Featured compact mode reuses the All Wallets `twk-wallet-card` surface in a 3-column grid instead of maintaining a separate compact button.
+  - Default recommended featured wallets remain 5 row items.
+  - The compact preset uses 9 items so compact mode is a balanced 3x3 grid.
+  - wallet icons follow the All Wallets card sizing.
+  - shared card status indicators are 18px with a 1.5px neutral surface border so installed dots do not overpower wallet icons.
+  - installed dots are 8px.
+  - QR glyphs render at 12px and use a simplified SVG shape so the badge reads as QR at small size.
+  - QR status keeps the neutral badge surface instead of applying `--twk-badge-qr-bg` to the badge container; only the glyph uses `--twk-badge-qr-fg`.
+  - QR transport has priority over installed state, so WalletConnect renders the QR icon.

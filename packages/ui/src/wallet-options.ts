@@ -1,10 +1,11 @@
 import type { WalletAdapter } from "@tron-wallet-kit/core";
-import type { WalletOptionViewModel } from "./types";
+import { en } from "./locales/en";
+import type { ConnectModalLabels, WalletOptionViewModel } from "./types";
 
 export type WalletAvailability = boolean | "loading" | undefined;
 type WalletReadyState = NonNullable<WalletOptionViewModel["readyState"]>;
 
-export function mapAdapterToWalletOption(adapter: WalletAdapter, availability?: WalletAvailability): WalletOptionViewModel {
+export function mapAdapterToWalletOption(adapter: WalletAdapter, availability?: WalletAvailability, labels: ConnectModalLabels = en.connectModal): WalletOptionViewModel {
   const readyState = resolveReadyState(adapter, availability);
   const capabilities = Object.entries(adapter.capabilities)
     .filter(([, supported]) => supported === true)
@@ -23,7 +24,7 @@ export function mapAdapterToWalletOption(adapter: WalletAdapter, availability?: 
   if (adapter.metadata.type) option.transport = adapter.metadata.type;
   if (adapter.metadata.platforms) option.platforms = adapter.metadata.platforms;
   if (capabilities.length > 0) option.capabilities = capabilities;
-  const badge = createWalletBadge(adapter, readyState, capabilities);
+  const badge = createWalletBadge(adapter, readyState, capabilities, labels);
   if (badge) option.badge = badge;
   return option;
 }
@@ -35,13 +36,13 @@ function resolveReadyState(adapter: WalletAdapter, availability: WalletAvailabil
   return adapter.isAvailable ? "loading" : "found";
 }
 
-function createWalletBadge(adapter: WalletAdapter, readyState: WalletReadyState, capabilities: readonly string[]): WalletOptionViewModel["badge"] {
+function createWalletBadge(adapter: WalletAdapter, readyState: WalletReadyState, capabilities: readonly string[], labels: ConnectModalLabels): WalletOptionViewModel["badge"] {
   if (capabilities.includes("qr") || adapter.metadata.type === "walletconnect" || adapter.metadata.id === "walletconnect") {
-    return { label: "QR CODE", tone: "qr" };
+    return { label: labels.qrCode.toUpperCase(), tone: "qr" };
   }
-  if (readyState === "found") return { label: "INSTALLED", tone: "installed" };
-  if (readyState === "loading") return { label: "CHECKING", tone: "muted" };
-  if (readyState === "notFound") return { label: "NOT INSTALLED", tone: "muted" };
-  if (readyState === "unsupported") return { label: "UNAVAILABLE", tone: "muted" };
-  return { label: "TRON", tone: "tron" };
+  if (readyState === "found") return { label: labels.installed.toUpperCase(), tone: "installed" };
+  if (readyState === "loading") return { label: labels.checking.toUpperCase(), tone: "muted" };
+  if (readyState === "notFound") return { label: labels.notInstalled.toUpperCase(), tone: "muted" };
+  if (readyState === "unsupported") return { label: labels.unavailable.toUpperCase(), tone: "muted" };
+  return { label: labels.tron.toUpperCase(), tone: "tron" };
 }

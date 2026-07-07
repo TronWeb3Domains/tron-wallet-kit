@@ -15,7 +15,7 @@ export function logoutIcon(): string {
 }
 
 export function qrIcon(): string {
-  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 14h2v2h-2v-2Zm4 0h2v6h-6v-2h4v-4Z" fill="currentColor"/></svg>`;
+  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M14 14h2.8v2.8H14V14Zm4.2 0H20v6h-6v-1.8h4.2V14Zm-4.2 4.2h1.8V20H14v-1.8Z" fill="currentColor"/></svg>`;
 }
 
 export function sendIcon(): string {

@@ -1,24 +1,11 @@
 import { createElementFromHtml } from "./dom";
 import { createActionContentHtml } from "./actions";
 import { backIcon, checkIcon, closeIcon, copyIcon, externalIcon, logoutIcon, qrIcon, sendIcon } from "./icons";
+import { en } from "./locales/en";
 import { escapeAttribute, escapeHtml, shortenAddress } from "./utils";
 import type { AccountPanelLabels, AccountPanelViewModel, AddressQrPanelViewModel, RecentTransactionViewModel } from "./types";
 
-const defaultAccountPanelLabels: AccountPanelLabels = {
-  title: "Connected",
-  addressTitle: "Address",
-  back: "Back",
-  close: "Close",
-  copy: "Copy address",
-  copied: "Copied",
-  disconnect: "Disconnect",
-  explorer: "Explorer",
-  showQr: "QR",
-  lightQr: "Light QR",
-  noTransactions: "No recent transactions",
-  recentTransactions: "Recent transactions",
-  qrAlt: "TRON address QR"
-};
+const defaultAccountPanelLabels: AccountPanelLabels = en.accountPanel;
 
 export function createAccountPanelHtml(viewModel: AccountPanelViewModel): string {
   const labels = { ...defaultAccountPanelLabels, ...viewModel.labels };
@@ -59,7 +46,8 @@ export function createAccountPanelHtml(viewModel: AccountPanelViewModel): string
     ? `<img src="${escapeAttribute(viewModel.addressQr.src)}" alt="${escapeAttribute(viewModel.addressQr.alt ?? labels.qrAlt)}" />`
     : `<span class="twk-muted">${escapeHtml(labels.qrAlt)}</span>`;
   const transactionCount = viewModel.recentTransactions?.length ?? 0;
-  const visibleTransactions = viewModel.recentTransactions?.slice(0, 3) ?? [];
+  const maxVisibleTransactions = Math.max(1, Math.trunc(viewModel.maxVisibleTransactions ?? 3));
+  const visibleTransactions = viewModel.recentTransactions?.slice(0, maxVisibleTransactions) ?? [];
   const transactions =
     visibleTransactions.length > 0
       ? visibleTransactions.map(createTransactionRowHtml).join("")
@@ -70,7 +58,7 @@ export function createAccountPanelHtml(viewModel: AccountPanelViewModel): string
         <div class="twk-tx-header">
           <span>${escapeHtml(labels.recentTransactions)}</span>
           <span class="twk-tx-count">${transactionCount > 9 ? "9+" : transactionCount}</span>
-          ${transactionCount > 3 ? `<button class="twk-tx-header-link" type="button" data-twk-action="tx-history">View ${externalIcon()}</button>` : ""}
+          ${transactionCount > maxVisibleTransactions ? `<button class="twk-tx-header-link" type="button" data-twk-action="tx-history">View ${externalIcon()}</button>` : ""}
         </div>
         <div class="twk-tx-list"><div class="twk-tx-list-inner">${transactions}</div></div>
       </section>`

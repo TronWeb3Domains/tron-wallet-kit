@@ -1,7 +1,7 @@
 import { createContext, createElement, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 import { createWalletKit, type TronIdentity, type WalletClientConfig, type WalletKit } from "@tron-wallet-kit/client";
 import type { WalletAccount, WalletCapabilities, WalletSession } from "@tron-wallet-kit/core";
-import { createAccountPanelHtml, createAddressQrPanelHtml, createConnectModalHtml, createStyledQrDataUrl, createThemeStyleProperties, createTransactionHistoryPanelHtml, createWalletButtonHtml, ensureWalletKitStyles, mapAdapterToWalletOption, mergeWalletOptionsWithCatalog, QR_FALLBACK_DARK, shortenAddress, type AccountPanelViewModel, type ConnectModalViewModel, type ThemeConfig, type WalletButtonViewModel } from "@tron-wallet-kit/ui";
+import { copyToClipboard, createAccountPanelHtml, createAddressQrPanelHtml, createConnectModalHtml, createStyledQrDataUrl, createThemeStyleProperties, createTransactionHistoryPanelHtml, createWalletButtonHtml, ensureWalletKitStyles, mapAdapterToWalletOption, mergeWalletOptionsWithCatalog, QR_FALLBACK_DARK, shortenAddress, type AccountPanelViewModel, type ConnectModalViewModel, type ThemeConfig, type WalletButtonViewModel } from "@tron-wallet-kit/ui";
 import type { WalletAvailability } from "@tron-wallet-kit/ui";
 
 export type WalletStatus = "disconnected" | "connecting" | "connected";
@@ -46,6 +46,12 @@ const WalletKitContext = createContext<WalletKit | null>(null);
 
 export function TronWalletProvider(props: TronWalletProviderProps) {
   const kit = useMemo(() => props.kit ?? createWalletKit(props), [props]);
+  useEffect(() => {
+    void kit.manager.autoReconnect();
+    return () => {
+      kit.manager.destroy();
+    };
+  }, [kit]);
   return createElement(WalletKitContext.Provider, { value: kit }, props.children);
 }
 
@@ -246,7 +252,8 @@ export function WalletButton(props: WalletButtonProps) {
     const target = event.target instanceof Element ? event.target : null;
     const action = target?.closest("[data-twk-action]")?.getAttribute("data-twk-action");
     if (action === "copy" && session) {
-      void copyText(session.account.address).then(() => {
+      void copyText(session.account.address).then((copied) => {
+        if (!copied) return;
         setCopyState("copied");
         globalThis.setTimeout(() => setCopyState("idle"), 1400);
       });
@@ -343,10 +350,9 @@ function createWalletButtonAccountPanelHtml(input: WalletButtonAccountPanelModel
   return `<div class="twk-button-panel" data-twk-account-panel-mode="dropdown">${panel}</div>`;
 }
 
-async function copyText(value: string): Promise<void> {
-  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(value);
-  }
+async function copyText(value: string): Promise<boolean> {
+  if (typeof document === "undefined") return false;
+  return copyToClipboard(value, document);
 }
 
 function focusFirstPanelControl(root: HTMLElement | null): void {
@@ -428,7 +434,8 @@ export function ConnectModal(props: ConnectModalProps) {
     ...(props.qrUri ? { qrUri: props.qrUri } : {}),
     ...(props.qrImageSrc ? { qrImageSrc: props.qrImageSrc } : {}),
     ...(props.errorMessage ? { errorMessage: props.errorMessage } : {}),
-    ...(props.showCloseButton !== undefined ? { showCloseButton: props.showCloseButton } : {})
+    ...(props.showCloseButton !== undefined ? { showCloseButton: props.showCloseButton } : {}),
+    ...(props.walletList ? { walletList: props.walletList } : {})
   });
 
   if (props.open === false) return null;

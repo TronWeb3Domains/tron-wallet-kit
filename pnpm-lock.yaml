@@ -146,9 +146,6 @@ importers:
       '@tron-wallet-kit/ui':
         specifier: workspace:*
         version: link:../ui
-      trondomainjs:
-        specifier: ^1.0.8
-        version: 1.0.8
       tronweb:
         specifier: ^6.4.0
         version: 6.4.0
@@ -3761,9 +3758,6 @@ packages:
 
   trim-lines@3.0.1:
     resolution: {integrity: sha512-kRj8B+YHZCc9kQYdWfJB2/oUl9rA99qbowYYBtr4ui4mZyAQ2JpvVBd/6U2YloATfqBhBTSMhTpgBHtU0Mf3Rg==}
-
-  trondomainjs@1.0.8:
-    resolution: {integrity: sha512-XiuWxYfBOwW+plRRP7vyhy0IzUHJNcobWMSWXUEYrEwgsQxO1PmBiaaVL4eCuCmYHlOETMjhs7apAjb3DNeWxA==}
 
   tronweb@6.2.2:
     resolution: {integrity: sha512-jRBf4+7fJ0HUVzveBi0tE21r3EygCNtbYE92T38Sxlwr/x320W2vz+dvGLOIpp4kW/CvJ4HLvtnb6U30A0V2eA==}
@@ -9221,8 +9215,6 @@ snapshots:
   tree-kill@1.2.2: {}
 
   trim-lines@3.0.1: {}
-
-  trondomainjs@1.0.8: {}
 
   tronweb@6.2.2:
     dependencies:

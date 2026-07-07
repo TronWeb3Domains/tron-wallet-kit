@@ -1,6 +1,6 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { TRON_NILE, type WalletAdapter } from "@tron-wallet-kit/core";
-import { createInjectedTronAdapter, createTronWeb3AdapterBridge, createWalletClient, createWalletKit } from "../src/index";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { TRON_MAINNET, TRON_NILE, type WalletAdapter } from "@tron-wallet-kit/core";
+import { createInjectedTronAdapter, createTronDomainIdentityResolver, createTronWeb3AdapterBridge, createWalletClient, createWalletKit } from "../src/index";
 
 function createMockAdapter(id = "mock"): WalletAdapter {
   return {
@@ -38,6 +38,53 @@ function createMockAdapter(id = "mock"): WalletAdapter {
   };
 }
 
+function createMockTronDomainTronWeb(options: {
+  reverseOf?: unknown;
+  balanceOf?: unknown;
+  tokenDomain?: unknown;
+  metadataValues?: unknown[];
+  neverResolveReverse?: boolean;
+} = {}) {
+  const calls = {
+    at: [] as string[],
+    setAddress: [] as string[],
+    reverseOf: [] as string[],
+    genTokenId: [] as string[],
+    getMany: [] as string[][]
+  };
+  const call = (value: unknown) => ({ call: async () => value });
+  const contract = {
+    reverseOf: (address: string) => {
+      calls.reverseOf.push(address);
+      if (options.neverResolveReverse) return { call: () => new Promise(() => undefined) };
+      return call(options.reverseOf ?? "alice.trx");
+    },
+    balanceOf: () => call(options.balanceOf ?? "0"),
+    tokenOfOwnerByIndex: () => call("token-1"),
+    _tokenURIs: () => call(options.tokenDomain ?? ""),
+    genTokenId: (domain: string) => {
+      calls.genTokenId.push(domain);
+      return call(`token:${domain}`);
+    },
+    getMany: (keys: string[]) => {
+      calls.getMany.push(keys);
+      return call(options.metadataValues ?? []);
+    }
+  };
+  return {
+    calls,
+    tronWeb: {
+      setAddress: (address: string) => calls.setAddress.push(address),
+      contract: () => ({
+        at: async (address: string) => {
+          calls.at.push(address);
+          return contract;
+        }
+      })
+    }
+  };
+}
+
 describe("client entrypoints", () => {
   afterEach(() => {
     delete (globalThis as Record<string, unknown>).tokenpocket;
@@ -47,10 +94,14 @@ describe("client entrypoints", () => {
     delete (globalThis as Record<string, unknown>).gatewallet;
     delete (globalThis as Record<string, unknown>).bybitWallet;
     delete (globalThis as Record<string, unknown>).binancew3w;
+    delete (globalThis as Record<string, unknown>).guarda;
     delete (globalThis as Record<string, unknown>).$onekey;
     delete (globalThis as Record<string, unknown>).trustwallet;
     delete (globalThis as Record<string, unknown>).foxwallet;
     delete (globalThis as Record<string, unknown>).tronWeb;
+    delete (globalThis as Record<string, unknown>).tronLink;
+    delete (globalThis as Record<string, unknown>).isBitKeep;
+    delete (globalThis as Record<string, unknown>).__tronWalletKitTronWebForTest;
   });
 
   it("creates a WalletManager with registered adapters", async () => {
@@ -73,6 +124,99 @@ describe("client entrypoints", () => {
       hash: "trx-hash"
     });
     expect(kit.manager.getTransactions()[0]?.methodHint).toBe("transferTrx");
+  });
+
+  it("refreshes identity and enriches the connected account", async () => {
+    const kit = createWalletKit({
+      adapters: [createMockAdapter()],
+      identity: {
+        enabled: true,
+        resolver: async () => ({
+          domain: "alice.trx",
+          displayName: "alice.trx",
+          avatar: "https://trxdomains.xyz/avatar.png"
+        })
+      }
+    });
+
+    await kit.manager.connect("mock");
+    await expect(kit.refreshIdentity()).resolves.toMatchObject({ domain: "alice.trx" });
+    expect(kit.manager.getSession()?.account).toMatchObject({
+      address: "TMockAddress",
+      domain: "alice.trx",
+      displayName: "alice.trx",
+      avatar: "https://trxdomains.xyz/avatar.png"
+    });
+  });
+
+  it("resolves TRX Domains through the direct mainnet contract", async () => {
+    const { tronWeb, calls } = createMockTronDomainTronWeb({
+      reverseOf: "trxdomains.trx",
+      metadataValues: ["https://trxdomains.xyz/avatar.png", ""]
+    });
+    (globalThis as Record<string, unknown>).__tronWalletKitTronWebForTest = tronWeb;
+
+    const resolver = createTronDomainIdentityResolver({ metadataKeys: ["avatar", "website"] });
+    const identity = await resolver({ address: "TSFquXZoXtei19kDJ1Sy1YGjznz8gWhfKd" }, { network: TRON_MAINNET, walletId: "mock" });
+
+    expect(identity).toMatchObject({
+      domain: "trxdomains.trx",
+      displayName: "trxdomains.trx",
+      avatar: "https://trxdomains.xyz/avatar.png"
+    });
+    expect(identity?.website).toBeUndefined();
+    expect(calls.setAddress).toEqual(["TSFquXZoXtei19kDJ1Sy1YGjznz8gWhfKd"]);
+    expect(calls.genTokenId).toEqual(["trxdomains.trx"]);
+  });
+
+  it("falls back to the first owned TRX Domain when no default domain is set", async () => {
+    const { tronWeb } = createMockTronDomainTronWeb({
+      reverseOf: "",
+      balanceOf: "1",
+      tokenDomain: "trxdomains.trx"
+    });
+    (globalThis as Record<string, unknown>).__tronWalletKitTronWebForTest = tronWeb;
+    const resolver = createTronDomainIdentityResolver({ metadataKeys: [] });
+
+    const identity = await resolver({ address: "TSFquXZoXtei19kDJ1Sy1YGjznz8gWhfKd" }, { network: TRON_MAINNET, walletId: "mock" });
+
+    expect(identity).toMatchObject({
+      domain: "trxdomains.trx",
+      displayName: "trxdomains.trx"
+    });
+  });
+
+  it("keeps TRX Domains multi-TLD names unchanged", async () => {
+    const { tronWeb, calls } = createMockTronDomainTronWeb({
+      reverseOf: "bob.sun",
+      metadataValues: []
+    });
+    (globalThis as Record<string, unknown>).__tronWalletKitTronWebForTest = tronWeb;
+    const resolver = createTronDomainIdentityResolver({ metadataKeys: ["avatar"] });
+
+    const identity = await resolver({ address: "TMockAddress" }, { network: TRON_MAINNET, walletId: "mock" });
+
+    expect(identity?.domain).toBe("bob.sun");
+    expect(identity?.displayName).toBe("bob.sun");
+    expect(calls.genTokenId).toEqual(["bob.sun"]);
+  });
+
+  it("skips TRX Domains identity outside mainnet without touching the contract", async () => {
+    const { tronWeb, calls } = createMockTronDomainTronWeb({ reverseOf: "alice.trx" });
+    (globalThis as Record<string, unknown>).__tronWalletKitTronWebForTest = tronWeb;
+    const resolver = createTronDomainIdentityResolver({ metadataKeys: [] });
+
+    await expect(resolver({ address: "TMockAddress" }, { network: TRON_NILE, walletId: "mock" })).resolves.toBeUndefined();
+    expect(calls.at).toEqual([]);
+    expect(calls.reverseOf).toEqual([]);
+  });
+
+  it("times out slow TRX Domains contract reads without blocking UI", async () => {
+    const { tronWeb } = createMockTronDomainTronWeb({ neverResolveReverse: true });
+    (globalThis as Record<string, unknown>).__tronWalletKitTronWebForTest = tronWeb;
+    const resolver = createTronDomainIdentityResolver({ metadataKeys: [], timeoutMs: 5 });
+
+    await expect(resolver({ address: "TMockAddress" }, { network: TRON_MAINNET, walletId: "mock" })).resolves.toBeUndefined();
   });
 
   it("includes extension wallets by default and WalletConnect only when a projectId is configured", () => {
@@ -108,6 +252,23 @@ describe("client entrypoints", () => {
       "onekey",
       "backpack",
       "walletconnect"
+    ]);
+  });
+
+  it("allows default registry wallets to be disabled without removing adapter code", () => {
+    expect(createWalletClient({ walletConnectProjectId: "project", disabledWallets: ["trust", "guarda", "walletconnect"] }).getWallets().map((wallet) => wallet.metadata.id)).toEqual([
+      "tronlink",
+      "tokenpocket",
+      "okx",
+      "bitget",
+      "metamask",
+      "gate",
+      "foxwallet",
+      "bybit",
+      "imtoken",
+      "binance",
+      "onekey",
+      "backpack"
     ]);
   });
 
@@ -178,6 +339,97 @@ describe("client entrypoints", () => {
     await expect(manager.connect("okx")).resolves.toMatchObject({ account: { address: "TOKX" } });
     await manager.disconnect();
     await expect(manager.connect("bitget")).resolves.toMatchObject({ account: { address: "TBitget" } });
+  });
+
+  it("reads Bitget addresses from parent tronWeb after a successful request", async () => {
+    const request = vi.fn(async () => ({ code: 200 }));
+    (globalThis as typeof globalThis & { bitkeep?: unknown }).bitkeep = {
+      tronLink: { request },
+      tronWeb: {
+        defaultAddress: { base58: "TBitgetParent", hex: "41bitget" },
+        trx: {
+          getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" }),
+          getBalance: async () => "123000000"
+        }
+      }
+    };
+
+    const kit = createWalletKit({ wallets: ["bitget"] });
+
+    await expect(kit.manager.connect("bitget")).resolves.toMatchObject({
+      account: { address: "TBitgetParent", hexAddress: "41bitget" }
+    });
+    await expect(kit.refreshBalance()).resolves.toMatchObject({ formatted: "123", symbol: "TRX" });
+    expect(request).toHaveBeenCalledWith({ method: "tron_requestAccounts" });
+  });
+
+  it("uses global Bitget markers when the extension exposes TronLink-shaped globals", async () => {
+    const request = vi.fn(async () => ({ code: 200 }));
+    Object.assign(globalThis, {
+      isBitKeep: true,
+      tronLink: { request },
+      tronWeb: {
+        defaultAddress: { base58: "TBitgetGlobal" },
+        trx: {
+          getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" })
+        }
+      }
+    });
+
+    const manager = createWalletClient({ wallets: ["bitget"] });
+
+    await expect(manager.getWallets().find((wallet) => wallet.metadata.id === "bitget")?.isAvailable?.()).resolves.toBe(true);
+    await expect(manager.connect("bitget")).resolves.toMatchObject({ account: { address: "TBitgetGlobal" } });
+  });
+
+  it("uses the Trust-specific injected provider instead of shared TronLink globals", async () => {
+    const trustProvider = {
+      request: async () => ({ address: "TTrustAddress" }),
+      tronWeb: {
+        defaultAddress: { base58: "TTrustAddress" },
+        trx: {
+          getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" })
+        }
+      }
+    };
+    const tronLinkProvider = {
+      isTronLink: true,
+      request: async () => ({ code: 200, message: "ok" }),
+      tronWeb: {
+        defaultAddress: { base58: "TTronLinkAddress" },
+        trx: {
+          getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" })
+        }
+      }
+    };
+    (globalThis as Record<string, unknown>).trustwallet = { tronLink: trustProvider };
+    (globalThis as Record<string, unknown>).tronLink = tronLinkProvider;
+    (globalThis as Record<string, unknown>).tronWeb = tronLinkProvider.tronWeb;
+
+    const manager = createWalletClient({ wallets: ["trust"] });
+
+    await expect(manager.getWallets()[0]?.isAvailable?.()).resolves.toBe(true);
+    await expect(manager.connect("trust")).resolves.toMatchObject({ account: { address: "TTrustAddress" } });
+  });
+
+  it("uses Guarda tron request with parent tronWeb to resolve an address", async () => {
+    const guardaTronWeb = {
+      defaultAddress: { base58: "TGuardaDefault" },
+      trx: {
+        getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" })
+      }
+    };
+    (globalThis as Record<string, unknown>).guarda = {
+      tron: {
+        request: async ({ method }: { method: string }) => (method === "eth_requestAccounts" ? ["TGuardaAddress"] : [])
+      },
+      tronWeb: guardaTronWeb
+    };
+
+    const manager = createWalletClient({ wallets: ["guarda"] });
+
+    await expect(manager.getWallets()[0]?.isAvailable?.()).resolves.toBe(true);
+    await expect(manager.connect("guarda")).resolves.toMatchObject({ account: { address: "TGuardaAddress" } });
   });
 
   it("uses wallet-specific injected fallbacks for second phase extension wallets", async () => {

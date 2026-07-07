@@ -1,5 +1,5 @@
 import { BaseWalletAdapter } from "./adapter";
-import { WalletKitError } from "./errors";
+import { WalletKitError, createWalletError, normalizeWalletError } from "./errors";
 import { WalletEventEmitter } from "./events";
 import type { WalletEventListener, WalletEventName } from "./events";
 import { NetworkRegistry } from "./networks";
@@ -27,6 +27,11 @@ import type {
 } from "./types";
 import { formatExplorerUrl } from "./utils";
 
+const DEFAULT_CONNECT_TIMEOUT_MS = 180_000;
+const DEFAULT_DISCONNECT_TIMEOUT_MS = 2_000;
+const DEFAULT_SIGN_TIMEOUT_MS = 180_000;
+const RECOVER_SESSION_RETRY_DELAYS_MS = [0, 700, 1600, 3000];
+
 export class WalletManager {
   readonly events = new WalletEventEmitter();
   readonly registry: NetworkRegistry;
@@ -37,6 +42,9 @@ export class WalletManager {
   private readonly transactions: WalletTransaction[] = [];
   private session: WalletSession | null = null;
   private activeAdapterId: string | null = null;
+  private pendingAdapterId: string | null = null;
+  private pendingAbortController: AbortController | undefined;
+  private autoReconnectPromise: Promise<WalletSession | null> | undefined;
 
   constructor(readonly config: WalletManagerConfig = {}) {
     this.appName = config.appName;
@@ -89,15 +97,22 @@ export class WalletManager {
 
   async connect(adapterId: string, options: ConnectOptions = {}): Promise<WalletSession> {
     const adapter = this.requireAdapter(adapterId);
+    await this.cancelPendingConnection(adapterId);
+    if (this.activeAdapterId && this.activeAdapterId !== adapterId) {
+      await this.disconnect();
+    }
+    this.pendingAdapterId = adapterId;
+    this.pendingAbortController = new AbortController();
     this.events.emit("connecting", { adapterId });
     try {
       const available = await adapter.isAvailable?.();
       if (available === false) {
-        throw new WalletKitError("WALLET_UNAVAILABLE", `${adapter.metadata.name} is not available`);
+        throw createWalletError.walletNotAvailable(adapter.metadata.name);
       }
 
       const network = this.registry.resolve(options.network ?? this.config.network);
-      const connectOptions: ConnectOptions = { ...options, network };
+      const signal = options.signal ?? this.pendingAbortController.signal;
+      const connectOptions: ConnectOptions = { ...options, network, signal };
       const appName = options.appName ?? this.appName;
       if (appName) connectOptions.appName = appName;
       const userOnAccountChanged = options.onAccountChanged;
@@ -115,58 +130,59 @@ export class WalletManager {
         void this.disconnect();
         userOnDisconnect?.();
       };
-      const result = await adapter.connect(connectOptions);
+      const { timedOut, value: result } = await this.withTimeout(adapter.connect(connectOptions), options.timeoutMs ?? DEFAULT_CONNECT_TIMEOUT_MS);
+      if (timedOut) throw createWalletError.requestTimeout(`${adapter.metadata.name} connect timed out`);
+      if (signal.aborted || this.pendingAdapterId !== adapterId || !result) throw createWalletError.connectionRejected(adapter.metadata.name);
       const session = this.createSession(adapter, result, network);
       await this.setSession(session);
       this.events.emit("connected", { session });
       return session;
     } catch (error) {
-      this.events.emit("rejected", { kind: "connect", adapterId, error });
-      this.events.emit("error", { adapterId, error });
-      throw error;
+      const normalized = normalizeWalletError(error);
+      this.events.emit("rejected", { kind: "connect", adapterId, error: normalized });
+      this.events.emit("error", { adapterId, error: normalized });
+      throw normalized;
+    } finally {
+      if (this.pendingAdapterId === adapterId) {
+        this.pendingAdapterId = null;
+        this.pendingAbortController = undefined;
+      }
     }
   }
 
   async autoReconnect(): Promise<WalletSession | null> {
     if (!this.config.autoReconnect) return null;
-    const stored = await this.readStoredSession();
-    if (!stored) return null;
-    const adapter = this.adapters.get(stored.adapterId);
-    if (!adapter?.restoreSession) {
-      this.events.emit("session_stale", { session: stored });
-      return null;
-    }
-
-    try {
-      const result = await adapter.restoreSession(stored);
-      if (!result) {
-        this.events.emit("session_stale", { session: stored });
-        return null;
-      }
-      const session = this.createSession(adapter, result, stored.network, stored);
-      await this.setSession(session);
-      this.events.emit("session_restored", { session });
-      this.events.emit("connected", { session });
-      return session;
-    } catch (error) {
-      this.events.emit("session_stale", { session: stored });
-      this.events.emit("error", { adapterId: stored.adapterId, error });
-      return null;
-    }
+    this.autoReconnectPromise ??= this.runAutoReconnect().finally(() => {
+      this.autoReconnectPromise = undefined;
+    });
+    return this.autoReconnectPromise;
   }
 
   async disconnect(): Promise<void> {
     const session = this.session ?? undefined;
     const adapterId = this.activeAdapterId ?? session?.adapterId;
     const adapter = adapterId ? this.adapters.get(adapterId) : null;
-    await adapter?.disconnect?.();
-    await this.storage.removeItem(this.storageKey);
-    this.session = null;
-    this.activeAdapterId = null;
-    this.events.emit("disconnected", {
-      ...(adapterId ? { adapterId } : {}),
-      ...(session ? { session } : {})
-    });
+    try {
+      await this.cancelPendingConnection();
+      const { timedOut } = await this.withTimeout(adapter?.disconnect?.(), DEFAULT_DISCONNECT_TIMEOUT_MS);
+      if (adapter?.disconnect && timedOut) {
+        this.events.emit("session_stale", { ...(session ? { session } : {}), reason: "disconnect_timeout" });
+        await adapter.cancelPendingConnection?.();
+      }
+    } catch (error) {
+      const normalized = normalizeWalletError(error);
+      this.events.emit("error", { ...(adapterId ? { adapterId } : {}), error: normalized });
+      await Promise.resolve(adapter?.cancelPendingConnection?.()).catch(() => {});
+    } finally {
+      await this.storage.removeItem(this.storageKey);
+      this.session = null;
+      this.activeAdapterId = null;
+      this.transactions.length = 0;
+      this.events.emit("disconnected", {
+        ...(adapterId ? { adapterId } : {}),
+        ...(session ? { session } : {})
+      });
+    }
   }
 
   async signMessage(request: string | SignMessageRequest): Promise<SignMessageResult> {
@@ -176,15 +192,18 @@ export class WalletManager {
     const normalized = typeof request === "string" ? { message: request } : request;
     this.events.emit("signing", { kind: "message", adapterId: session.adapterId });
     try {
-      const result = await adapter.signMessage({ ...normalized, account: session.account, session });
+      const { timedOut, value: result } = await this.withTimeout(adapter.signMessage({ ...normalized, account: session.account, session }), DEFAULT_SIGN_TIMEOUT_MS);
+      if (timedOut) throw createWalletError.requestTimeout(`${adapter.metadata.name} sign message timed out`);
+      if (!result) throw createWalletError.requestTimeout(`${adapter.metadata.name} sign message timed out`);
       if (!result.proof && !result.signature && !result.txBlob) {
         throw new WalletKitError("INVALID_SIGNATURE", "Wallet returned an empty signature proof");
       }
       this.events.emit("signed", { kind: "message", adapterId: session.adapterId, result });
       return result;
     } catch (error) {
-      this.events.emit("rejected", { kind: "message", adapterId: session.adapterId, error });
-      throw error;
+      const normalizedError = normalizeWalletError(error);
+      this.events.emit("rejected", { kind: "message", adapterId: session.adapterId, error: normalizedError });
+      throw normalizedError;
     }
   }
 
@@ -200,13 +219,16 @@ export class WalletManager {
         : { transaction: request as TransactionPayload };
     this.events.emit("signing", { kind: "transaction", adapterId: session.adapterId });
     try {
-      const result = await adapter.signTransaction({ ...normalized, account: session.account, session });
+      const { timedOut, value: result } = await this.withTimeout(adapter.signTransaction({ ...normalized, account: session.account, session }), DEFAULT_SIGN_TIMEOUT_MS);
+      if (timedOut) throw createWalletError.requestTimeout(`${adapter.metadata.name} sign transaction timed out`);
+      if (!result) throw createWalletError.requestTimeout(`${adapter.metadata.name} sign transaction timed out`);
       if (!result.signed) throw new WalletKitError("INVALID_TRANSACTION_SIGNATURE", "Wallet did not sign transaction");
       this.events.emit("signed", { kind: "transaction", adapterId: session.adapterId, result });
       return result;
     } catch (error) {
-      this.events.emit("rejected", { kind: "transaction", adapterId: session.adapterId, error });
-      throw error;
+      const normalizedError = normalizeWalletError(error);
+      this.events.emit("rejected", { kind: "transaction", adapterId: session.adapterId, error: normalizedError });
+      throw normalizedError;
     }
   }
 
@@ -218,7 +240,9 @@ export class WalletManager {
     }
     this.events.emit("signing", { kind: "transaction", adapterId: session.adapterId });
     try {
-      const result = await adapter.submitTransaction({ ...request, account: session.account, session });
+      const { timedOut, value: result } = await this.withTimeout(adapter.submitTransaction({ ...request, account: session.account, session }), DEFAULT_SIGN_TIMEOUT_MS);
+      if (timedOut) throw createWalletError.requestTimeout(`${adapter.metadata.name} submit transaction timed out`);
+      if (!result) throw createWalletError.requestTimeout(`${adapter.metadata.name} submit transaction timed out`);
       if (!result.hash) throw new WalletKitError("INVALID_TX_RESULT", "Wallet returned an empty transaction hash");
       const transaction = this.addTransaction({
         hash: result.hash,
@@ -233,9 +257,10 @@ export class WalletManager {
       if (transaction.status === "failed") this.events.emit("tx_failed", { transaction });
       return result;
     } catch (error) {
-      this.events.emit("rejected", { kind: "transaction", adapterId: session.adapterId, error });
-      this.events.emit("error", { adapterId: session.adapterId, error });
-      throw error;
+      const normalizedError = normalizeWalletError(error);
+      this.events.emit("rejected", { kind: "transaction", adapterId: session.adapterId, error: normalizedError });
+      this.events.emit("error", { adapterId: session.adapterId, error: normalizedError });
+      throw normalizedError;
     }
   }
 
@@ -291,6 +316,118 @@ export class WalletManager {
     await this.storage.setItem(this.storageKey, JSON.stringify(envelope));
   }
 
+  async cancelPendingConnection(exceptAdapterId?: string): Promise<void> {
+    const pending = this.pendingAdapterId;
+    if (!pending || pending === exceptAdapterId) return;
+    this.pendingAbortController?.abort();
+    this.pendingAbortController = undefined;
+    this.pendingAdapterId = null;
+    try {
+      await this.adapters.get(pending)?.cancelPendingConnection?.();
+    } catch (error) {
+      this.events.emit("error", { adapterId: pending, error: normalizeWalletError(error) });
+    }
+    this.events.emit("session_stale", { reason: "connection_cancelled" });
+  }
+
+  destroy(): void {
+    void this.cancelPendingConnection();
+    this.events.removeAllListeners();
+  }
+
+  private async runAutoReconnect(): Promise<WalletSession | null> {
+    const serialized = await this.storage.getItem(this.storageKey);
+    if (!serialized) return this.recoverPendingReturnSession();
+
+    const stored = this.parseStoredSession(serialized);
+    if (!stored) {
+      await this.storage.removeItem(this.storageKey);
+      this.events.emit("session_expired", {});
+      return null;
+    }
+
+    const adapter = this.adapters.get(stored.adapterId);
+    if (!adapter) {
+      await this.storage.removeItem(this.storageKey);
+      this.events.emit("session_expired", { session: stored });
+      return null;
+    }
+
+    try {
+      if (adapter.restoreSession) {
+        const result = await adapter.restoreSession(stored);
+        if (!result) {
+          this.events.emit("session_stale", { session: stored, reason: "restore_unavailable" });
+          return null;
+        }
+        const session = this.createSession(adapter, result, stored.network, stored);
+        await this.setSession(session);
+        this.events.emit("session_restored", { session });
+        this.events.emit("connected", { session });
+        return session;
+      }
+
+      if (adapter.isAvailable && !(await adapter.isAvailable())) {
+        this.events.emit("session_stale", { session: stored, reason: "adapter_unavailable" });
+        return null;
+      }
+      await this.setSession(stored);
+      this.events.emit("session_restored", { session: stored, stale: true });
+      this.events.emit("connected", { session: stored });
+      return stored;
+    } catch (error) {
+      const normalized = normalizeWalletError(error);
+      await this.storage.removeItem(this.storageKey);
+      this.events.emit("session_expired", { session: stored });
+      this.events.emit("error", { adapterId: stored.adapterId, error: normalized });
+      return null;
+    }
+  }
+
+  private async recoverPendingReturnSession(): Promise<WalletSession | null> {
+    const network = this.getNetwork();
+    const candidates: WalletAdapter[] = [];
+    for (const adapter of this.adapters.values()) {
+      if (!adapter.recoverSession) continue;
+      try {
+        if (adapter.canRecoverSession && !(await adapter.canRecoverSession({ network, walletId: adapter.metadata.id } as ConnectOptions & { walletId: string }))) continue;
+        candidates.push(adapter);
+      } catch {
+        // Skip adapters whose recovery probe throws.
+      }
+    }
+    if (candidates.length === 0) return null;
+
+    const announced = new Set<string>();
+    const delays = this.config.recoveryRetryDelaysMs ?? RECOVER_SESSION_RETRY_DELAYS_MS;
+    for (const delayMs of delays) {
+      if (delayMs > 0) await this.delay(delayMs);
+      for (const adapter of candidates) {
+        try {
+          if (!announced.has(adapter.metadata.id)) {
+            announced.add(adapter.metadata.id);
+            this.events.emit("connecting", { adapterId: adapter.metadata.id, recovering: true });
+          }
+          const result = await adapter.recoverSession?.({ network });
+          if (!result) continue;
+          const session = this.createSession(adapter, result, network);
+          await this.setSession(session);
+          this.events.emit("session_restored", { session });
+          this.events.emit("connected", { session });
+          return session;
+        } catch {
+          // Try the next adapter or retry cycle.
+        }
+      }
+    }
+
+    for (const adapter of candidates) {
+      this.events.emit("session_stale", { reason: "recover_unavailable", attempts: delays.length });
+      void adapter.cancelPendingConnection?.();
+    }
+    return null;
+  }
+
   private createSession(adapter: WalletAdapter, result: ConnectResult, fallbackNetwork: WalletNetwork, previous?: WalletSession): WalletSession {
     const network = result.network ?? result.account.network ?? fallbackNetwork;
     const now = Date.now();
@@ -318,23 +455,59 @@ export class WalletManager {
   private async readStoredSession(): Promise<WalletSession | null> {
     const value = await this.storage.getItem(this.storageKey);
     if (!value) return null;
+    const session = this.parseStoredSession(value);
+    if (!session) await this.storage.removeItem(this.storageKey);
+    return session;
+  }
+
+  private parseStoredSession(serialized: string): WalletSession | null {
     try {
-      const envelope = JSON.parse(value) as StoredWalletSessionEnvelope;
-      return envelope.version === 1 ? envelope.session : null;
+      const parsed = JSON.parse(serialized) as Partial<StoredWalletSessionEnvelope> | WalletSession;
+      if (parsed && typeof parsed === "object" && "version" in parsed && "session" in parsed) {
+        return parsed.version === 1 && this.isValidStoredSession(parsed.session) ? parsed.session : null;
+      }
+      return this.isValidStoredSession(parsed) ? parsed : null;
     } catch {
-      await this.storage.removeItem(this.storageKey);
       return null;
     }
   }
 
+  private isValidStoredSession(value: unknown): value is WalletSession {
+    if (!value || typeof value !== "object") return false;
+    const session = value as Partial<WalletSession>;
+    if (typeof session.adapterId !== "string" || session.adapterId.length === 0) return false;
+    if (typeof session.connectedAt !== "number") return false;
+    if (!session.account || typeof session.account.address !== "string" || session.account.address.length === 0) return false;
+    if (!session.network || typeof session.network !== "object") return false;
+    if (typeof session.expiresAt === "number" && session.expiresAt <= Date.now()) return false;
+    return true;
+  }
+
+  private async withTimeout<T>(promise: Promise<T> | undefined, timeoutMs: number): Promise<{ timedOut: boolean; value?: T }> {
+    if (!promise) return { timedOut: false };
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<{ timedOut: true }>((resolve) => {
+      timer = setTimeout(() => resolve({ timedOut: true }), timeoutMs);
+    });
+    try {
+      return await Promise.race([promise.then((value) => ({ timedOut: false, value }) as const), timeout]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   private requireAdapter(adapterId: string): WalletAdapter {
     const adapter = this.adapters.get(adapterId);
-    if (!adapter) throw new WalletKitError("UNKNOWN_ADAPTER", `Unknown wallet adapter: ${adapterId}`);
+    if (!adapter) throw createWalletError.walletNotFound(adapterId);
     return adapter;
   }
 
   private requireSession(): WalletSession {
-    if (!this.session) throw new WalletKitError("NO_SESSION", "Connect a TRON wallet first");
+    if (!this.session) throw createWalletError.notConnected();
     return this.session;
   }
 
