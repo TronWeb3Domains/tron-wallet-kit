@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "paths": {
+      "@tron-wallet-kit/adapter-tronwallet-bridge": ["../adapters/tronwallet-bridge/src/index.ts"],
+      "@tron-wallet-kit/client": ["../client/src/index.ts"],
+      "@tron-wallet-kit/core": ["../core/src/index.ts"],
+      "@tron-wallet-kit/ui": ["../ui/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}

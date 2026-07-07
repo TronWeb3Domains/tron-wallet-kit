@@ -1,0 +1,17 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "paths": {
+      "@tron-wallet-kit/adapter-tronlink": ["../packages/adapters/tronlink/src/index.ts"],
+      "@tron-wallet-kit/adapter-tronwallet-bridge": ["../packages/adapters/tronwallet-bridge/src/index.ts"],
+      "@tron-wallet-kit/adapter-walletconnect": ["../packages/adapters/walletconnect/src/index.ts"],
+      "@tron-wallet-kit/browser": ["../packages/browser/src/index.ts"],
+      "@tron-wallet-kit/client": ["../packages/client/src/index.ts"],
+      "@tron-wallet-kit/core": ["../packages/core/src/index.ts"],
+      "@tron-wallet-kit/react": ["../packages/react/src/index.ts"],
+      "@tron-wallet-kit/ui": ["../packages/ui/src/index.ts"]
+    }
+  },
+  "include": ["*.ts", "react-basic/**/*.tsx"]
+}

@@ -1,0 +1,32 @@
+{
+  "name": "@tron-wallet-kit/react",
+  "version": "0.0.0",
+  "description": "React integration for TRON Wallet Kit.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --sourcemap --clean --external react",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tron-wallet-kit/client": "workspace:*",
+    "@tron-wallet-kit/core": "workspace:*",
+    "@tron-wallet-kit/ui": "workspace:*"
+  }
+}

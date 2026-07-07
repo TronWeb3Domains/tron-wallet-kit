@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TRON Wallet Kit HTML/CDN Example</title>
+    <link rel="stylesheet" href="/shared.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <h1>HTML / CDN</h1>
+            <p>Vanilla HTML page using the browser IIFE bundle.</p>
+          </div>
+          <a class="button secondary" href="/">Examples</a>
+        </header>
+
+        <div class="grid">
+          <section class="panel">
+            <div class="row">
+              <button class="button" id="open-modal" type="button">Open modal</button>
+              <button class="button secondary" id="sign-message" type="button">Sign message</button>
+              <button class="button secondary" id="mock-tx" type="button">Add mock tx</button>
+            </div>
+
+            <label class="field">
+              <span>Theme</span>
+              <select class="select" id="theme-name">
+                <option value="default">default</option>
+                <option value="light">light</option>
+                <option value="dark">dark</option>
+                <option value="tron" selected>tron</option>
+                <option value="tron-energy">tron-energy</option>
+                <option value="nile">nile</option>
+                <option value="shasta">shasta</option>
+                <option value="bandwidth">bandwidth</option>
+                <option value="energy">energy</option>
+                <option value="sun">sun</option>
+                <option value="terminal">terminal</option>
+                <option value="highContrast">highContrast</option>
+                <option value="graphite">graphite</option>
+                <option value="midnight">midnight</option>
+                <option value="ocean">ocean</option>
+                <option value="glass">glass</option>
+                <option value="rounded">rounded</option>
+                <option value="crisp">crisp</option>
+                <option value="soft">soft</option>
+                <option value="neon">neon</option>
+                <option value="minimal">minimal</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>WalletConnect URI</span>
+              <textarea class="textarea" id="walletconnect-uri" readonly></textarea>
+            </label>
+            <div class="qr-preview" id="walletconnect-qr"></div>
+
+            <pre class="log" id="state-log">Loading...</pre>
+          </section>
+
+          <section class="stack">
+            <div id="wallet-root" class="twk-root" data-twk-root="true"></div>
+            <pre class="log" id="action-log">Ready.</pre>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast-root" class="twk-root" data-twk-root="true"></div>
+
+    <script src="/vendor/tron-wallet-kit.iife.min.js"></script>
+    <script>
+      const walletConnectProjectId = "a4109c95d50e5c136cdafaf9fc44c105";
+      const walletRoot = document.getElementById("wallet-root");
+      const stateLog = document.getElementById("state-log");
+      const actionLog = document.getElementById("action-log");
+      const themeSelect = document.getElementById("theme-name");
+      const walletConnectUri = document.getElementById("walletconnect-uri");
+      const walletConnectQr = document.getElementById("walletconnect-qr");
+      const toastRoot = document.getElementById("toast-root");
+
+      let themeName = themeSelect.value;
+      const kit = TronWalletKit.createBrowserKit({
+        root: walletRoot,
+        theme: { themeName },
+        walletConnectProjectId,
+        walletConnectNetwork: "nile",
+        onWalletConnectUri(uri) {
+          walletConnectUri.value = uri;
+          renderQr(walletConnectQr, uri, "WalletConnect QR");
+          actionLog.textContent = "WalletConnect URI received.";
+        },
+        ui: { themeName, toast: true, showRecentTransactions: true },
+        useBrowserStorage: true,
+      });
+
+      TronWalletKit.applyThemeToElement(toastRoot, { themeName });
+      kit.manager.on("connected", render);
+      kit.manager.on("disconnected", render);
+      kit.manager.on("tx_submitted", render);
+      render();
+
+      document.getElementById("open-modal").addEventListener("click", () => kit.openModal());
+
+      document.getElementById("sign-message").addEventListener("click", async () => {
+        try {
+          const result = await kit.signMessage("Hello from TRON Wallet Kit");
+          actionLog.textContent = `Signature:\n${result.proof || result.signature || result.txBlob || ""}`;
+        } catch (error) {
+          actionLog.textContent = formatError(error);
+        }
+      });
+
+      document.getElementById("mock-tx").addEventListener("click", () => {
+        if (!kit.manager.getSession()) {
+          actionLog.textContent = "Connect a wallet before adding a mock transaction.";
+          return;
+        }
+        const hash = `mock-${Date.now()}`;
+        const transaction = kit.manager.addTransaction({
+          hash,
+          status: "submitted",
+          methodHint: "transferTrx",
+          description: "Mock TRX transaction",
+        });
+        toastRoot.innerHTML = TronWalletKit.createTransactionToastContainerHtml([
+          {
+            id: transaction.id,
+            label: "Mock transaction submitted",
+            status: "pending",
+            txHash: hash,
+          },
+        ]);
+      });
+
+      themeSelect.addEventListener("change", () => {
+        themeName = themeSelect.value;
+        TronWalletKit.applyThemeToElement(walletRoot, { themeName });
+        TronWalletKit.applyThemeToElement(toastRoot, { themeName });
+        render();
+      });
+
+      function render() {
+        const session = kit.manager.getSession();
+        stateLog.textContent = JSON.stringify({ session, transactions: kit.manager.getTransactions(5) }, null, 2);
+        renderAccountPanel(session);
+      }
+
+      function renderAccountPanel(session) {
+        if (!session) {
+          walletRoot.innerHTML = "";
+          return;
+        }
+
+        const viewModel = {
+          account: session.account,
+          networkName: session.network.name,
+          balanceTrx: session.balance ? session.balance.formatted : "0",
+          recentTransactions: kit.manager.getTransactions(5).map((transaction) => ({
+            id: transaction.id,
+            label: transaction.description || "TRON transaction",
+            status: transaction.status === "confirmed" ? "success" : transaction.status === "submitted" ? "pending" : transaction.status,
+            txHash: transaction.hash,
+          })),
+        };
+
+        walletRoot.innerHTML = TronWalletKit.createAccountPanelHtml(viewModel);
+        renderAccountQr(session.account.address);
+      }
+
+      async function renderAccountQr(address) {
+        const slot = walletRoot.querySelector(".twk-qr-slot");
+        if (!slot) return;
+        const dataUrl = await TronWalletKit.createQrDataUrl(address);
+        slot.innerHTML = `<img src="${dataUrl}" alt="TRON address QR">`;
+      }
+
+      async function renderQr(container, value, alt) {
+        const dataUrl = await TronWalletKit.createQrDataUrl(value);
+        container.innerHTML = `<img src="${dataUrl}" alt="${alt}">`;
+      }
+
+      function formatError(error) {
+        return error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+      }
+    </script>
+  </body>
+</html>

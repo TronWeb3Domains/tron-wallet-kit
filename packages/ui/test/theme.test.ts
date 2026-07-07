@@ -1,0 +1,864 @@
+import { describe, expect, it } from "vitest";
+import {
+  createAccountPanelHtml,
+  createAddressQrPanelHtml,
+  createConnectModalHtml,
+  createDefaultWalletUiConfig,
+  createQrDataUrl,
+  createThemeStyleProperties,
+  createThemeStyleText,
+  createTransactionToastContainerHtml,
+  createTransactionToastHtml,
+  createTransactionHistoryPanelHtml,
+  createWalletInlineHtml,
+  createWalletButtonHtml,
+  createWalletKitStyles,
+  filterWalletOptions,
+  getFeaturedWalletOptions,
+  getThemeNames,
+  mergeWalletOptionsWithCatalog,
+  renderWalletQr,
+  resolveWalletUiConfig,
+  resolveTheme,
+} from "../src/index";
+
+describe("themeName presets", () => {
+  it("ships multiple theme names for product customization", () => {
+    expect(getThemeNames()).toEqual([
+      "default",
+      "light",
+      "dark",
+      "tron",
+      "tron-energy",
+      "nile",
+      "shasta",
+      "bandwidth",
+      "energy",
+      "sun",
+      "graphite",
+      "midnight",
+      "ocean",
+      "glass",
+      "rounded",
+      "crisp",
+      "soft",
+      "neon",
+      "terminal",
+      "minimal",
+      "highContrast",
+    ]);
+  });
+
+  it("resolves selected themeName with token overrides", () => {
+    const theme = resolveTheme({
+      themeName: "tron",
+      tokens: {
+        radius: "20px",
+        accent: "#ff0000",
+      },
+    });
+
+    expect(theme.name).toBe("tron");
+    expect(theme.tokens.colorScheme).toBe("dark");
+    expect(theme.tokens.radius).toBe("20px");
+    expect(theme.tokens.accent).toBe("#ff0000");
+  });
+
+  it("creates scoped CSS variables for portal roots", () => {
+    expect(createThemeStyleText({ themeName: "energy" }, "[data-twk-root]")).toContain(
+      "[data-twk-root]",
+    );
+    expect(createThemeStyleText({ themeName: "energy" })).toContain("--twk-accent");
+    expect(createThemeStyleText({ themeName: "energy" })).toContain("--twk-color-scheme");
+    expect(createThemeStyleText({ themeName: "energy" })).toContain("color-scheme: dark");
+  });
+
+  it("creates inline style properties for framework wrappers", () => {
+    const properties = createThemeStyleProperties({ themeName: "bandwidth" });
+
+    expect(properties["color-scheme"]).toBe("dark");
+    expect(properties["--twk-accent"]).toBe("#3b82f6");
+    expect(properties["--twk-wallet-radius"]).toBe("8px");
+    expect(properties["--twk-surface-hover"]).toBe("#1d3455");
+  });
+
+  it("uses polished measured defaults for light and dark", () => {
+    expect(resolveTheme({ themeName: "light" }).tokens).toMatchObject({
+      radius: "28px",
+      walletRadius: "16px",
+      walletIconRadius: "7px",
+      surface: "#ffffff",
+      accent: "#0988f0",
+      qrForeground: "#0a0a0a",
+      qrBackground: "#ffffff",
+    });
+    expect(resolveTheme({ themeName: "dark" }).tokens).toMatchObject({
+      radius: "28px",
+      walletRadius: "16px",
+      walletIconRadius: "7px",
+      surface: "#141414",
+      accent: "#0988f0",
+      qrForeground: "#111827",
+      qrBackground: "#ffffff",
+    });
+  });
+
+  it("keeps production theme text contrast above WCAG AA", () => {
+    for (const themeName of ["light", "dark", "tron", "tron-energy", "nile", "shasta", "bandwidth", "energy", "sun", "terminal", "highContrast"] as const) {
+      const { tokens } = resolveTheme({ themeName });
+      expect(contrast(tokens.text, tokens.surface), themeName).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it("resolves auto mode to a concrete light or dark preset", () => {
+    const theme = resolveTheme({ mode: "auto" });
+
+    expect(["light", "dark"]).toContain(theme.name);
+    expect(["light", "dark"]).toContain(theme.tokens.colorScheme);
+  });
+});
+
+describe("wallet kit surfaces", () => {
+  it("creates token-driven, portal-safe component CSS", () => {
+    const styles = createWalletKitStyles("[data-twk-root]");
+
+    expect(styles).toContain("[data-twk-root] .twk-overlay");
+    expect(styles).toContain("width: min(400px, calc(100vw - 32px))");
+    expect(styles).toContain("height: 360px");
+    expect(styles).toContain(".twk-body");
+    expect(styles).toContain(".twk-qr-code");
+    expect(styles).not.toContain(".twk-qr-theme-action");
+    expect(styles).toContain(".twk-qr-skeleton::after");
+    expect(styles).toContain("padding: 8px 20px 12px");
+    expect(styles).toContain("min-height: 44px");
+    expect(styles).toContain("-webkit-tap-highlight-color: transparent");
+    expect(styles).toContain("appearance: none");
+    expect(styles).toContain("transform: none");
+    expect(styles).toContain(".twk-action-icon");
+    expect(styles).toContain(".twk-action-label");
+    expect(styles).toContain("line-height: 1.28");
+    expect(styles).toContain("padding-block: 1px");
+    expect(styles).toContain(".twk-action-spin");
+    expect(styles).toContain("opacity: 0.58");
+    expect(styles).toContain(".twk-skeleton-name");
+    expect(styles).toContain(".twk-skeleton-balance");
+    expect(styles).toContain(".twk-connecting-ring");
+    expect(styles).toContain(".twk-connecting-ring-accent");
+    expect(styles).toContain("height: 110px");
+    expect(styles).toContain("width: 110px");
+    expect(styles).toContain("stroke-dasharray: 78 162");
+    expect(styles).toContain("@keyframes twk-connecting-dash");
+    expect(styles).not.toContain(".twk-connecting-ring-trail");
+    expect(styles).not.toMatch(/\.twk-connecting-ring\s*{[^}]*border-radius:\s*999px/);
+    expect(styles).not.toContain(".twk-connecting-arc");
+    expect(styles).not.toContain(".twk-qr-tabs");
+    expect(styles).toContain("height: 168px");
+    expect(styles).toContain("var(--twk-wallet-icon-radius)");
+    expect(styles).toContain("background: var(--twk-surface)");
+    expect(styles).toContain(".twk-badge");
+    expect(styles).toContain(".twk-button-icon");
+    expect(styles).toContain(".twk-button-panel");
+    expect(styles).toContain("backdrop-filter: blur(var(--twk-backdrop-blur))");
+    expect(styles).toContain("outline: 2px solid var(--twk-focus-ring)");
+    expect(styles).not.toContain("#");
+    expect(styles).not.toContain("rgba(");
+  });
+
+  it("creates a stable connect modal with wallet ready states", () => {
+    const html = createConnectModalHtml({
+      wallets: [
+        {
+          id: "tronlink",
+          name: "TronLink",
+          readyState: "found",
+          status: "connecting",
+        },
+        {
+          id: "walletconnect",
+          name: "WalletConnect",
+          readyState: "notFound",
+          capabilities: ["qr"],
+        },
+      ],
+      errorMessage: "User rejected the request",
+    });
+
+    expect(html).toContain('role="dialog"');
+    expect(html).toContain('data-twk-wallet-id="tronlink"');
+    expect(html).toContain("Connecting");
+    expect(html).toContain("QR CODE");
+    expect(html).toContain("twk-badge");
+    expect(html).toContain("User rejected the request");
+    expect(html).toContain("twk-status");
+    expect(html).toContain('data-tone="danger"');
+  });
+
+  it("reserves wallet row name and badge space while readiness is loading", () => {
+    const html = createConnectModalHtml({
+      wallets: [
+        {
+          id: "tronlink",
+          name: "TronLink",
+          readyState: "loading",
+        },
+      ],
+    });
+
+    expect(html).toContain('class="twk-wallet-icon" data-loading="true"');
+    expect(html).toContain('class="twk-wallet-name" data-loading="true"');
+    expect(html).toContain('class="twk-badge" data-loading="true"');
+    expect(html).toContain("TronLink");
+  });
+
+  it("creates a token-driven wallet button in disconnected and connected states", () => {
+    const disconnected = createWalletButtonHtml();
+    expect(disconnected).toContain("Connect Wallet");
+    expect(disconnected).toContain('data-status="disconnected"');
+    expect(disconnected).toContain("twk-button-icon");
+
+    const connected = createWalletButtonHtml({
+      status: "connected",
+      connectedLabel: "alice.trx",
+      address: "TXYZabcdefghijklmnopqrstuvwxyz123456789",
+      balanceTrx: "12.5",
+      adapterName: "TronLink",
+      hasPendingTransactions: true,
+      variant: "pill"
+    });
+    expect(connected).toContain("alice.trx");
+    expect(connected).toContain("(12.5 TRX)");
+    expect(connected).toContain("twk-button-chevron");
+    expect(connected).toContain("twk-button-pending");
+    expect(connected).toContain('data-variant="pill"');
+
+    const loading = createWalletButtonHtml({
+      status: "connected",
+      connectedLabel: "alice.trx",
+      identityLoading: true,
+      balanceLoading: true,
+    });
+    expect(loading).toContain("twk-skeleton-name");
+    expect(loading).toContain("twk-skeleton-balance");
+  });
+
+  it("renders TRON featured wallets with TronLink first and WalletConnect last", () => {
+    const html = createConnectModalHtml({
+      wallets: [
+        {
+          id: "walletconnect",
+          adapterId: "walletconnect",
+          name: "WalletConnect",
+          readyState: "found",
+          capabilities: ["qr"],
+        },
+        {
+          id: "tronlink",
+          adapterId: "tronlink",
+          name: "TronLink",
+          readyState: "found",
+        },
+      ],
+    });
+
+    expect(html.indexOf('data-twk-wallet-id="tronlink"')).toBeLessThan(html.indexOf('data-twk-wallet-id="walletconnect"'));
+    expect(html).toContain('data-twk-action="show-all-wallets"');
+    expect(html).toContain("Powered by TRON Wallet Kit");
+    expect(html).not.toContain("reown");
+    expect(html).not.toContain("MULTICHAIN");
+  });
+
+  it("merges the TRON wallet catalog without treating it as multichain", () => {
+    const wallets = mergeWalletOptionsWithCatalog([
+      {
+        id: "tronlink",
+        adapterId: "tronlink",
+        name: "TronLink",
+        readyState: "found",
+      },
+      {
+        id: "walletconnect",
+        adapterId: "walletconnect",
+        name: "WalletConnect",
+        readyState: "found",
+        capabilities: ["qr"],
+      },
+    ]);
+
+    expect(wallets.some((wallet) => wallet.id === "tokenpocket" && wallet.adapterId === "walletconnect")).toBe(true);
+    expect(wallets.find((wallet) => wallet.id === "tronlink")?.platforms).toEqual(["extension", "mobile"]);
+    expect(wallets.find((wallet) => wallet.id === "tokenpocket")?.platforms).toEqual(["extension", "mobile"]);
+    expect(wallets.find((wallet) => wallet.id === "okx")?.adapterId).toBe("okx");
+    expect(wallets.find((wallet) => wallet.id === "bitget")?.adapterId).toBe("bitget");
+    expect(filterWalletOptions(wallets, "trust").map((wallet) => wallet.id)).toEqual(["trust"]);
+    expect(getFeaturedWalletOptions(wallets).at(0)?.id).toBe("tronlink");
+    expect(getFeaturedWalletOptions(wallets).at(-1)?.id).toBe("walletconnect");
+  });
+
+  it("falls back dual-mode wallets to WalletConnect QR when the extension is unavailable", () => {
+    const wallets = mergeWalletOptionsWithCatalog([
+      {
+        id: "tokenpocket",
+        adapterId: "tokenpocket",
+        name: "TokenPocket",
+        readyState: "notFound",
+        transport: "extension",
+      },
+      {
+        id: "walletconnect",
+        name: "WalletConnect",
+        readyState: "found",
+        capabilities: ["qr"],
+        transport: "walletconnect",
+      },
+    ]);
+    const tokenPocket = wallets.find((wallet) => wallet.id === "tokenpocket");
+
+    expect(tokenPocket).toMatchObject({
+      id: "tokenpocket",
+      adapterId: "walletconnect",
+      readyState: "found",
+      transport: "qr",
+      available: true,
+      badge: { label: "QR CODE", tone: "qr" },
+    });
+
+    const html = createConnectModalHtml({
+      view: "qr",
+      activeWalletId: "tokenpocket",
+      qrUri: "wc:test",
+      wallets,
+    });
+
+    expect(html).toContain("TokenPocket");
+    expect(html).toContain("Don&#39;t have TokenPocket?");
+    expect(html).not.toContain("Don&#39;t have WalletConnect?");
+  });
+
+  it("ships generated SVG icons for every catalog wallet", () => {
+    const wallets = mergeWalletOptionsWithCatalog([]);
+    const expectedIconWallets = [
+      "walletconnect",
+      "tronlink",
+      "metamask",
+      "okx",
+      "bitget",
+      "binance",
+      "tokenpocket",
+      "trust",
+      "gate",
+      "foxwallet",
+      "bybit",
+      "imtoken",
+      "tomo",
+      "guarda",
+      "backpack",
+      "onekey",
+      "ledger",
+    ];
+
+    for (const walletId of expectedIconWallets) {
+      expect(wallets.find((wallet) => wallet.id === walletId)?.icon, walletId).toMatch(/^data:image\/svg\+xml,/);
+    }
+  });
+
+  it("renders all-wallets search, connecting detail, and QR views", () => {
+    const allWalletsHtml = createConnectModalHtml({
+      view: "all-wallets",
+      searchQuery: "token",
+      wallets: [
+        {
+          id: "tronlink",
+          name: "TronLink",
+          readyState: "found",
+        },
+        {
+          id: "walletconnect",
+          name: "WalletConnect",
+          readyState: "found",
+          capabilities: ["qr"],
+        },
+      ],
+    });
+    expect(allWalletsHtml).toContain('data-twk-search="wallets"');
+    expect(allWalletsHtml).toContain('data-twk-wallet-id="tokenpocket"');
+    expect(allWalletsHtml).toContain('data-twk-platforms="extension mobile"');
+    expect(allWalletsHtml).not.toContain('data-twk-wallet-id="tronlink"');
+
+    const flatAllWalletsHtml = createConnectModalHtml({
+      view: "all-wallets",
+      wallets: [
+        {
+          id: "tronlink",
+          name: "TronLink",
+          readyState: "loading",
+          platforms: ["extension", "mobile"],
+        },
+        {
+          id: "tokenpocket",
+          name: "TokenPocket",
+          readyState: "found",
+          capabilities: ["qr"],
+          platforms: ["extension", "mobile"],
+        },
+      ],
+    });
+    expect(flatAllWalletsHtml).toContain("twk-wallet-grid");
+    expect(flatAllWalletsHtml).not.toContain("twk-wallet-sections");
+    expect(flatAllWalletsHtml).not.toContain('data-platform="extension"');
+    expect(flatAllWalletsHtml).toContain('class="twk-wallet-card"');
+    expect(flatAllWalletsHtml).toContain('data-loading="true"');
+    expect(flatAllWalletsHtml).toContain("twk-skeleton");
+
+    const connectingHtml = createConnectModalHtml({
+      view: "connecting",
+      activeWalletId: "tronlink",
+      wallets: [
+        {
+          id: "tronlink",
+          name: "TronLink",
+          readyState: "found",
+          downloadUrl: "https://www.tronlink.org/download",
+        },
+      ],
+    });
+    expect(connectingHtml).toContain("Continue in TronLink");
+    expect(connectingHtml).toContain('data-twk-action="retry"');
+    expect(connectingHtml).toContain("twk-connecting-ring");
+    expect(connectingHtml).toContain("twk-connecting-ring-accent");
+    expect(connectingHtml).toContain('viewBox="0 0 110 110"');
+    expect(connectingHtml).toContain('width="110"');
+    expect(connectingHtml).toContain('height="110"');
+    expect(connectingHtml).toContain('rx="36"');
+    expect(connectingHtml).toContain("pathLength=\"240\"");
+    expect(connectingHtml).not.toContain("twk-connecting-ring-trail");
+    expect(connectingHtml).not.toContain("&times;");
+    expect(connectingHtml).toContain("https://www.tronlink.org/download");
+
+    const retryBusyHtml = createConnectModalHtml({
+      view: "connecting",
+      activeWalletId: "tronlink",
+      retryState: "busy",
+      wallets: [
+        {
+          id: "tronlink",
+          name: "TronLink",
+          readyState: "found",
+        },
+      ],
+    });
+    expect(retryBusyHtml).toContain('data-busy="true" disabled');
+    expect(retryBusyHtml).toContain("twk-action-spin");
+    expect(retryBusyHtml).toContain("Try again");
+
+    const qrHtml = createConnectModalHtml({
+      view: "qr",
+      activeWalletId: "walletconnect",
+      qrUri: "wc:test",
+      qrImageSrc: "data:image/png;base64,abc",
+      wallets: [
+        {
+          id: "walletconnect",
+          name: "WalletConnect",
+          readyState: "found",
+          capabilities: ["qr"],
+        },
+      ],
+    });
+    expect(qrHtml).toContain("twk-qr-large");
+    expect(qrHtml).toContain('data-twk-qr-code="true"');
+    expect(qrHtml).not.toContain('data-twk-action="toggle-qr-light"');
+    expect(qrHtml).not.toContain('aria-pressed="false"');
+    expect(qrHtml).not.toContain("twk-qr-tabs");
+    expect(qrHtml).not.toContain("Mobile</span>");
+    expect(qrHtml).not.toContain("twk-view-title");
+    expect(qrHtml.indexOf("twk-qr-large")).toBeLessThan(qrHtml.indexOf("Scan this QR Code"));
+    expect(qrHtml).not.toContain("twk-qr-uri");
+    expect(qrHtml).toContain("data:image/png;base64,abc");
+    expect(qrHtml).toContain("twk-action-icon");
+    expect(qrHtml).toContain("twk-action-label");
+
+    const loadingQrHtml = createConnectModalHtml({
+      view: "qr",
+      activeWalletId: "walletconnect",
+      wallets: [
+        {
+          id: "walletconnect",
+          name: "WalletConnect",
+          readyState: "found",
+          capabilities: ["qr"],
+        },
+      ],
+    });
+    expect(loadingQrHtml).toContain('class="twk-qr-code" data-loading="true" data-twk-qr-code="true"');
+    expect(loadingQrHtml).toContain("twk-qr-skeleton");
+    expect(loadingQrHtml).not.toContain('data-twk-action="toggle-qr-light"');
+
+    const walletConnectQrHtml = createConnectModalHtml({
+      view: "qr",
+      activeWalletId: "walletconnect",
+      qrUri: "wc:test",
+      qrCopyState: "copied",
+      wallets: [
+        {
+          id: "tokenpocket",
+          adapterId: "walletconnect",
+          name: "TokenPocket",
+          readyState: "found",
+          capabilities: ["qr"],
+        },
+        {
+          id: "walletconnect",
+          name: "WalletConnect",
+          readyState: "found",
+          capabilities: ["qr"],
+        },
+      ],
+    });
+    expect(walletConnectQrHtml).toContain('<h2 class="twk-title" id="twk-connect-title">WalletConnect</h2>');
+    expect(walletConnectQrHtml).not.toContain("Don&#39;t have WalletConnect?");
+    expect(walletConnectQrHtml).toContain("Copy link");
+    expect(walletConnectQrHtml).toContain('data-state="success"');
+    expect(walletConnectQrHtml).not.toContain("Don&#39;t have TokenPocket?");
+  });
+
+  it("keeps technical connection errors compact inside detail panels", () => {
+    const html = createConnectModalHtml({
+      view: "connecting",
+      activeWalletId: "metamask",
+      errorMessage:
+        "Failed to fetch dynamically imported module: http://127.0.0.1:5174/node_modules/.vite/deps/@tronweb3_tronwallet-adapter-metamask-tron.js?v=2220cb3c",
+      wallets: [
+        {
+          id: "metamask",
+          name: "MetaMask",
+          readyState: "found",
+        },
+      ],
+    });
+
+    expect(html).toContain("Connection declined");
+    expect(html).not.toContain("node_modules/.vite/deps");
+    expect(html).toContain("MetaMask could not be loaded. Refresh the page and try again.");
+  });
+
+  it("creates inline wallet picker markup with a network badge", () => {
+    const html = createWalletInlineHtml({
+      networkName: "Nile",
+      networkType: "TESTNET",
+      wallets: [
+        {
+          id: "tronlink",
+          name: "TronLink",
+          readyState: "found",
+        },
+      ],
+    });
+
+    expect(html).toContain("twk-inline");
+    expect(html).not.toContain("twk-overlay");
+    expect(html).toContain("twk-network-badge");
+    expect(html).toContain("Nile");
+    expect(html).toContain("TESTNET");
+
+    const mainnetHtml = createWalletInlineHtml({
+      networkName: "TRON Mainnet",
+      networkType: "MAINNET",
+      wallets: [
+        {
+          id: "tronlink",
+          name: "TronLink",
+          readyState: "found",
+        },
+      ],
+    });
+    expect(mainnetHtml).not.toContain("twk-network-badge");
+  });
+
+  it("keeps all-wallets flat without wallet grouping markup", () => {
+    const wallets = [
+      { id: "walletconnect", name: "WalletConnect", readyState: "found" as const, group: "featured", capabilities: ["qr"] },
+      { id: "tokenpocket", name: "TokenPocket", readyState: "found" as const, group: "popular", capabilities: ["qr"] },
+      { id: "okx", name: "OKX Wallet", readyState: "found" as const, group: "popular" },
+      { id: "bitget", name: "Bitget Wallet", readyState: "found" as const, group: "popular" },
+      { id: "guarda", name: "Guarda", readyState: "found" as const, group: "popular" },
+    ];
+    const flat = createConnectModalHtml({
+      view: "all-wallets",
+      wallets,
+    });
+
+    expect(flat).not.toContain("twk-wallet-groups");
+    expect(flat).not.toContain("twk-mini-stack");
+    expect(flat).not.toContain("twk-mini-count");
+    expect(flat).toContain("twk-wallet-grid");
+  });
+
+  it("creates an account panel with copy, QR, and recent transaction slots", () => {
+    const html = createAccountPanelHtml({
+      account: {
+        address: "TXYZabcdefghijklmnopqrstuvwxyz123456789",
+        domain: "alice.trx",
+      },
+      networkName: "nile",
+      balanceTrx: "123.45",
+      copyState: "copied",
+      addressQr: {
+        src: "data:image/svg+xml,%3Csvg%3E%3C/svg%3E",
+      },
+      recentTransactions: [
+        {
+          id: "tx-1",
+          label: "Send TRX",
+          status: "pending",
+          txHash: "abcdef1234567890abcdef1234567890abcdef12",
+          explorerUrl: "https://tronscan.org/#/transaction/abcdef1234567890abcdef1234567890abcdef12",
+        },
+        { id: "tx-2", label: "Confirmed", status: "success", txHash: "2222222222222222222222222222222222222222" },
+        { id: "tx-3", label: "Failed", status: "failed", txHash: "3333333333333333333333333333333333333333" },
+        { id: "tx-4", label: "Fourth", status: "unknown", txHash: "4444444444444444444444444444444444444444" },
+      ],
+      showSendButton: true,
+    });
+
+    expect(html).toContain("Connected");
+    expect(html).toContain("alice.trx");
+    expect(html).toContain("123.45 TRX");
+    expect(html).not.toContain("nile");
+    expect(html).not.toContain("TRX TRX");
+    expect(html).toContain("Copied");
+    expect(html).toContain('data-state="success"');
+    expect(html).toContain("twk-action-icon");
+    expect(html).toContain("twk-action-label");
+    expect(html).toContain('aria-live="polite"');
+    expect(html).toContain("twk-qr-slot");
+    expect(html).toContain('data-has-recent="true"');
+    expect(html).toContain("twk-tx-section");
+    expect(html).toContain("twk-tx-header");
+    expect(html).toContain('data-twk-action="tx-history"');
+    expect(html).toContain("View");
+    expect(html).toContain("Send TRX");
+    expect(html).toContain("Confirmed");
+    expect(html).toContain("Failed");
+    expect(html).not.toContain("Fourth");
+    expect(html).toContain('data-status="pending"');
+    expect(html).toContain("twk-tx-link");
+  });
+
+  it("keeps recent transactions opt-in when there are no transactions", () => {
+    const html = createAccountPanelHtml({
+      account: {
+        address: "TXYZabcdefghijklmnopqrstuvwxyz123456789",
+      },
+    });
+
+    expect(html).toContain('data-has-recent="false"');
+    expect(html).not.toContain("twk-tx-section");
+  });
+
+  it("creates an address QR sub-view with back, copy, and shared QR target", () => {
+    const html = createAddressQrPanelHtml({
+      address: "TXYZabcdefghijklmnopqrstuvwxyz123456789",
+      copyState: "copied",
+    });
+
+    expect(html).toContain('data-twk-account-view="address-qr"');
+    expect(html).toContain('data-twk-action="account-back"');
+    expect(html).toContain('data-twk-action="close-account"');
+    expect(html).toContain('data-twk-address-qr-code="true"');
+    expect(html).not.toContain('data-twk-action="toggle-address-qr-light"');
+    expect(html).not.toContain('aria-pressed="true"');
+    expect(html).toContain("TXYZabcdefghijklmnopqrstuvwxyz123456789");
+    expect(html).toContain("Copied");
+    expect(html).toContain('data-state="success"');
+  });
+
+  it("renders stable account identity and balance skeletons", () => {
+    const html = createAccountPanelHtml({
+      account: {
+        address: "TXYZabcdefghijklmnopqrstuvwxyz123456789",
+      },
+      identityLoading: true,
+      balanceLoading: true,
+    });
+
+    expect(html).toContain('class="twk-domain" data-loading="true"');
+    expect(html).toContain('class="twk-pill-balance" data-loading="true"');
+    expect(html).toContain("twk-skeleton");
+  });
+
+  it("hides balance when missing instead of rendering a dash", () => {
+    const html = createAccountPanelHtml({
+      account: {
+        address: "TXYZabcdefghijklmnopqrstuvwxyz123456789",
+        network: {
+          id: "nile",
+          name: "Nile",
+          networkType: "TESTNET",
+          nativeAsset: "TRX",
+          nativeAssetDecimals: 6,
+          rpcUrl: "https://nile.trongrid.io",
+        },
+      },
+    });
+
+    expect(html).not.toContain('class="twk-pill-balance"');
+    expect(html).not.toContain(">-<");
+    expect(html).not.toContain("TRX TRX");
+  });
+
+  it("does not render network labels inside the account panel", () => {
+    const html = createAccountPanelHtml({
+      account: {
+        address: "TXYZabcdefghijklmnopqrstuvwxyz123456789",
+      },
+      networkName: "TRON mainnet",
+    });
+
+    expect(html).not.toContain("TRON mainnet");
+  });
+
+  it("omits fallback account name and explorer unless explicitly enabled", () => {
+    const html = createAccountPanelHtml({
+      account: {
+        address: "TXYZabcdefghijklmnopqrstuvwxyz123456789",
+      },
+      explorerUrl: "https://tronscan.org/#/address/TXYZabcdefghijklmnopqrstuvwxyz123456789",
+    });
+
+    expect(html).not.toContain("twk-domain");
+    expect(html).toContain("twk-account-meta-pill");
+    expect(html).toContain("TXYZ");
+    expect(html).not.toContain("Explorer");
+  });
+
+  it("creates a full recent transaction history sub-view", () => {
+    const html = createTransactionHistoryPanelHtml({
+      account: {
+        address: "TXYZabcdefghijklmnopqrstuvwxyz123456789",
+      },
+      recentTransactions: [
+        { id: "tx-1", label: "One", status: "pending", txHash: "1111111111111111111111111111111111111111" },
+        { id: "tx-2", label: "Two", status: "success", txHash: "2222222222222222222222222222222222222222" },
+        { id: "tx-3", label: "Three", status: "failed", txHash: "3333333333333333333333333333333333333333" },
+        { id: "tx-4", label: "Four", status: "unknown", txHash: "4444444444444444444444444444444444444444" },
+      ],
+    });
+
+    expect(html).toContain('data-twk-account-view="tx-history"');
+    expect(html).toContain('data-twk-action="account-back"');
+    expect(html).toContain("One");
+    expect(html).toContain("Four");
+  });
+
+
+  it("escapes untrusted display values", () => {
+    const html = createConnectModalHtml({
+      view: "all-wallets",
+      searchQuery: "bad",
+      wallets: [
+        {
+          id: "bad",
+          name: "<script>alert(1)</script>",
+          readyState: "found",
+        },
+      ],
+    });
+
+    expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
+    expect(html).not.toContain("<script>");
+  });
+
+  it("resolves TRON UI config with simple defaults", () => {
+    const config = resolveWalletUiConfig({
+      mode: "dark",
+      customTheme: {
+        radius: "18px",
+      },
+      modal: {
+        title: "Connect TRON",
+      },
+      walletList: {
+        layout: "grid",
+      },
+      toast: true,
+    });
+
+    expect(config.theme.name).toBe("dark");
+    expect(config.theme.tokens.radius).toBe("18px");
+    expect(config.modal.title).toBe("Connect TRON");
+    expect(config.walletList.layout).toBe("grid");
+    expect(config.toast && config.toast.position).toBe("bottom-right");
+    expect(createDefaultWalletUiConfig().accountPanel.showAddressQr).toBe(true);
+  });
+
+  it("creates accessible transaction toasts with explorer and dismiss actions", () => {
+    const toast = createTransactionToastHtml({
+      id: "tx-1",
+      label: "Transaction confirmed",
+      status: "success",
+      txHash: "abcdef1234567890abcdef1234567890abcdef12",
+      explorerUrl: "https://tronscan.org/#/transaction/abcdef",
+    });
+    const container = createTransactionToastContainerHtml([
+      {
+        id: "tx-1",
+        label: "Transaction submitted",
+        status: "pending",
+      },
+    ]);
+
+    expect(toast).toContain('role="status"');
+    expect(toast).toContain('data-status="success"');
+    expect(toast).toContain('data-twk-toast-dismiss="tx-1"');
+    expect(toast).toContain("https://tronscan.org/#/transaction/abcdef");
+    expect(container).toContain('aria-live="polite"');
+    expect(container).toContain("twk-toast-spinner");
+  });
+
+  it("creates QR data URLs for addresses or WalletConnect URIs", async () => {
+    const dataUrl = await createQrDataUrl("TXYZabcdefghijklmnopqrstuvwxyz123456789");
+
+    expect(dataUrl).toMatch(/^data:image\/png;base64,/);
+    expect(typeof renderWalletQr).toBe("function");
+  });
+
+  it("creates transaction toast markup", () => {
+    const html = createTransactionToastContainerHtml([
+      {
+        id: "tx-1",
+        label: "Transaction submitted",
+        status: "pending",
+        txHash: "abcdef1234567890abcdef1234567890abcdef12",
+      },
+    ]);
+
+    expect(html).toContain("twk-toast-root");
+    expect(html).toContain('data-status="pending"');
+    expect(html).toContain("twk-toast-spinner");
+    expect(html).toContain("twk-toast-dismiss");
+    expect(html).toContain("Transaction submitted");
+  });
+});
+
+function contrast(foreground: string, background: string): number {
+  const fg = luminance(parseHex(foreground));
+  const bg = luminance(parseHex(background));
+  const light = Math.max(fg, bg);
+  const dark = Math.min(fg, bg);
+  return (light + 0.05) / (dark + 0.05);
+}
+
+function luminance([red, green, blue]: readonly [number, number, number]): number {
+  const [r, g, b] = [red, green, blue].map((channel) => {
+    const value = channel / 255;
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  }) as [number, number, number];
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function parseHex(value: string): [number, number, number] {
+  const match = /^#([0-9a-f]{6})$/i.exec(value);
+  if (!match) throw new Error(`Expected hex color, got ${value}`);
+  const hex = match[1] as string;
+  return [Number.parseInt(hex.slice(0, 2), 16), Number.parseInt(hex.slice(2, 4), 16), Number.parseInt(hex.slice(4, 6), 16)];
+}
