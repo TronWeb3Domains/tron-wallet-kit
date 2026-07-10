@@ -81,7 +81,7 @@ Track expected wallet behavior for MVP and future adapters.
 | HTML/CDN example QR/toast smoke | HTML/CDN route and browser global bundle load after QR/toast integration | Browser smoke passed on 2026-07-03 |
 | TRX Domains identity resolver | Enriches connected account with `.trx` domain/displayName/avatar and ignores stale async lookups after account changes | Mock-tested on 2026-07-07 |
 | React basic identity controls | Shows `Resolve TRX Domains` toggle and Identity metric with safe no-domain fallback | Browser smoke passed on 2026-07-07 |
-| TRX Domains real lookup | Known wallet address resolves to expected domain through `trondomainjs` `getDomain` then `getDomains` fallback | Manual lookup passed on 2026-07-07: `TSFquXZoXtei19kDJ1Sy1YGjznz8gWhfKd` -> `trxdomains.trx` |
+| TRX Domains real lookup | Known wallet address resolves to expected domain through the direct mainnet TRX Domains contract resolver | Manual lookup passed on 2026-07-07: `TSFquXZoXtei19kDJ1Sy1YGjznz8gWhfKd` -> `trxdomains.trx` |
 | Core manager lifecycle | Connect/session/sign/submit/autoReconnect events with `session_restored` then `connected` | Unit-tested |
 | Core runtime hardening P0 | Connect/sign timeouts, pending connect cancellation, disconnect timeout cleanup, autoReconnect dedup/fallback, session expiry/legacy migration, recover-return, destroy cleanup, and error normalization | Unit-tested on 2026-07-07 |
 | UI i18n/config P1 | Locale/labels merge, localized wallet badges, modal behavior toggles, powered-by branding toggle, QR size/margin/error-correction config, account visible tx count | UI unit-tested on 2026-07-07 |

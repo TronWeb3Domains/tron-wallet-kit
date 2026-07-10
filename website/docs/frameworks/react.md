@@ -5,6 +5,7 @@ The React package provides provider/hooks and current MVP surfaces.
 ```tsx
 import {
   TronWalletProvider,
+  WalletButton,
   ConnectModal,
   AccountPanel,
   useWalletKit,
@@ -19,6 +20,7 @@ import {
 
 - `TronWalletProvider`
 - `TronWalletKitProvider` alias
+- `WalletButton`
 - `ConnectModal`
 - `AccountPanel`
 

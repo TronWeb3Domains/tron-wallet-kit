@@ -3316,3 +3316,20 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Verification:
   - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 40 tests.
+
+## 2026-07-10 Current Docs Cleanup
+
+- Reviewed the reviewer note about stale client dead code/docs.
+- Findings:
+  - `walletRegistryFields` and `injectedFallbackFromRegistry` no longer exist in current client source, so there was no live export to remove.
+  - Current operational docs still had adapter-era React examples, external-domain-SDK identity wording, and outdated Ledger optional wording.
+- Fix:
+  - Updated `docs/REACT_USAGE.md` to use `@tron-wallet-kit/client`, `createWalletKit()`, `TronWalletProvider`, and `WalletButton`.
+  - Updated website quick start and identity docs to the same kit/provider flow.
+  - Updated coder notes and wallet test matrix to describe direct TRX Domains contract identity.
+  - Removed external domain SDK naming from current docs; historical specs/reviews remain unchanged.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 40 tests.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 46 tests.

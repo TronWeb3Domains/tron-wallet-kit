@@ -51,13 +51,14 @@
 - Do not introduce XRPL terms into public TRON APIs.
 - Avoid leaking TronLink-specific API shapes into core.
 - WalletConnect should be implemented as an adapter with explicit TRON chain/session handling.
-- Identity resolution belongs in the client layer, not adapters or UI. Current implementation uses `trondomainjs` behind opt-in `identity: { enabled: true }` and writes normalized `account.domain` / `account.displayName`.
-- `trondomainjs` requires `tronweb`. The all-in-one browser IIFE now includes those dependencies when identity helpers are exported, making split browser bundles more urgent before release.
+- Identity resolution belongs in the client layer, not adapters or UI. Current implementation calls the TRX Domains contract directly on mainnet behind opt-in `identity: { enabled: true }` and writes normalized `account.domain` / `account.displayName`.
+- Identity uses the shared/lazy TronWeb path and intentionally avoids an external domain SDK runtime dependency.
 - Architecture source of truth: `docs/TRON_WALLET_KIT_ARCHITECTURE_SPEC.md`.
 - Current migration rule: keep compatibility with scaffold-era adapters while moving toward spec-era `WalletManager`/session/transaction lifecycle. Do not expand `WalletClient` further as a pseudo-manager; next client work should wrap the core `WalletManager` and expose `createWalletKit()`.
 - Core now has full TRON network configs. New adapter/network code should use `TRON_MAINNET`, `TRON_NILE`, `TRON_SHASTA`, or `NetworkRegistry`, not ad hoc `{ name, chainId }` objects.
 - Core source is now split into XRPL-style modules: `adapter`, `errors`, `events`, `manager`, `networks`, `storage`, `types`, and `utils`. Keep `packages/core/src/index.ts` as a barrel only.
 - UI source is now split into XRPL-style modules: `types`, `themes`, `config`, `styles`, `dom`, `icons`, `utils`, `qr`, `modal`, `button`, `toast`, and `account-panel`. Keep `packages/ui/src/index.ts` as a barrel only.
+- Modal view HTML builders now live in `packages/ui/src/modal-views.ts`; keep `packages/ui/src/modal.ts` focused on controller lifecycle, mounting, focus, timers, and wallet-manager events.
 - Next UI work should improve behavior inside the focused modules rather than re-growing the package entrypoint: WalletConnect QR/details belongs in `modal`/`qr`, account identity and balance lifecycle belongs in `account-panel`/future `balance`, and toast lifecycle belongs in `toast`.
 - TronLink detection note: current TronLink docs say `window.tron.tronWeb` can be `false` until authorization. Do not require `tronWeb` before `eth_requestAccounts` on TIP-1193 providers. Legacy docs also allow separate `window.tronLink` + `window.tronWeb`, so keep that fallback inside the TronLink adapter.
 - Upstream TronWallet Adapter note: learn from its `readyState/state/connecting/address` lifecycle and async wallet discovery, especially for TronLink. Keep our public core contract TRON-native and avoid carrying upstream EVM/multichain assumptions into core.

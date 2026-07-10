@@ -1,19 +1,24 @@
 # Identity
 
-TRON Wallet Kit resolves wallet identity from TRX Domains by calling the TRX Domains smart contract directly — no `trondomainjs` dependency. Resolution is **mainnet-only** (other networks resolve to no identity, without error) and reuses the kit's shared TronWeb instance.
+TRON Wallet Kit resolves wallet identity from TRX Domains by calling the TRX Domains smart contract directly. Resolution is **mainnet-only** (other networks resolve to no identity, without error) and reuses the kit's shared TronWeb instance.
 
 Identity resolution lives in the client layer. Adapters return TRON addresses; the client can optionally enrich the connected account with the wallet's default TRX Domains name (any TLD — `.trx`, `.sun`, `.usdd`, …) and metadata. UI components only render the normalized `account.domain` / `account.displayName` fields.
 
 ## React
 
 ```tsx
-import { TronWalletKitProvider, AccountPanel } from "@tron-wallet-kit/react";
+import { createWalletKit } from "@tron-wallet-kit/client";
+import { TronWalletProvider, WalletButton } from "@tron-wallet-kit/react";
+
+const kit = createWalletKit({
+  identity: { enabled: true },
+});
 
 export function App() {
   return (
-    <TronWalletKitProvider adapters={adapters} identity={{ enabled: true }}>
-      <AccountPanel theme={{ themeName: "tron" }} />
-    </TronWalletKitProvider>
+    <TronWalletProvider kit={kit} ui={{ themeName: "tron" }}>
+      <WalletButton />
+    </TronWalletProvider>
   );
 }
 ```
@@ -21,10 +26,9 @@ export function App() {
 ## Client
 
 ```ts
-import { createWalletClient } from "@tron-wallet-kit/client";
+import { createWalletKit } from "@tron-wallet-kit/client";
 
-const client = createWalletClient({
-  adapters,
+const kit = createWalletKit({
   identity: {
     enabled: true,
     metadataKeys: ["avatar", "website"],
@@ -35,8 +39,7 @@ const client = createWalletClient({
 ## Custom Resolver
 
 ```ts
-const client = createWalletClient({
-  adapters,
+const kit = createWalletKit({
   identity: {
     enabled: true,
     resolver: async (account) => {

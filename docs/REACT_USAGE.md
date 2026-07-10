@@ -1,60 +1,45 @@
 # React Usage
 
-This guide shows the current React MVP shape with TronLink and WalletConnect.
+This guide shows the current React MVP shape with the default TRON wallet registry.
 
 ## Install Packages
 
 ```sh
-pnpm add @tron-wallet-kit/react @tron-wallet-kit/adapter-tronlink @tron-wallet-kit/adapter-walletconnect
+pnpm add @tron-wallet-kit/react @tron-wallet-kit/client
 ```
 
 ## Provider Setup
 
 ```tsx
-import { TronWalletKitProvider, ConnectModal, AccountPanel } from "@tron-wallet-kit/react";
-import { createTronLinkAdapter } from "@tron-wallet-kit/adapter-tronlink";
-import { createWalletConnectAdapter } from "@tron-wallet-kit/adapter-walletconnect";
+import { createWalletKit } from "@tron-wallet-kit/client";
+import { TronWalletProvider, WalletButton } from "@tron-wallet-kit/react";
 
-const adapters = [
-  createTronLinkAdapter(),
-  createWalletConnectAdapter({
+const kit = createWalletKit({
+  walletConnect: {
     projectId: "a4109c95d50e5c136cdafaf9fc44c105",
-    network: "nile",
-    onUri(uri) {
-      console.log("WalletConnect URI:", uri);
-    },
-  }),
-];
+  },
+  identity: { enabled: true },
+});
 
 export function App() {
   return (
-    <TronWalletKitProvider adapters={adapters} identity={{ enabled: true }}>
-      <ConnectModal theme={{ themeName: "tron" }} />
-      <AccountPanel
-        theme={{ themeName: "tron" }}
-        balanceTrx="0"
-        showSendButton
-      />
-    </TronWalletKitProvider>
+    <TronWalletProvider kit={kit} ui={{ themeName: "tron" }}>
+      <WalletButton />
+    </TronWalletProvider>
   );
 }
 ```
 
 ## Current Surface Notes
 
-- `ConnectModal` renders registered adapters from `WalletClient`.
-- `AccountPanel` reads connected account state from `WalletClient` and displays `account.domain` when identity resolution is enabled.
-- Identity resolution uses `trondomainjs` through the client layer, not adapters or UI.
+- `WalletButton` opens the shared connect modal and connected account panel.
+- The connect modal renders the default client wallet registry plus any app-supplied wallet config.
+- Account state displays `account.domain` when identity resolution is enabled.
+- Identity resolution calls the TRX Domains smart contract directly through the shared/lazy TronWeb path; there is no external domain SDK runtime dependency.
 - Address QR can use `createQrDataUrl(address)`.
 - Transaction toast markup is available through `createTransactionToastContainerHtml`.
 - WalletConnect real-wallet QA still needs TokenPocket/mobile testing with the project ID above.
 
-## Optional Ledger Support
+## Ledger Support
 
-Ledger is shipped as a wallet descriptor, but the hardware adapter package is not bundled as a hard dependency. Install the upstream package in the app when Ledger should be enabled:
-
-```sh
-pnpm add @tronweb3/tronwallet-adapter-ledger
-```
-
-If the package is not installed, Ledger remains gracefully unavailable and the rest of the wallet list continues to work. Real-device QA still requires a Ledger device with the TRON app open.
+Ledger is shipped as a default hardware wallet descriptor and the upstream Ledger adapter package is included by `@tron-wallet-kit/client`. Real-device QA still requires a Ledger device with the TRON app open.
