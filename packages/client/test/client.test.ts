@@ -9,6 +9,7 @@ import {
   createTronWeb3AdapterBridge,
   createWalletClient,
   createWalletKit,
+  getSharedTronWeb,
   WALLET_ICONS
 } from "../src/index";
 
@@ -218,6 +219,16 @@ describe("client entrypoints", () => {
     await expect(kit.refreshIdentity()).resolves.toMatchObject({ domain: "retry.trx" });
     expect(calls).toBe(2);
     expect(kit.getSession()?.account.domain).toBe("retry.trx");
+  });
+
+  it("does not pin the first test identity TronWeb as the shared instance", async () => {
+    const first = createMockTronDomainTronWeb({ reverseOf: "first.trx" }).tronWeb;
+    const second = createMockTronDomainTronWeb({ reverseOf: "second.trx" }).tronWeb;
+    (globalThis as Record<string, unknown>).__tronWalletKitTronWebForTest = first;
+    await expect(getSharedTronWeb(undefined, TRON_MAINNET, "tronlink")).resolves.toBe(first);
+
+    (globalThis as Record<string, unknown>).__tronWalletKitTronWebForTest = second;
+    await expect(getSharedTronWeb(undefined, TRON_MAINNET, "trust")).resolves.toBe(second);
   });
 
   it("resolves TRX Domains through the direct mainnet contract", async () => {

@@ -28,7 +28,7 @@ const balanceTronWebPathsByWallet: Record<string, readonly string[]> = {
   backpack: ["backpack.tron.tronWeb", "backpack.tronLink.tronWeb"]
 };
 
-let sharedTronWeb: TronDomainTronWeb | undefined;
+const sharedTronWebByHost = new Map<string, TronDomainTronWeb>();
 
 export function resolveBalanceTronWeb(walletId: string | undefined): BalanceTronWeb | undefined {
   const paths = walletId ? balanceTronWebPathsByWallet[walletId] : undefined;
@@ -39,40 +39,23 @@ export function resolveBalanceTronWeb(walletId: string | undefined): BalanceTron
   return undefined;
 }
 
-export async function getSharedTronWeb(manager: WalletManager | undefined, network: TronNetwork | undefined, walletId: string | undefined): Promise<TronDomainTronWeb> {
+export async function getSharedTronWeb(manager: WalletManager | undefined, network: TronNetwork | undefined, _walletId: string | undefined): Promise<TronDomainTronWeb> {
   const testTronWeb = (globalThis as { __tronWalletKitTronWebForTest?: TronDomainTronWeb }).__tronWalletKitTronWebForTest;
-  if (testTronWeb) {
-    sharedTronWeb = testTronWeb;
-    return sharedTronWeb;
-  }
-  if (sharedTronWeb) return sharedTronWeb;
-  const injected = resolveIdentityTronWeb(walletId);
-  if (injected) {
-    sharedTronWeb = injected;
-    return sharedTronWeb;
-  }
+  if (testTronWeb) return testTronWeb;
   const resolvedNetwork = network ?? manager?.getNetwork() ?? TRON_MAINNET;
   const fullHost = resolvedNetwork.fullHost ?? resolvedNetwork.httpRpcUrl ?? resolvedNetwork.rpcUrl;
+  const cached = sharedTronWebByHost.get(fullHost);
+  if (cached) return cached;
   const TronWeb = await loadTronWebConstructor();
-  sharedTronWeb = new TronWeb({ fullHost });
-  return sharedTronWeb;
-}
-
-function resolveIdentityTronWeb(walletId: string | undefined): TronDomainTronWeb | undefined {
-  const tronWeb = resolveBalanceTronWeb(walletId);
-  return isTronDomainTronWeb(tronWeb) ? tronWeb : undefined;
+  const tronWeb = new TronWeb({ fullHost });
+  sharedTronWebByHost.set(fullHost, tronWeb);
+  return tronWeb;
 }
 
 function isBalanceTronWeb(value: unknown): value is BalanceTronWeb {
   if (typeof value !== "object" || value === null) return false;
   const trx = (value as BalanceTronWeb).trx;
   return typeof trx?.getBalance === "function";
-}
-
-function isTronDomainTronWeb(value: unknown): value is TronDomainTronWeb {
-  if (typeof value !== "object" || value === null) return false;
-  const candidate = value as Partial<TronDomainTronWeb>;
-  return typeof candidate.contract === "function";
 }
 
 async function loadTronWebConstructor(): Promise<TronWebConstructor> {

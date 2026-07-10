@@ -3479,3 +3479,20 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 49 tests.
+
+## 2026-07-10 RPC-Scoped Identity TronWeb
+
+- Follow-up fix for identity still not appearing reliably on first connect.
+- Root cause:
+  - TRX Domains identity resolution was allowed to use wallet-injected `tronWeb` and cache that instance as shared state.
+  - On first connect, injected provider readiness can lag behind the session, so identity could bind to an unstable provider.
+  - The test override path also cached the first override as shared state, revealing the same class of stale TronWeb pinning.
+- Fix:
+  - `getSharedTronWeb()` now uses a network RPC/fullHost-scoped TronWeb cache for identity.
+  - It no longer chooses wallet-injected `tronWeb` for identity resolution; injected provider lookup remains for balance.
+  - Test override TronWeb is returned directly and never pinned into shared cache.
+  - Added regression coverage proving the first test TronWeb instance is not pinned.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 50 tests.
