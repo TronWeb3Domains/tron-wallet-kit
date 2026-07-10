@@ -98,12 +98,24 @@ export function getFeaturedWalletOptions(wallets: readonly WalletOptionViewModel
 
   const installedIds = new Set(installed.map((wallet) => wallet.id));
   const targetCount = Math.max(installed.length, rankedIds.length);
-  const recommended = wallets
-    .filter((wallet) => !installedIds.has(wallet.id) && isFeaturedFallbackWallet(wallet))
+  const walletConnect = byId.get("walletconnect");
+  const qrFallbacks = wallets
+    .filter((wallet) => !installedIds.has(wallet.id) && isQrFeaturedFallbackWallet(wallet))
     .sort(compareWalletRank);
-  const featured = uniqueWalletsById([...installed, ...recommended]).slice(0, targetCount);
+  const hardware = wallets
+    .filter((wallet) => !installedIds.has(wallet.id) && isHardwareWallet(wallet))
+    .sort(compareWalletRank);
+  const loading = wallets
+    .filter((wallet) => !installedIds.has(wallet.id) && !isWalletConnectWallet(wallet) && !isQrFeaturedFallbackWallet(wallet) && !isHardwareWallet(wallet) && wallet.readyState === "loading")
+    .sort(compareWalletRank);
+  const featured = uniqueWalletsById([
+    ...installed,
+    ...(walletConnect ? [walletConnect] : []),
+    ...qrFallbacks,
+    ...hardware,
+    ...loading
+  ]).slice(0, targetCount);
   if (installed.length === 0) {
-    const walletConnect = byId.get("walletconnect");
     return walletConnect ? uniqueWalletsById([walletConnect, ...featured]) : featured;
   }
   return featured;
@@ -240,15 +252,22 @@ function getWalletRank(wallet: WalletOptionViewModel): number {
 }
 
 function isInstalledWallet(wallet: WalletOptionViewModel): boolean {
-  if (wallet.id === "walletconnect" || wallet.transport === "walletconnect" || wallet.transport === "qr" || wallet.capabilities?.includes("qr")) return false;
-  if (wallet.transport === "hardware" || wallet.platforms?.includes("hardware")) return false;
+  if (isWalletConnectWallet(wallet) || wallet.transport === "qr" || wallet.capabilities?.includes("qr")) return false;
+  if (isHardwareWallet(wallet)) return false;
   return wallet.readyState === "found" || wallet.available === true;
 }
 
-function isFeaturedFallbackWallet(wallet: WalletOptionViewModel): boolean {
-  if (wallet.readyState === "loading") return true;
-  if (wallet.transport === "hardware" || wallet.platforms?.includes("hardware")) return true;
-  return isWalletConnectLike(wallet) || wallet.transport === "qr" || wallet.capabilities?.includes("qr") === true;
+function isQrFeaturedFallbackWallet(wallet: WalletOptionViewModel): boolean {
+  if (isWalletConnectWallet(wallet)) return false;
+  return wallet.transport === "qr" || wallet.capabilities?.includes("qr") === true;
+}
+
+function isWalletConnectWallet(wallet: WalletOptionViewModel): boolean {
+  return wallet.id === "walletconnect" || wallet.transport === "walletconnect";
+}
+
+function isHardwareWallet(wallet: WalletOptionViewModel): boolean {
+  return wallet.transport === "hardware" || wallet.platforms?.includes("hardware") === true;
 }
 
 function createCatalogBadge(item: TronWalletCatalogItem, available: boolean, labels: ConnectModalLabels): NonNullable<WalletOptionViewModel["badge"]> {

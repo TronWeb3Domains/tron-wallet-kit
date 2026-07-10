@@ -200,6 +200,7 @@
 
 - Featured installed-first is an actionable surface, not a full wallet directory.
 - Desktop featured installed-first must not show pure `NOT INSTALLED` extension wallets.
-- After installed extensions, the list may use QR/WalletConnect-capable wallets, hardware wallets, or loading entries to keep the layout useful.
+- Bucket order is installed extensions first, then WalletConnect, then QR-capable wallet fallbacks, then hardware wallets, then loading entries.
+- Recommended order only sorts wallets inside a bucket; it must not decide visibility ahead of actionable state.
 - Not-installed extension wallets remain discoverable in All Wallets, where directory/search behavior is expected.
 - Manual featured configuration still follows the integrator's explicit list, even if that list includes unavailable wallets.

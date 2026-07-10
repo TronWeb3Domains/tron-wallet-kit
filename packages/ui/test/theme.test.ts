@@ -299,7 +299,8 @@ describe("wallet kit surfaces", () => {
     const featured = getFeaturedWalletOptions(wallets);
     expect(featured).toHaveLength(5);
     expect(featured.at(0)?.id).toBe("tronlink");
-    expect(featured.map((wallet) => wallet.id)).toEqual(["tronlink", "tokenpocket", "walletconnect", "binance", "ledger"]);
+    expect(featured.map((wallet) => wallet.id)).toEqual(["tronlink", "walletconnect", "tokenpocket", "binance", "safepal"]);
+    expect(featured.findIndex((wallet) => wallet.id === "walletconnect")).toBeLessThan(featured.findIndex((wallet) => wallet.id === "tokenpocket"));
     expect(featured.some((wallet) => wallet.readyState === "notFound" && !wallet.capabilities?.includes("qr") && wallet.transport !== "hardware")).toBe(false);
   });
 
@@ -409,7 +410,8 @@ describe("wallet kit surfaces", () => {
     );
 
     expect(featuredWallets.map((wallet) => wallet.id)).toEqual(["tronlink", "tokenpocket", "okx", "bitget", "trust", "binance", "walletconnect", "metamask", "gate", "bybit", "guarda"]);
-    expect(installedFirstWallets.map((wallet) => wallet.id)).toEqual(["tronlink", "tokenpocket", "walletconnect", "binance", "ledger"]);
+    expect(installedFirstWallets.map((wallet) => wallet.id)).toEqual(["tronlink", "walletconnect", "tokenpocket", "binance", "safepal"]);
+    expect(installedFirstWallets.findIndex((wallet) => wallet.id === "walletconnect")).toBeLessThan(installedFirstWallets.findIndex((wallet) => wallet.id === "tokenpocket"));
     expect(installedFirstWallets.map((wallet) => wallet.id)).not.toEqual(expect.arrayContaining(["okx", "bitget"]));
     expect(installedFirstWallets.some((wallet) => wallet.readyState === "notFound" && !wallet.capabilities?.includes("qr") && wallet.transport !== "hardware")).toBe(false);
     expect(installedOnlyWithoutInstalled.map((wallet) => wallet.id)).toEqual(["walletconnect"]);
