@@ -214,3 +214,9 @@
 - Featured and All Wallets should share the same wallet-grid max-height rhythm to reduce perceived panel jumping.
 - All Wallets uses the same token-driven top/bottom fade overflow affordance as Featured.
 - View changes should use a subtle opacity/translate/scale transition and must respect `prefers-reduced-motion`.
+
+## 2026-07-10 Modal View Module Boundary
+
+- Modal HTML view builders live in `packages/ui/src/modal-views.ts`.
+- `packages/ui/src/modal.ts` should stay focused on controller lifecycle, wallet manager events, timers, focus, QR side effects, and modal/inline mounting.
+- Future UI text/markup changes should usually touch `modal-views.ts` once, not duplicate fixes between portal modal and inline controller.

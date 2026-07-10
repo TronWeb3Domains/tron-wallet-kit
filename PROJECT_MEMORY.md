@@ -3304,3 +3304,15 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Verification:
   - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 40 tests.
   - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+
+## 2026-07-10 Modal View Builder Split
+
+- Returned to the technical-debt list from review.
+- First low-risk UI refactor:
+  - Extracted modal body/view HTML builders from `packages/ui/src/modal.ts` into `packages/ui/src/modal-views.ts`.
+  - Moved connecting/QR/all-wallets/featured markup helpers, wallet icon/name/badge rendering, network/status/footer helpers, active wallet resolution, QR event wallet resolution, and connect error normalization into the view module.
+  - Kept controller lifecycle, connect flow state, QR rendering side effects, timers, focus, and scroll overflow logic in `modal.ts`.
+  - `modal.ts` line count reduced from about 1230 to about 947; this prepares the next pass to unify `createWalletModal` and `createWalletInline`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 40 tests.
