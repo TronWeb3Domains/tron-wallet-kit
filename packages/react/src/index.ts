@@ -174,16 +174,23 @@ export function WalletButton(props: WalletButtonProps) {
     setBalanceTrx(session.balance?.formatted);
     setIdentityLoading(!props.connectedLabel && !session.account.domain && !session.account.displayName);
     setBalanceLoading(!session.balance?.formatted);
-    const identityTimer = globalThis.setTimeout(() => {
+    const identityTimers: ReturnType<typeof globalThis.setTimeout>[] = [];
+    const runIdentityRefresh = (attempt = 0) => {
       void kit.refreshIdentity().then((nextIdentity) => {
-        if (!cancelled) {
+        if (cancelled) return;
+        if (!nextIdentity && attempt < 2) {
+          identityTimers.push(globalThis.setTimeout(() => runIdentityRefresh(attempt + 1), attempt === 0 ? 1400 : 3200));
+          return;
+        }
+        {
           setIdentity(nextIdentity);
           setIdentityLoading(false);
         }
       }).catch(() => {
         if (!cancelled) setIdentityLoading(false);
       });
-    }, 260);
+    };
+    identityTimers.push(globalThis.setTimeout(() => runIdentityRefresh(0), 260));
     void kit.refreshBalance().then((balance) => {
       if (!cancelled) {
         setBalanceTrx(balance?.formatted);
@@ -194,7 +201,7 @@ export function WalletButton(props: WalletButtonProps) {
     });
     return () => {
       cancelled = true;
-      globalThis.clearTimeout(identityTimer);
+      identityTimers.forEach((timer) => globalThis.clearTimeout(timer));
     };
   }, [kit, session?.account.address, session?.network.id]);
 

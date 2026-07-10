@@ -112,7 +112,7 @@ export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
       }
       try {
         const identity = await identityResolver(account, { network: session.network, walletId: getEffectiveWalletId(session) });
-        identityCache.set(key, { identity, expiresAt: Date.now() + identityCacheTtlMs });
+        if (identity) identityCache.set(key, { identity, expiresAt: Date.now() + identityCacheTtlMs });
         const latest = getRefreshTargetSession(session);
         if (!latest) return identity;
         if (identity) {

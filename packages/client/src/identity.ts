@@ -15,6 +15,15 @@ export function createTronDomainIdentityResolver(config: {
   const metadataKeys = config.metadataKeys ?? ["avatar", "website"];
   const timeoutMs = config.timeoutMs ?? config.resolverTimeoutMs ?? 8000;
   let contractPromise: Promise<TronDomainContract> | undefined;
+  const getContract = async (tronWeb: Awaited<ReturnType<typeof getSharedTronWeb>>) => {
+    contractPromise ??= tronWeb.contract().at(contractAddress) as Promise<TronDomainContract>;
+    try {
+      return await contractPromise;
+    } catch (error) {
+      contractPromise = undefined;
+      throw error;
+    }
+  };
 
   return async (account, context) => {
     const network = context.network ?? config.manager?.getNetwork();
@@ -23,8 +32,7 @@ export function createTronDomainIdentityResolver(config: {
     const run = (async () => {
       const tronWeb = await getSharedTronWeb(config.manager, network, context.walletId);
       tronWeb.setAddress?.(account.address);
-      contractPromise ??= tronWeb.contract().at(contractAddress) as Promise<TronDomainContract>;
-      const contract = await contractPromise;
+      const contract = await getContract(tronWeb);
       const domain = normalizeDomain(await contract.reverseOf(account.address).call()) ?? await firstOwnedDomain(contract, account.address);
       if (!domain) return undefined;
 

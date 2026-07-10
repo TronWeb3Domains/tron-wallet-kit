@@ -200,6 +200,26 @@ describe("client entrypoints", () => {
     });
   });
 
+  it("does not cache a missing identity result from the first refresh", async () => {
+    let calls = 0;
+    const kit = createWalletKit({
+      adapters: [createMockAdapter()],
+      identity: {
+        enabled: true,
+        resolver: async () => {
+          calls += 1;
+          return calls === 1 ? undefined : { domain: "retry.trx", displayName: "retry.trx" };
+        }
+      }
+    });
+
+    await kit.manager.connect("mock");
+    await expect(kit.refreshIdentity()).resolves.toBeUndefined();
+    await expect(kit.refreshIdentity()).resolves.toMatchObject({ domain: "retry.trx" });
+    expect(calls).toBe(2);
+    expect(kit.getSession()?.account.domain).toBe("retry.trx");
+  });
+
   it("resolves TRX Domains through the direct mainnet contract", async () => {
     const { tronWeb, calls } = createMockTronDomainTronWeb({
       reverseOf: "trxdomains.trx",

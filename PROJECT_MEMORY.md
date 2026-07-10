@@ -3463,3 +3463,19 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 48 tests.
+
+## 2026-07-10 First Identity Refresh Retry
+
+- Follow-up fix for identity still being flaky on first connect.
+- Root cause:
+  - `refreshIdentity()` cached `undefined` results for the full identity cache TTL. If the first TRX Domains lookup returned empty because provider/contract was not ready yet, later refreshes reused the miss and did not retry.
+  - The TRX Domains resolver could also keep a rejected contract promise from an early contract load failure.
+- Fix:
+  - Identity cache now stores successful identities only; misses can be retried.
+  - TRX Domains contract promise is cleared when contract creation rejects, allowing later calls to recover.
+  - React `WalletButton` now retries initial identity refresh twice with short delays when the first lookup returns no identity.
+  - Added regression coverage for a first missing identity result followed by a successful retry.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 49 tests.
