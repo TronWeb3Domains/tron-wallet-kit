@@ -3227,3 +3227,19 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 39 tests.
+
+## 2026-07-10 Gate First Approval Hydration Window
+
+- User reported the first Gate connect still fails with `Gate Wallet did not return an address`, but after page refresh clicking connect succeeds.
+- Interpretation:
+  - Gate authorization likely succeeds on the first request, but the injected address is hydrated after the previous short settle window.
+  - Refresh works because the address is already persisted/exposed by the extension.
+- Fix:
+  - Do not add a second request/prompt.
+  - Increase Gate's injected address wait window:
+    - `addressTimeoutMs: 15000`
+    - `addressSettleMs: 8000`
+  - Gate still uses one `eth_requestAccounts` call, then polls fresh `gatewallet.tron`, `gatewallet.tronLink`, and `gatewallet.tronWeb` paths plus `accountsChanged`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 46 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.

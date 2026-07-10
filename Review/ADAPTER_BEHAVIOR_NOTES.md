@@ -666,3 +666,12 @@ pnpm add @tronweb3/tronwallet-adapter-ledger
   - `shouldAutoRetryConnect()` returns false for Gate.
   - Gate retains the visible manual Try again action.
   - Other non-QR transient extension failures may still use the one-shot auto retry.
+
+# 2026-07-10 Gate first approval hydration wait
+
+- User reported Gate first connect still fails with `Gate Wallet did not return an address`, then succeeds after page refresh.
+- Treat this as delayed provider hydration, not a need for a second request.
+- Gate injected descriptor now waits longer after the single `eth_requestAccounts` call:
+  - `addressTimeoutMs: 15000`
+  - `addressSettleMs: 8000`
+- This keeps Gate from double-prompting while giving the extension enough time to expose `defaultAddress` on fresh global paths.

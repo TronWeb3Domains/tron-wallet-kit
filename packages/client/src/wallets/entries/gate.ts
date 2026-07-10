@@ -9,8 +9,8 @@ export const gate: WalletDescriptor = {
   platforms: ["extension"],
   group: "popular",
   availabilityTimeoutMs: 5000,
-  addressTimeoutMs: 5000,
-  addressSettleMs: 900,
+  addressTimeoutMs: 15000,
+  addressSettleMs: 8000,
   accountChangeEventNames: ["accountsChanged"],
   accountChangeTimeoutMs: 5000,
   detect: {
