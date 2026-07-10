@@ -164,6 +164,14 @@ export function WalletButton(props: WalletButtonProps) {
     }
 
     let cancelled = false;
+    setIdentity(session.account.domain || session.account.displayName || session.account.avatar
+      ? {
+          ...(session.account.domain ? { domain: session.account.domain } : {}),
+          ...(session.account.displayName ? { displayName: session.account.displayName } : {}),
+          ...(session.account.avatar ? { avatar: session.account.avatar } : {})
+        }
+      : undefined);
+    setBalanceTrx(session.balance?.formatted);
     setIdentityLoading(!props.connectedLabel && !session.account.domain && !session.account.displayName);
     setBalanceLoading(!session.balance?.formatted);
     const identityTimer = globalThis.setTimeout(() => {

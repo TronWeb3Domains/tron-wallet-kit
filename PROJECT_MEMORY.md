@@ -3446,3 +3446,20 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 41 tests.
   - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 47 tests.
   - `pnpm wallets:validate` passed with 18 descriptors and 18 icons.
+
+## 2026-07-10 Stable Balance And Identity Refresh Merge
+
+- Fixed intermittent balance/identity display after connect and account changes.
+- Root cause:
+  - `refreshBalance()` and `refreshIdentity()` captured the same initial session snapshot and wrote results back asynchronously.
+  - Whichever refresh finished last could overwrite fields written by the other refresh, so balance or identity appeared to flicker or disappear.
+  - React `WalletButton` also kept local identity/balance state across account changes until the next refresh settled.
+- Fix:
+  - `refreshBalance()` and `refreshIdentity()` now re-read the current session before writing and only merge into it when adapter, address, and network still match the original refresh target.
+  - Refresh context now uses the connected session network and the selected catalog wallet id from `session.metadata.walletId` when present.
+  - React `WalletButton` resets local identity and balance state from the current session at the start of each account/network lifecycle.
+  - Added a regression test where balance resolves before identity; final session must keep both values.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 48 tests.

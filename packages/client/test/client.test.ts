@@ -166,6 +166,40 @@ describe("client entrypoints", () => {
     });
   });
 
+  it("merges concurrent identity and balance refreshes into the latest session", async () => {
+    let resolveIdentity: ((value: { domain: string; displayName: string }) => void) | undefined;
+    let resolveBalance: ((value: string) => void) | undefined;
+    const identityPromise = new Promise<{ domain: string; displayName: string }>((resolve) => {
+      resolveIdentity = resolve;
+    });
+    const balancePromise = new Promise<string>((resolve) => {
+      resolveBalance = resolve;
+    });
+    const kit = createWalletKit({
+      adapters: [createMockAdapter()],
+      identity: {
+        enabled: true,
+        resolver: async () => identityPromise
+      },
+      balance: {
+        resolver: async () => balancePromise
+      }
+    });
+
+    await kit.manager.connect("mock");
+    const identityRefresh = kit.refreshIdentity();
+    const balanceRefresh = kit.refreshBalance();
+    resolveBalance?.("42");
+    await expect(balanceRefresh).resolves.toMatchObject({ formatted: "42", symbol: "TRX" });
+    resolveIdentity?.({ domain: "alice.trx", displayName: "Alice" });
+    await expect(identityRefresh).resolves.toMatchObject({ domain: "alice.trx" });
+
+    expect(kit.getSession()).toMatchObject({
+      account: { domain: "alice.trx", displayName: "Alice" },
+      balance: { formatted: "42", symbol: "TRX" }
+    });
+  });
+
   it("resolves TRX Domains through the direct mainnet contract", async () => {
     const { tronWeb, calls } = createMockTronDomainTronWeb({
       reverseOf: "trxdomains.trx",

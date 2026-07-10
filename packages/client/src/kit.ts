@@ -37,6 +37,18 @@ export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
 
   const submit = (methodHint: TronMethodHint, transaction: TransactionPayload, description?: string) =>
     manager.submitTransaction({ methodHint, transaction, ...(description ? { description } : {}) });
+  const getRefreshTargetSession = (session: NonNullable<ReturnType<typeof manager.getSession>>) => {
+    const latest = manager.getSession();
+    if (!latest) return null;
+    if (latest.adapterId !== session.adapterId) return null;
+    if (latest.account.address !== session.account.address) return null;
+    if (latest.network.id !== session.network.id) return null;
+    return latest;
+  };
+  const getEffectiveWalletId = (session: NonNullable<ReturnType<typeof manager.getSession>>) => {
+    const walletId = session.metadata?.walletId;
+    return typeof walletId === "string" && walletId.length > 0 ? walletId : session.adapterId;
+  };
 
   return {
     manager,
@@ -63,13 +75,15 @@ export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
       const session = manager.getSession();
       if (!session || !balanceResolver) return session?.balance;
       try {
-        const result = await balanceResolver(session.account, { network: manager.getNetwork(), walletId: session.adapterId });
+        const result = await balanceResolver(session.account, { network: session.network, walletId: getEffectiveWalletId(session) });
         const balance = normalizeBalance(result);
-        if (!balance) return session.balance;
-        await manager.setSession({ ...session, balance, updatedAt: Date.now() });
+        const latest = getRefreshTargetSession(session);
+        if (!latest) return undefined;
+        if (!balance) return latest.balance;
+        await manager.setSession({ ...latest, balance, updatedAt: Date.now() });
         return balance;
       } catch (error) {
-        if (config.balance?.failSilently !== false) return session.balance;
+        if (config.balance?.failSilently !== false) return getRefreshTargetSession(session)?.balance;
         throw error;
       }
     },
@@ -78,17 +92,34 @@ export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
       const session = manager.getSession();
       const account = session?.account;
       if (!session || !account || !identityResolver) return undefined;
-      const key = `${manager.getNetwork().id}:${account.address}`;
+      const key = `${session.network.id}:${account.address}`;
       const cached = identityCache.get(key);
-      if (cached && cached.expiresAt > Date.now()) return cached.identity;
+      if (cached && cached.expiresAt > Date.now()) {
+        const latest = getRefreshTargetSession(session);
+        if (cached.identity && latest) {
+          await manager.setSession({
+            ...latest,
+            account: {
+              ...latest.account,
+              ...(cached.identity.domain ? { domain: cached.identity.domain } : {}),
+              ...(cached.identity.displayName ? { displayName: cached.identity.displayName } : {}),
+              ...(cached.identity.avatar ? { avatar: cached.identity.avatar } : {})
+            },
+            updatedAt: Date.now()
+          });
+        }
+        return cached.identity;
+      }
       try {
-        const identity = await identityResolver(account, { network: manager.getNetwork(), walletId: session.adapterId });
+        const identity = await identityResolver(account, { network: session.network, walletId: getEffectiveWalletId(session) });
         identityCache.set(key, { identity, expiresAt: Date.now() + identityCacheTtlMs });
+        const latest = getRefreshTargetSession(session);
+        if (!latest) return identity;
         if (identity) {
           await manager.setSession({
-            ...session,
+            ...latest,
             account: {
-              ...session.account,
+              ...latest.account,
               ...(identity.domain ? { domain: identity.domain } : {}),
               ...(identity.displayName ? { displayName: identity.displayName } : {}),
               ...(identity.avatar ? { avatar: identity.avatar } : {})
