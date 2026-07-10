@@ -973,55 +973,26 @@ describe("client entrypoints", () => {
     }
   });
 
-  it("marks Gate available from camelCase and EIP-6963 Gate markers", async () => {
+  it("does not mark Gate installed from OneKey or generic ethereum markers", async () => {
+    (globalThis as typeof globalThis & { $onekey?: unknown }).$onekey = {
+      tron: {
+        request: vi.fn(),
+        tronWeb: { defaultAddress: { base58: "TOneKey" } }
+      }
+    };
+    (globalThis as typeof globalThis & { ethereum?: unknown }).ethereum = {
+      providers: [
+        { info: { name: "OneKey", rdns: "so.onekey.wallet" }, isOneKey: true },
+        { info: { name: "Gate Wallet", rdns: "io.gate.wallet" }, request: vi.fn() }
+      ]
+    };
     (globalThis as typeof globalThis & { gateWallet?: unknown }).gateWallet = {
       tron: {}
     };
-    const aliasManager = createWalletClient({ wallets: ["gate"] });
+    const manager = createWalletClient({ wallets: ["gate", "onekey"] });
 
-    await expect(Promise.resolve(aliasManager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
-    delete (globalThis as Record<string, unknown>).gateWallet;
-
-    const eventTarget = new EventTarget();
-    const previousAddEventListener = (globalThis as Record<string, unknown>).addEventListener;
-    const previousRemoveEventListener = (globalThis as Record<string, unknown>).removeEventListener;
-    const previousDispatchEvent = (globalThis as Record<string, unknown>).dispatchEvent;
-    (globalThis as Record<string, unknown>).addEventListener = eventTarget.addEventListener.bind(eventTarget);
-    (globalThis as Record<string, unknown>).removeEventListener = eventTarget.removeEventListener.bind(eventTarget);
-    (globalThis as Record<string, unknown>).dispatchEvent = eventTarget.dispatchEvent.bind(eventTarget);
-    const listener = (event: Event) => {
-      if (event.type !== "eip6963:requestProvider") return;
-      globalThis.dispatchEvent(
-        new CustomEvent("eip6963:announceProvider", {
-          detail: {
-            info: { name: "Gate Wallet", rdns: "io.gate.wallet" },
-            provider: {}
-          }
-        })
-      );
-    };
-    globalThis.addEventListener("eip6963:requestProvider", listener);
-    try {
-      const eip6963Manager = createWalletClient({ wallets: ["gate"] });
-      await expect(Promise.resolve(eip6963Manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
-    } finally {
-      globalThis.removeEventListener("eip6963:requestProvider", listener);
-      if (previousAddEventListener) {
-        (globalThis as Record<string, unknown>).addEventListener = previousAddEventListener;
-      } else {
-        delete (globalThis as Record<string, unknown>).addEventListener;
-      }
-      if (previousRemoveEventListener) {
-        (globalThis as Record<string, unknown>).removeEventListener = previousRemoveEventListener;
-      } else {
-        delete (globalThis as Record<string, unknown>).removeEventListener;
-      }
-      if (previousDispatchEvent) {
-        (globalThis as Record<string, unknown>).dispatchEvent = previousDispatchEvent;
-      } else {
-        delete (globalThis as Record<string, unknown>).dispatchEvent;
-      }
-    }
+    await expect(Promise.resolve(manager.getWallets().find((wallet) => wallet.metadata.id === "gate")?.isAvailable?.())).resolves.toBe(false);
+    await expect(Promise.resolve(manager.getWallets().find((wallet) => wallet.metadata.id === "onekey")?.isAvailable?.())).resolves.toBe(true);
   });
 
   it("waits briefly for late injected providers when configured", async () => {

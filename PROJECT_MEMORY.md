@@ -3156,3 +3156,18 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Verification:
   - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 45 tests and no skipped tests.
   - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+
+## 2026-07-10 Gate + OneKey Conflict Root Cause
+
+- User found the Gate `R.updateStatus is not a function` error only appears when OneKey is enabled.
+- Root cause:
+  - Gate installed-state probe was too broad.
+  - It checked `window.ethereum/providers`, camelCase `window.gateWallet`, and dispatched EIP-6963 provider discovery.
+  - With OneKey/multi-chain extensions enabled, these probes can touch competing provider surfaces and make Gate appear installed or active without the upstream Gate marker.
+- Fix:
+  - Narrowed `hasGateInjectedMarker()` to the official upstream support check: `window.gatewallet && window.gatewallet.tronLink`.
+  - Removed Gate's ethereum-provider and EIP-6963 availability fallbacks.
+  - Added regression coverage: OneKey plus generic ethereum markers must not mark Gate installed when `window.gatewallet.tronLink` is absent.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 45 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.

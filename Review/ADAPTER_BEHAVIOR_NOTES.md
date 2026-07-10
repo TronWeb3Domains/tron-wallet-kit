@@ -617,3 +617,14 @@ pnpm add @tronweb3/tronwallet-adapter-ledger
   - In-app request method: `tron_requestAccounts`, then read `tronLink.tronWeb.defaultAddress.base58`.
 - The previous custom injected Gate hydrate/retry/event tests were removed because they no longer represent the runtime path. Current coverage follows the upstream adapter contract.
 - Gate desktop QA still requires HTTPS origin for provider injection; use `https://127.0.0.1:5174/react-basic/` or a deployed HTTPS URL.
+
+# 2026-07-10 Gate + OneKey conflict correction
+
+- User identified the Gate `R.updateStatus is not a function` condition as a conflict when OneKey is enabled, not a pure tronweb3-bridge issue.
+- Gate availability must be strict:
+  - Use only the upstream Gate support marker: `window.gatewallet && window.gatewallet.tronLink`.
+  - Do not infer Gate from `window.ethereum`, `ethereum.providers`, `window.gateWallet`, `window.GateWallet`, or EIP-6963 discovery.
+- Reason:
+  - OneKey and other multi-chain wallets can participate in generic ethereum/EIP-6963 provider surfaces.
+  - Broad Gate probes can make the UI construct/connect Gate without a real `window.gatewallet.tronLink`, or trigger provider side effects across wallets.
+- Regression coverage now verifies OneKey can be installed while Gate remains unavailable unless the exact Gate marker exists.

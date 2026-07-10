@@ -180,9 +180,9 @@ export function getGateInjectedProvider(): InjectedTronProvider | undefined {
 }
 
 export async function hasGateInjectedMarker(): Promise<boolean> {
-  if (hasGateGlobalMarker()) return true;
-  if (hasGateEthereumMarker()) return true;
-  return waitForGateEip6963Marker();
+  const gatewallet = safeGetProperty(globalThis as unknown as Record<string, unknown>, "gatewallet");
+  if (!gatewallet || typeof gatewallet !== "object") return false;
+  return Boolean(safeGetProperty(gatewallet as Record<string, unknown>, "tronLink"));
 }
 
 export function getInjectedTronProvider(paths: readonly string[]): InjectedTronProvider | undefined {
@@ -294,90 +294,6 @@ function safeGetProperty(source: Record<string, unknown>, key: string): unknown 
   } catch {
     return undefined;
   }
-}
-
-function hasGateGlobalMarker(): boolean {
-  const globals = globalThis as unknown as Record<string, unknown>;
-  for (const key of ["gatewallet", "gateWallet", "GateWallet"]) {
-    const marker = safeGetProperty(globals, key);
-    if (isGateWalletLike(marker)) return true;
-  }
-  return false;
-}
-
-function isGateWalletLike(value: unknown): boolean {
-  if (!value || typeof value !== "object") return false;
-  const wallet = value as Record<string, unknown>;
-  return Boolean(
-    safeGetProperty(wallet, "tronLink") ||
-      safeGetProperty(wallet, "tron") ||
-      safeGetProperty(wallet, "tronWeb") ||
-      safeGetProperty(wallet, "request")
-  );
-}
-
-function hasGateEthereumMarker(): boolean {
-  const ethereum = safeGetProperty(globalThis as unknown as Record<string, unknown>, "ethereum");
-  return [ethereum, ...getEthereumProviders(ethereum)].some(isGateEthereumProvider);
-}
-
-function getEthereumProviders(ethereum: unknown): unknown[] {
-  if (!ethereum || typeof ethereum !== "object") return [];
-  const providers = safeGetProperty(ethereum as Record<string, unknown>, "providers");
-  return Array.isArray(providers) ? providers : [];
-}
-
-function isGateEthereumProvider(provider: unknown): boolean {
-  if (!provider || typeof provider !== "object") return false;
-  const record = provider as Record<string, unknown>;
-  if (safeGetProperty(record, "isGateWallet") || safeGetProperty(record, "isGate")) return true;
-  const info = safeGetProperty(record, "info");
-  if (isGateProviderInfo(info)) return true;
-  const providerInfo = safeGetProperty(record, "providerInfo");
-  return isGateProviderInfo(providerInfo);
-}
-
-function isGateProviderInfo(info: unknown): boolean {
-  if (!info || typeof info !== "object") return false;
-  const record = info as Record<string, unknown>;
-  const name = String(safeGetProperty(record, "name") ?? "");
-  const rdns = String(safeGetProperty(record, "rdns") ?? "");
-  return /gate/i.test(name) || /gate/i.test(rdns);
-}
-
-function waitForGateEip6963Marker(timeoutMs = 250): Promise<boolean> {
-  const target = globalThis as unknown as {
-    addEventListener?: (type: string, listener: EventListener) => void;
-    removeEventListener?: (type: string, listener: EventListener) => void;
-    dispatchEvent?: (event: Event) => boolean;
-    CustomEvent?: typeof CustomEvent;
-  };
-  if (!target.addEventListener || !target.removeEventListener || !target.dispatchEvent || typeof Event !== "function") {
-    return Promise.resolve(false);
-  }
-  const addEventListener = target.addEventListener.bind(globalThis) as (type: string, listener: EventListener) => void;
-  const removeEventListener = target.removeEventListener.bind(globalThis) as (type: string, listener: EventListener) => void;
-  const dispatchEvent = target.dispatchEvent.bind(globalThis) as (event: Event) => boolean;
-  return new Promise((resolve) => {
-    let settled = false;
-    const cleanup = () => {
-      removeEventListener("eip6963:announceProvider", listener);
-      clearTimeout(timer);
-    };
-    const done = (value: boolean) => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      resolve(value);
-    };
-    const listener: EventListener = (event) => {
-      const detail = "detail" in event ? (event as CustomEvent<{ info?: unknown; provider?: unknown }>).detail : undefined;
-      if (isGateProviderInfo(detail?.info) || isGateEthereumProvider(detail?.provider)) done(true);
-    };
-    const timer = setTimeout(() => done(false), timeoutMs);
-    addEventListener("eip6963:announceProvider", listener);
-    dispatchEvent(new Event("eip6963:requestProvider"));
-  });
 }
 
 function createSafePalTronWeb(tronWeb: unknown, hook: Record<string, unknown>): NonNullable<InjectedTronProvider["tronWeb"]> {
