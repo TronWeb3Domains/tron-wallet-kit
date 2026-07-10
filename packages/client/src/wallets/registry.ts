@@ -6,6 +6,7 @@ import { foxwallet } from "./entries/foxwallet";
 import { gate } from "./entries/gate";
 import { guarda } from "./entries/guarda";
 import { imtoken } from "./entries/imtoken";
+import { klever } from "./entries/klever";
 import { ledger } from "./entries/ledger";
 import { metamask } from "./entries/metamask";
 import { okx } from "./entries/okx";
@@ -28,6 +29,7 @@ export const BUILTIN_WALLET_DESCRIPTORS = [
   foxwallet,
   bybit,
   imtoken,
+  klever,
   binance,
   safepal,
   guarda,

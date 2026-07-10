@@ -290,6 +290,7 @@ describe("client entrypoints", () => {
       "foxwallet",
       "bybit",
       "imtoken",
+      "klever",
       "binance",
       "safepal",
       "guarda",
@@ -299,6 +300,7 @@ describe("client entrypoints", () => {
       "walletconnect"
     ]);
     expect(BUILTIN_WALLET_DESCRIPTORS.every((wallet) => wallet.homepage && wallet.platforms.length > 0)).toBe(true);
+    expect(BUILTIN_WALLET_DESCRIPTORS.find((wallet) => wallet.id === "klever")).toMatchObject({ enabled: false });
   });
 
   it("ships Ledger as a default hardware bridge descriptor", async () => {
@@ -339,8 +341,13 @@ describe("client entrypoints", () => {
     const catalog = buildCatalog(BUILTIN_WALLET_DESCRIPTORS);
 
     for (const wallet of BUILTIN_WALLET_DESCRIPTORS) {
-      expect(WALLET_ICONS[wallet.id], wallet.id).toMatch(/^data:image\/(?:svg\+xml|png|webp);base64,/);
-      expect(catalog.find((item) => item.id === wallet.id)?.icon, wallet.id).toBe(WALLET_ICONS[wallet.id]);
+      expect(WALLET_ICONS[wallet.id], wallet.id).toMatch(/^data:image\/(?:svg\+xml|png|jpeg|webp);base64,/);
+      const catalogItem = catalog.find((item) => item.id === wallet.id);
+      if (wallet.enabled === false) {
+        expect(catalogItem, wallet.id).toBeUndefined();
+      } else {
+        expect(catalogItem?.icon, wallet.id).toBe(WALLET_ICONS[wallet.id]);
+      }
     }
   });
 

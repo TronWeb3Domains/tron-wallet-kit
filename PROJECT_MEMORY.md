@@ -3388,3 +3388,21 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 40 tests.
   - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 46 tests.
+
+## 2026-07-10 Wallet Registry Validation And Klever Staging
+
+- Continued registry hygiene after moving wallet catalog ownership to client descriptors.
+- Fix:
+  - Added `scripts/validate-wallet-registry.mjs` and root script `pnpm wallets:validate`.
+  - Validator checks descriptor id/filename alignment, duplicate ids, registry imports, missing icons, duplicate icon ids, and orphan icons.
+  - Updated `scripts/gen-wallet-icons.mjs` to support `.jpg` and `.jpeg` icons in addition to SVG/PNG/WebP.
+  - Added `packages/client/src/wallets/entries/klever.ts` as a staged descriptor with `enabled: false`, matching the copied `packages/client/src/wallets/icons/klever.jpg`.
+  - Regenerated `packages/client/src/wallets/icons.generated.ts`; generated icon count is now 18.
+- Notes:
+  - Klever is not shown in default adapters/catalog while disabled. Enable only after provider paths or WalletConnect QA are confirmed.
+- Verification:
+  - `pnpm icons:wallets` generated 18 icons.
+  - `pnpm wallets:validate` passed with 18 descriptors and 18 icons.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 46 tests.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 40 tests.

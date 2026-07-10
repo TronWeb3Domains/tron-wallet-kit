@@ -11,6 +11,7 @@
     "dev:examples": "pnpm --filter @tron-wallet-kit/examples dev",
     "dev:website": "pnpm --filter @tron-wallet-kit/website dev",
     "icons:wallets": "node scripts/gen-wallet-icons.mjs",
+    "wallets:validate": "node scripts/validate-wallet-registry.mjs",
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "eslint ."

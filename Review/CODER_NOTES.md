@@ -91,7 +91,8 @@
 - Featured wallet order is now catalog-driven: TronLink first, WalletConnect last. Catalog-only mobile wallets may route through `adapterId: "walletconnect"` when that adapter is registered.
 - Modal routing now supports `featured`, `all-wallets`, `connecting`, and `qr` views in `packages/ui/src/modal.ts`.
 - Modal a11y now includes Escape close, backdrop close, focus trap, and focus restore.
-- Wallet icons now live under `packages/client/src/wallets/icons/<id>.svg`; run `pnpm icons:wallets` to regenerate `packages/client/src/wallets/icons.generated.ts`. UI must stay icon-agnostic and receive icons through the runtime catalog injected by client.
+- Wallet icons now live under `packages/client/src/wallets/icons/<id>.(svg|png|jpg|jpeg|webp)`; run `pnpm icons:wallets` to regenerate `packages/client/src/wallets/icons.generated.ts`. UI must stay icon-agnostic and receive icons through the runtime catalog injected by client.
+- Run `pnpm wallets:validate` after adding a wallet/icon. It verifies descriptor ids, registry imports, missing icons, duplicate icon ids, and orphan icons.
 - React `ConnectModal` now consumes the same catalog merge path as the DOM modal.
 
 ## 2026-07-04 WalletButton Baseline Notes
@@ -107,7 +108,7 @@
 - Added `scripts/fetch-wallet-icons.mjs` and root script `pnpm icons:wallets`.
 - The local icon generator reads checked-in SVGs from `packages/client/src/wallets/icons/` and generates `packages/client/src/wallets/icons.generated.ts` data URIs. Do not add wallet icons to `packages/ui`.
 - Ran `pnpm icons:wallets` successfully; 17 icons were fetched.
-- Current generated wallet icon set: WalletConnect, TronLink, MetaMask, OKX, Bitget, Binance, TokenPocket, Trust, GateWallet, FoxWallet, Bybit, imToken, Tomo, Guarda, Backpack, OneKey, and Ledger.
+- Current generated wallet icon set has 18 descriptor-backed icons. Klever is staged as `enabled: false` until provider paths or WalletConnect QA are confirmed.
 - WalletConnect has a local override at `icon/walletconnect.svg`; `pnpm icons:wallets` copies this file instead of fetching `WalletConnect.svg` remotely, then regenerates both UI catalog data URI and adapter metadata icon.
 - React `WalletButton` now toggles a real account panel when connected. The panel uses shared `createAccountPanelHtml`, supports copy/disconnect actions, outside click close, Escape close, address QR, recent transaction rows, and dropdown/modal mode.
 - Client lifecycle now supports opt-in identity cache and opt-in balance resolver. `refreshIdentity()` writes `domain/displayName/avatar` into the active session; `refreshBalance()` writes normalized TRX balance into the active session.
