@@ -1030,6 +1030,33 @@ describe("client entrypoints", () => {
     });
   });
 
+  it("retries Gate once when the first approval request returns no address", async () => {
+    let attempts = 0;
+    const request = vi.fn(async ({ method }: { method: string }) => {
+      if (method !== "eth_requestAccounts") return undefined;
+      attempts += 1;
+      return attempts === 1 ? { code: 200 } : ["TGateSecondAttempt"];
+    });
+    (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = {
+      tronLink: {},
+      tron: {
+        request,
+        tronWeb: {
+          trx: {
+            signMessageV2: async (message: string) => `gate-retry:${message}`
+          }
+        }
+      }
+    };
+
+    const manager = createWalletClient({ wallets: ["gate"] });
+
+    await expect(manager.connect("gate")).resolves.toMatchObject({
+      account: { address: "TGateSecondAttempt" }
+    });
+    expect(request).toHaveBeenCalledTimes(2);
+  });
+
   it("marks Gate available from camelCase and EIP-6963 Gate markers", async () => {
     (globalThis as typeof globalThis & { gateWallet?: unknown }).gateWallet = {
       tron: {}

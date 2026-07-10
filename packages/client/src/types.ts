@@ -103,6 +103,8 @@ export type InjectedTronAdapterConfig = {
   availabilityTimeoutMs?: number;
   addressTimeoutMs?: number;
   addressSettleMs?: number;
+  emptyAddressRetryDelayMs?: number;
+  emptyAddressRetryTimeoutMs?: number;
   preferInjectedAddress?: boolean;
   metadata?: Partial<WalletMetadata>;
 };

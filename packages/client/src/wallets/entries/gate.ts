@@ -10,7 +10,9 @@ export const gate: WalletDescriptor = {
   group: "popular",
   availabilityTimeoutMs: 5000,
   addressTimeoutMs: 15000,
-  addressSettleMs: 4000,
+  addressSettleMs: 800,
+  emptyAddressRetryDelayMs: 300,
+  emptyAddressRetryTimeoutMs: 3000,
   // Gate exposes tronWeb.defaultAddress even before an explicit dapp request, and calling
   // request() again while already exposing an account hangs / returns code 4000 (their own
   // adapter documents this). So prefer the injected address and skip request().

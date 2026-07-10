@@ -174,11 +174,42 @@ async function acquireInjectedAddress(
       if (Date.now() - requestSettledAt >= (config.addressSettleMs ?? DEFAULT_ADDRESS_SETTLE_MS)) break;
     }
   }
-  return requestedAddress ?? readLive();
+  return requestedAddress ?? readLive() ?? await retryEmptyAddressRequest(readLive, resolveProvider, nextProvider, config);
 }
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function retryEmptyAddressRequest(
+  readLive: () => string | undefined,
+  resolveProvider: () => InjectedTronProvider | undefined,
+  nextProvider: InjectedTronProvider,
+  config: InjectedTronAdapterConfig
+): Promise<string | undefined> {
+  if (!config.emptyAddressRetryDelayMs && !config.emptyAddressRetryTimeoutMs) return undefined;
+  await delay(config.emptyAddressRetryDelayMs ?? 0);
+  const liveBeforeRetry = readLive();
+  if (liveBeforeRetry) return liveBeforeRetry;
+  const provider = resolveProvider() ?? nextProvider;
+  const timeoutMs = config.emptyAddressRetryTimeoutMs ?? 3000;
+  try {
+    const retryAddress = await withTimeout(requestInjectedAddress(provider, config.requestMethods), timeoutMs);
+    return retryAddress ?? readLive();
+  } catch (error) {
+    if (error instanceof WalletKitError && error.code === "USER_REJECTED") throw error;
+    return readLive();
+  }
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | undefined> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => resolve(undefined), timeoutMs);
+    promise
+      .then((value) => resolve(value))
+      .catch((error) => reject(error))
+      .finally(() => clearTimeout(timer));
+  });
 }
 
 async function signInjectedMessage(provider: InjectedTronProvider, message: string, mode?: InjectedTronAdapterConfig["signMessageMode"]): Promise<string | undefined> {

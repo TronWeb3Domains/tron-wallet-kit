@@ -3083,3 +3083,22 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Verification:
   - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 49 tests.
   - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+
+## 2026-07-10 Gate Empty Address Retry
+
+- User reported Gate still failed on first connect and suggested delaying then calling connect/request a second time.
+- Fix:
+  - Added optional injected adapter retry config:
+    - `emptyAddressRetryDelayMs`
+    - `emptyAddressRetryTimeoutMs`
+  - Gate enables a scoped recovery path:
+    - `addressSettleMs: 800`
+    - `emptyAddressRetryDelayMs: 300`
+    - `emptyAddressRetryTimeoutMs: 3000`
+  - When the first Gate request resolves without an address, the adapter waits briefly, rereads live provider paths, then calls `eth_requestAccounts` once more with its own timeout.
+  - The retry is Gate-scoped via descriptor config and does not affect other injected wallets.
+- Regression coverage:
+  - Added test for Gate first request returning `{ code: 200 }`, second request returning `["TGateSecondAttempt"]`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 50 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
