@@ -1,11 +1,12 @@
-import { getTronWalletCatalogIcon, type TronWalletCatalogItem } from "@tron-wallet-kit/ui";
+import type { TronWalletCatalogItem } from "@tron-wallet-kit/ui";
+import { getWalletIcon } from "./icons.generated";
 import type { WalletDescriptor } from "./types";
 
 export function buildCatalog(wallets: readonly WalletDescriptor[]): TronWalletCatalogItem[] {
   return wallets
     .filter((wallet) => wallet.enabled !== false)
     .map((wallet) => {
-      const icon = wallet.icon ?? getTronWalletCatalogIcon(wallet.id);
+      const icon = wallet.icon ?? getWalletIcon(wallet.id);
       const item: TronWalletCatalogItem = {
         id: wallet.id,
         name: wallet.name,
@@ -35,6 +36,7 @@ export function buildCatalog(wallets: readonly WalletDescriptor[]): TronWalletCa
 
 function resolveTransport(wallet: WalletDescriptor): NonNullable<TronWalletCatalogItem["transport"]> {
   if (wallet.integration === "walletconnect") return "walletconnect";
+  if (wallet.platforms.includes("hardware")) return "hardware";
   if (wallet.platforms.includes("extension")) return "extension";
   return "mobile";
 }

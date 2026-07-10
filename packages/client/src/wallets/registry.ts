@@ -6,9 +6,11 @@ import { foxwallet } from "./entries/foxwallet";
 import { gate } from "./entries/gate";
 import { guarda } from "./entries/guarda";
 import { imtoken } from "./entries/imtoken";
+import { ledger } from "./entries/ledger";
 import { metamask } from "./entries/metamask";
 import { okx } from "./entries/okx";
 import { onekey } from "./entries/onekey";
+import { safepal } from "./entries/safepal";
 import { tokenpocket } from "./entries/tokenpocket";
 import { tronlink } from "./entries/tronlink";
 import { trust } from "./entries/trust";
@@ -27,9 +29,11 @@ export const BUILTIN_WALLET_DESCRIPTORS = [
   bybit,
   imtoken,
   binance,
+  safepal,
   guarda,
   onekey,
   backpack,
+  ledger,
   walletconnect
 ] as const satisfies readonly WalletDescriptor[];
 

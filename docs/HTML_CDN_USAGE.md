@@ -51,3 +51,4 @@ After running `pnpm build`, load the browser bundle:
 - The all-in-one browser bundle currently includes WalletConnect support for convenience.
 - WalletConnect makes the IIFE bundle large. Before public release, decide whether to keep one all-in-one CDN file or publish separate adapter browser bundles.
 - For custom QR rendering, use `walletConnectOnUri` and render the URI into the UI QR slot.
+- Hardware wallets such as Ledger are optional-peer integrations for app builds. They are not guaranteed to be available from the default CDN/IIFE bundle unless the hosting app bundles the upstream hardware adapter.

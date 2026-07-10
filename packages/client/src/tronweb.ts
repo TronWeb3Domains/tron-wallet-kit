@@ -17,11 +17,12 @@ const balanceTronWebPathsByWallet: Record<string, readonly string[]> = {
   okx: ["okxwallet.tronLink.tronWeb"],
   bitget: ["bitkeep.tron.tronWeb", "bitkeep.tronLink.tronWeb", "bitkeep.tronWeb"],
   trust: ["trustwallet.tronLink.tronWeb", "tronWeb"],
-  gate: ["gatewallet.tron.tronWeb", "gatewallet.tronLink.tronWeb"],
+  gate: ["gatewallet.tron.tronWeb", "gatewallet.tronLink.tronWeb", "gatewallet.tronWeb"],
   foxwallet: ["foxwallet.tronLink.tronWeb"],
   bybit: ["bybitWallet.tronLink.tronWeb", "bybitWallet.tron.tronWeb"],
   imtoken: ["tronweb"],
   binance: ["binancew3w.tron.tronWeb", "binancew3w.tronLink.tronWeb"],
+  safepal: ["tronWeb"],
   guarda: ["guarda.tronWeb", "guarda.tron.tronWeb"],
   onekey: ["$onekey.tron.tronWeb", "$onekey.tronLink.tronWeb"],
   backpack: ["backpack.tron.tronWeb", "backpack.tronLink.tronWeb"]

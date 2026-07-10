@@ -3,7 +3,7 @@ import {
   createTronwalletBridgeAdapter,
   type TronwalletBridgeInnerAdapter
 } from "@tron-wallet-kit/adapter-tronwallet-bridge";
-import type { WalletAdapter, WalletPlatform } from "@tron-wallet-kit/core";
+import type { WalletAdapter, WalletAdapterType, WalletPlatform } from "@tron-wallet-kit/core";
 import { createAvailabilityProbeWalletAdapter, createFallbackWalletAdapter } from "./combinators";
 import { createInjectedTronAdapter } from "./injected";
 import { normalizeWalletId, walletIconMetadata } from "../injected/registry-map";
@@ -13,6 +13,7 @@ export type DefaultTronwalletBridgeWalletConfig = {
   id: string;
   name: string;
   homepage: string;
+  type?: WalletAdapterType;
   platforms: WalletPlatform[];
   signMessageMode?: "string" | "messageObject";
   availabilityTimeoutMs?: number;
@@ -52,7 +53,7 @@ export function createDefaultTronwalletBridgeAdapter(
       downloadUrl: bridgeConfig.homepage,
       description: `${bridgeConfig.name} TRON wallet adapter bridged from @tronweb3/tronwallet-adapter.`
     },
-    type: "extension",
+    type: bridgeConfig.type ?? "extension",
     platforms: bridgeConfig.platforms,
     ...(bridgeConfig.signMessageMode ? { signMessageMode: bridgeConfig.signMessageMode } : {}),
     ...(bridgeConfig.availabilityTimeoutMs ? { availabilityTimeoutMs: bridgeConfig.availabilityTimeoutMs } : {}),

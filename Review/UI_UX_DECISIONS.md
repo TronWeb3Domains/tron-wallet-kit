@@ -135,3 +135,63 @@
 - Panel interactions now include copy address feedback, disconnect, Escape close, and outside click close.
 - Identity and balance lifecycle are non-blocking: identity waits briefly to avoid flicker, balance refreshes on connect and after pending transactions.
 - Visual QA screenshots were saved for React light modal, dark modal, and mobile light modal in `Review/screenshots/`.
+## 2026-07-08 WalletConnect QR Panel Stabilization
+
+- WalletConnect QR must be rendered by TRON Wallet Kit UI, not by a WalletConnect/Reown modal.
+- The QR panel uses one stable square frame:
+  - `.twk-qr-slot.twk-qr-large` reserves a fixed square area up to 340px.
+  - `.twk-qr-code`, QR image/svg/canvas, and `.twk-qr-skeleton` fill the same square to prevent layout shift.
+  - QR background stays token-driven through `--twk-qr-background`, defaulting to white for dark-mode scan reliability.
+- `qr-code-styling` is the primary browser renderer for styled QR codes.
+- `qrcode` remains only as a non-DOM/SSR fallback for `createQrDataUrl()` because `qr-code-styling` requires `window`.
+- QR flows such as WalletConnect must not auto-close when `manager.connect()` resolves. `closeOnSelect` still applies to direct extension connect flows, but QR panels stay visible so the user can scan/copy/retry until they intentionally close, go back, or select another wallet.
+- The QR sticky guard must be applied to both portal and inline controllers. It is set when a QR-capable wallet is selected and reinforced when the manager emits a `qr` event, so late WalletConnect promise resolution cannot collapse or close the QR panel.
+- React examples or host apps that display an external WalletConnect URI preview should subscribe to `manager.on("qr")` inside the wallet provider boundary. Avoid storing QR preview state in a parent component that wraps `TronWalletProvider`, because that can remount portal controllers in dev/Strict mode and hide the active QR modal.
+- WalletConnect adapters must invoke the per-connect `options.onUri` before any configured external `onUri` callback so active UI flow state updates before app-level preview/log callbacks run.
+
+## 2026-07-08 All Wallets And Install Row Polish
+
+- All Wallets search is treated as a single full-width form group. The search icon lives inside the field on the right to match the compact wallet-selection pattern and reduce visual fragmentation.
+- All Wallets loading skeleton cards must center their icon and name placeholders within the same footprint as real wallet cards.
+- The featured-view All wallets trigger stays visually lighter than wallet cards. Its count indicator is a compact badge sized by text content, not a fixed-width pill.
+- QR/connecting install rows use a muted token-driven surface with a smaller Get action so the row feels like secondary help, not a primary wallet action.
+
+## 2026-07-08 UI Config 2c Desktop Behavior
+
+- Wallet list layout is explicit. `walletList.layout:"list"` renders rows in both Featured and All Wallets; `walletList.layout:"card"` renders three-column cards in both places. The older `"grid"` value is an alias for `"card"`.
+- Featured behavior is mode-driven:
+  - `manual` respects `featuredWallets` ordering without installed reordering.
+  - `installed-first` puts installed extension wallets first, then TRON-ranked recommended wallets.
+  - `installed-only` shows installed extension wallets, falling back to WalletConnect when none are installed.
+- Featured wallets live in a fixed scroll viewport with a fade mask. The All wallets trigger stays outside that viewport so it remains visible.
+- `react-basic` exposes these knobs directly so desktop extension QA can switch modes without code edits.
+- Mobile browser/in-app branching from the spec remains a separate implementation step.
+
+## 2026-07-08 Search Stability And TronLink Availability
+
+- Search filtering must preserve card/row footprint. Sparse results align to the top and must not stretch vertically to fill the modal scroll area.
+- Async modal renders, including wallet availability refreshes, must preserve the active search input and caret instead of falling through to the default focus target.
+- TronLink availability probing should use a short default timeout so the row does not visually lag behind other injected wallets. Apps can still override the timeout when they need a longer TIP-6963/provider wait window.
+
+## 2026-07-08 Modal Focus Discipline
+
+- The close button must never be used as the modal's primary programmatic focus target. DOM order places close before the wallet body, so broad `querySelector()` focus fallback can accidentally create a visible close-button ring after render.
+- Modal and inline wallet panels own an invisible `tabindex="-1"` focus target. Non-search renders focus the panel only on view transitions; ordinary availability refreshes should not move focus.
+- Search is the only control whose focus and caret are preserved across render because typing replaces the input node.
+- Keyboard users still get tokenized focus rings when they intentionally tab to close/back/action/wallet controls.
+
+## 2026-07-08 Featured Wallet Overflow Rules
+
+- Integrator-provided `walletList.featuredWallets` must not be capped by UI config. `featuredLimit` remains only as a deprecated compatibility value and must not affect visible rendering.
+- Featured wallet containers use content-sized height plus `max-height`; small lists must not render an empty 360px scroll box.
+- Featured fade masks are data-driven and appear only when the measured container overflows. Scroll position determines bottom/top/both fade states.
+- Focused wallet items inside the featured scroller should use `scrollIntoView({ block: "nearest" })` so keyboard Tab navigation does not hide the focused row behind the fade.
+
+## 2026-07-08 Mobile Platform-Aware Wallet Lists
+
+- Runtime modal/inline controllers classify wallet UX environment as `desktop-extension`, `mobile-in-app`, or `mobile-browser` from cheap browser signals.
+- Static HTML rendering defaults to desktop behavior for SSR/test stability; runtime controllers pass the detected environment into wallet list resolution.
+- Desktop lists keep extension/hardware wallets plus WalletConnect; Ledger is a PC hardware wallet and must remain visible on desktop.
+- Mobile lists keep mobile-capable wallets plus WalletConnect; hardware wallets such as Ledger are hidden from normal mobile browser lists.
+- Mobile browser mode treats installed-first differently from desktop: WalletConnect is shown first, then mobile-capable wallets sorted by TRON rank/name. Extension-only wallets are hidden.
+- On mobile browser, `showUnavailable:false` must not hide mobile-capable launch/WC wallets merely because no injected provider exists.

@@ -43,10 +43,18 @@ export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
     modal,
     button,
     toast,
+    catalog,
     setTheme: (theme) => {
       modal.setTheme(theme);
       button?.setTheme(theme);
       toast?.setTheme(theme);
+    },
+    destroy: () => {
+      button?.destroy();
+      toast?.destroy();
+      modal.destroy();
+      manager.destroy();
+      identityCache.clear();
     },
     openModal: () => modal.open(),
     closeModal: () => modal.close(),

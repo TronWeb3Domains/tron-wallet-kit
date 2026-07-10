@@ -45,11 +45,22 @@ type WalletButtonAccountPanelModel = {
 const WalletKitContext = createContext<WalletKit | null>(null);
 
 export function TronWalletProvider(props: TronWalletProviderProps) {
-  const kit = useMemo(() => props.kit ?? createWalletKit(props), [props]);
+  const kitRef = useRef<WalletKit | null>(null);
+  const ownsKitRef = useRef(false);
+  if (!kitRef.current || (props.kit && kitRef.current !== props.kit)) {
+    kitRef.current = props.kit ?? createWalletKit(props);
+    ownsKitRef.current = !props.kit;
+  }
+  const kit = kitRef.current;
   useEffect(() => {
     void kit.manager.autoReconnect();
     return () => {
-      kit.manager.destroy();
+      if (ownsKitRef.current) {
+        kit.destroy();
+        kitRef.current = null;
+      } else {
+        kit.manager.destroy();
+      }
     };
   }, [kit]);
   return createElement(WalletKitContext.Provider, { value: kit }, props.children);
@@ -424,7 +435,7 @@ export function ConnectModal(props: ConnectModalProps) {
   const wallets = mergeWalletOptionsWithCatalog(
     kit.manager.getWallets().map((adapter) => mapAdapterToWalletOption(adapter, availability[adapter.metadata.id] ?? (adapter.isAvailable ? "loading" : true))),
     undefined,
-    props.catalog
+    props.catalog ?? kit.catalog
   );
   const html = createConnectModalHtml({
     wallets,

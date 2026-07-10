@@ -168,6 +168,122 @@ modal?: {
 
 ---
 
+## 2c. Featured view: layout + fixed-viewport scroll + installed-aware (quyết định UX)
+
+**Đã có sẵn**: badge INSTALLED/NOT INSTALLED/CHECKING (`wallet-options.ts`), `sortAvailableFirst`, `showUnavailable`, skeleton dò 600ms, grid ẩn scrollbar. **Đổi/bổ sung** theo 6 điểm dưới.
+
+Cấu trúc featured view đích (chiều cao modal **cố định**):
+```
+┌ header ────────────────────────┐
+│ Vùng ví (fixed height ~6 ví)   │  ← cuộn nội bộ, overflow che mờ (fade) ở đáy
+│  … ví 7,8,… (cuộn mới thấy)    │
+├────────────────────────────────┤
+│ [ All Wallets  (17+) ]         │  ← STICKY, luôn hiện, NGOÀI vùng cuộn (điểm 5)
+│ footer / powered-by            │
+└────────────────────────────────┘
+```
+
+Config (nới `walletList`):
+```ts
+walletList: {
+  layout?: "list" | "card";          // điểm 1+2: CHỌN TAY, áp CẢ featured + All Wallets; default "list"
+  featuredMode?: "manual" | "installed-first" | "installed-only"; // điểm 4, default "installed-first"
+  featuredWallets?: string[];        // chỉ dùng khi featuredMode:"manual" (thứ tự integrator)
+  wallets?: "all" | string[];        // All Wallets: whitelist
+  disabledWallets?: string[];        // All Wallets: blacklist
+  showUnavailable?: boolean;         // ẩn ví chưa cài (default true = hiện) — CHỈ áp desktop, xem 2c.2 mobile
+  sortAvailableFirst?: boolean;      // sắp xếp trong ALL WALLETS (khác featuredMode — xem lưu ý)
+  // ⚠️ KHÔNG có visibleCount/featuredLimit: hiện HẾT ví đã cài (như Reown); viewport = max-height (token) → tràn thì cuộn.
+  //    Giữ alias featuredLimit (deprecated, no-op) để BC.
+};
+```
+
+**Điểm 1 — bỏ auto list→card**: xoá `compact = featuredWallets.length > 6` (modal.ts ~L746). Layout **chỉ** theo `walletList.layout`. ✅ explicit > magic.
+
+**Điểm 2 — 2 layout tường minh, 1 TERM THỐNG NHẤT = `card`**: `layout:"list"` (hàng: icon + tên + badge) | `layout:"card"` (lưới thẻ). Nối vào `walletList.layout` (type hiện `"list" | "grid"` → **đổi chính thức thành `"list" | "card"`**, **giữ alias `"grid"`** map sang `card` cho backward-compat). **Áp thống nhất cho CẢ featured view LẪN All Wallets** (không còn mỗi view một kiểu): `list` → cả hai đều list-rows; `card` → cả hai đều lưới thẻ. Cả hai render trong vùng cuộn cố định (điểm 3).
+
+**Điểm 3 — max-height viewport + fade + scroll (KHÔNG cap số ví)**:
+- **Hiện HẾT ví đã cài** (như Reown) — không giới hạn số lượng. Vùng ví có **`max-height` cố định** (token, ~ tương đương 5–6 hàng); ít ví → không cuộn; nhiều ví → cuộn nội bộ. Không cần config `visibleCount`.
+- **Fade mask** ở đáy khi tràn: `mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent)`; chỉ bật khi thực sự overflow (JS toggle `data-overflow="true"` khi `scrollHeight > clientHeight`; thêm fade đỉnh khi đã cuộn xuống).
+- Scrollbar **ẩn** (đã có). **A11y**: Tab tới ví bị che phải auto-scroll vào tầm nhìn (`scrollIntoView`/focus). Tôn trọng `prefers-reduced-motion` (fade tĩnh nên OK).
+- Muốn cao/thấp khác → override **token max-height**, không phải knob riêng. Áp cho cả `list` lẫn `card`.
+
+**Điểm 4 — installed-aware featured (có RANK ưu tiên TRON, không hiện tuỳ tiện)**:
+
+**Khoá sắp xếp `rank(wallet)`** (một nguồn): vị trí trong `featuredWallets` (integrator, nếu set) → `descriptor.featured` (số, kit gán) → ∞ (chưa rank, xuống cuối theo tên). `descriptor.featured` = **thứ tự ưu tiên nền tảng TRON mặc định** kit đặt sẵn: **TronLink #1** (native TRON), rồi TokenPocket, OKX, Bitget… (đánh số cách quãng 10 để chèn sau). Đây chính là `featuredOrder` hardcode hiện tại, chuyển vào descriptor thành số.
+
+- `manual`: sắp thuần theo `rank` (không nhóm installed).
+- `installed-first`: sort **2 tầng** → (1) đã cài trước / chưa cài sau; (2) **trong mỗi nhóm theo `rank`**. ⇒ TronLink đã cài lên đỉnh; ví ưu tiên TRON nổi trước ví lạ ngay cả khi cùng "đã cài". Hết ví đã cài → tập recommended (`rank` hữu hạn) → All Wallets.
+- `installed-only`: chỉ ví đã cài, vẫn sort theo `rank`; 0 ví cài → xem điểm 6.
+- **⚠️ Cạm bẫy — probe phải RẺ**: dò "đã cài" cho mọi ví. Với **bridge lazy adapter**, `isAvailable()` có thể kích hoạt dynamic import `@tronweb3` → probe hết = nạp cả loạt (phình/chậm). Dùng **`descriptor.detect` (global `window.X`) làm probe**, KHÔNG import adapter; import nặng để lúc connect. ⇒ **làm CHUNG P3 registry**.
+- **⚠️ Cạm bẫy — probe phải RẺ**: dò "đã cài" cho mọi ví. Với **bridge lazy adapter**, `isAvailable()` có thể kích hoạt dynamic import `@tronweb3` → probe hết = nạp cả loạt (phình/chậm). Dùng **`descriptor.detect` (global `window.X`) làm probe**, KHÔNG import adapter; import nặng để lúc connect. ⇒ **làm CHUNG P3 registry**.
+
+**Điểm 5 — All Wallets sticky, luôn thấy**: nút "All Wallets" đặt **NGOÀI vùng cuộn**, ngay dưới vùng ví, **trên** footer, `position: sticky`/pinned → **không cuộn mất** như Reown (Reown để cuối, phải cuộn). Giữ style nhẹ hơn card (đã làm trước đó). Luôn hiện kể cả `installed-only` (để tìm ví chưa cài / WC).
+
+**Điểm 6 — chưa cài ví nào → WalletConnect lên TOP**: mặc định WC ghim **cuối** featured; nếu `installedCount === 0` → đưa **WC lên đầu** (người chưa có extension dùng QR ngay). Điều kiện rõ (đếm ví có `detect`→true), **có test**. **CHỈ áp cho `installed-first`/`installed-only`** (mode động); **`manual` KHÔNG reorder** — tôn trọng đúng `featuredWallets` integrator đặt (tránh mâu thuẫn với lời hứa của manual).
+
+**Ghi chú privacy**: auto-detect ví đã cài là fingerprinting nhẹ — chuẩn ngành (Reown/RainbowKit đều làm), chấp nhận được; nêu trong docs.
+
+### 2c.1 Cho dapp tích hợp: dễ hiểu + thứ tự ưu tiên (dọn mâu thuẫn)
+
+**Zero-config = đã đẹp** (CHỐT, học theo Reown): không set gì → `layout:"list"`, `featuredMode:"installed-first"` → hiện **hết ví đã cài** ở đầu, cuộn xem thêm (max-height), All Wallets luôn thấy → đúng như ảnh Reown. **90% dapp không cần đụng `walletList`.** Lý do: user không biết ví nào được hỗ trợ, chỉ biết mình đang cài ví gì → đẩy ví đã cài lên đầu = khớp mental model (Reown/RainbowKit đều vậy).
+
+> **Hoà giải với DoD "không phá backward-compat"**: quy tắc đó áp cho **config integrator đã set tường minh** (set gì → chạy y vậy). Đổi **default (chưa set)** từ featured-tĩnh → `installed-first` là **thay đổi baseline có chủ đích, pre-1.0, chưa có consumer ngoài** — KHÔNG tính là phá BC. Ai muốn giữ thứ tự cũ chỉ cần `featuredMode:"manual"`.
+
+**Phân vai rõ (tránh nhầm 2 knob giống tên):**
+- `featuredMode` → quyết định **FEATURED view** (màn đầu): chọn + sắp ví nào nổi bật.
+- `sortAvailableFirst` → chỉ sắp xếp trong **ALL WALLETS view** (danh sách đầy đủ). **Khác view, không xung đột.**
+
+**Thứ tự ưu tiên khi dựng FEATURED (một nguồn sự thật):**
+
+| featuredMode | Thứ tự ví |
+| --- | --- |
+| `manual` | `featuredWallets` (integrator) → `descriptor.featured` (tác giả ví) → mặc định. **KHÔNG reorder theo installed, KHÔNG áp điểm 6.** |
+| `installed-first` | **hết ví đã cài** (trong nhóm sort theo `rank` TRON, TronLink đỉnh) → tập recommended (`rank` hữu hạn) → All Wallets. WC ghim cuối *(hoặc top nếu 0 ví cài)*. |
+| `installed-only` | chỉ ví đã cài → nếu 0 ví cài thì chỉ WC (top) + nút All Wallets. |
+
+**Recipe thường gặp** (copy-paste được):
+```ts
+// A. Mặc định (khỏi set gì) — như Reown.
+// B. Chỉ định cứng thứ tự nổi bật:
+walletList: { featuredMode: "manual", featuredWallets: ["tronlink","safepal","okx"] }
+// C. Chỉ hiện một tập ví trong All Wallets:
+walletList: { wallets: ["tronlink","safepal","okx","tokenpocket","walletconnect"] }
+// D. Dạng thẻ:
+walletList: { layout: "card" }
+```
+
+**Đã dọn mâu thuẫn**: bỏ `featuredLimit`/`visibleCount` (hiện hết ví đã cài, viewport = max-height token); điểm 6 chỉ ở mode động; `sortAvailableFirst` tách bạch view. Descriptor chỉ **đề xuất** (`featured`), integrator **quyết** (`walletList`) — như mục 5b registry.
+
+**Test (điểm 1–6)**: layout đổi theo config không auto-switch; ít ví → không cuộn, nhiều ví → overflow + fade; installed-first hiện hết ví đã cài lên đầu; installed-only + 0 ví → chỉ WC + All Wallets, WC top; All Wallets luôn render ngoài scroll; `installedCount===0` → WC top (chỉ mode động).
+
+### 2c.2 MOBILE — đánh giá lại (KHÁC HẲN desktop)
+
+**Sự thật nền tảng**: trên **mobile browser thường** (Safari/Chrome trên điện thoại) **KHÔNG detect được ví đã cài** — ví là app riêng, không inject `window.tronWeb`. Chỉ **in-app browser** (dapp mở BÊN TRONG app ví) mới có provider inject → detect đúng **một** ví đó.
+
+⇒ `installed-first`/`installed-only` **theo nghĩa desktop là vô nghĩa trên mobile browser**. Phải xử lý riêng:
+
+**Nhận diện môi trường** (client, rẻ):
+- `hasInjected` = có `window.tronWeb`/provider global? (in-app browser hay extension).
+- `isMobile` = UA mobile / touch / không có injected trên desktop-class.
+- 3 ca: **desktop-extension** (injected, PC) · **mobile in-app** (injected, phone) · **mobile browser** (không injected, phone).
+
+**Hành vi featured theo môi trường:**
+| Môi trường | Featured |
+| --- | --- |
+| desktop-extension | như 2c (installed-first, detect thật). |
+| mobile in-app (đang ở trong app ví) | ví đang chứa dapp = injected → **feature/auto-connect ví đó**; các ví khác ẩn/để All Wallets. |
+| **mobile browser** (thường gặp) | `installedCount ≈ 0` → **điểm 6 tự kích: WalletConnect + deep-link lên TOP**. Featured = WC + các ví có `platforms:"mobile"` dạng **launcher deep-link** (tap → mở app ví qua deeplink + WC pairing). **Ẩn ví extension-only**. |
+
+**Cạm bẫy phải sửa (khác desktop):**
+- **"available" trên mobile ≠ injected**: một ví "dùng được" nếu **hỗ trợ WC/deep-link**, KHÔNG phải vì có `window.X`. ⇒ trên mobile, `showUnavailable:false` **không được ẩn ví mobile-capable**; badge **"INSTALLED" KHÔNG áp mobile** (thay bằng không-badge hoặc "GET"/mở app). Availability logic phải rẽ nhánh theo platform.
+- **QR vs deep-link**: trên mobile, QR cùng-thiết-bị vô dụng → dùng **deep-link/universal link** mở app ví (WC lo phần này qua `onUri` + link). Descriptor có `platforms` (đã có); nếu ví cần scheme riêng → thêm `mobileLink?` vào descriptor (optional).
+- **Lọc theo `platforms`**: mobile chỉ hiện ví `platforms` chứa `"mobile"`; desktop chỉ hiện `"extension"`. Ví extension-only biến mất trên mobile, và ngược lại.
+
+**Kết luận**: featured phải **platform-aware**. `featuredMode` giữ nguyên API, nhưng **resolver phải rẽ nhánh**: desktop = detect injected; mobile browser = WC-first + deep-link (installed≈0 nên điểm 6 tự đúng); mobile in-app = feature ví injected. ⇒ ghi rõ cho coder, và **QA riêng 3 môi trường**. Ăn khớp registry: descriptor cung cấp `platforms` + (optional) `mobileLink`; WC adapter native lo pairing/deeplink.
+
+---
+
 ## 3. Branding
 
 ```ts
@@ -264,7 +380,7 @@ Core đã có event `connected/disconnected/...`; đây chỉ là hook cho hành
 - **Responsive**: có `@media` mobile + safe-area trong `styles.ts`; touch target chính 44–48px.
 - **ARIA cơ bản**: `role="dialog"`, `aria-modal`, `aria-labelledby`, wallet card/row là `<button>` có `aria-label`.
 - **SSR**: controller nhận `document` inject; `dom.ts` guard; QR sinh khi mount (không chạy lúc import).
-- **Export surface**: `index.ts` dùng `export *` toàn bộ module ⇒ util (`filterWalletOptions`, `getFeaturedWalletOptions`, `getTronWalletCatalogIcon`...) đều đã export. Không thiếu.
+- **Export surface**: `index.ts` dùng `export *` toàn bộ module ⇒ util (`filterWalletOptions`, `getFeaturedWalletOptions`...) đều đã export. `getTronWalletCatalogIcon` đã bị bỏ vì UI không còn sở hữu wallet icon lookup; client inject catalog runtime có icon.
 
 ## B1. Cần sửa (verified) — mức Should-fix
 1. **Copy dùng clipboard không có fallback/không check kết quả** — `modal.ts` ~L334 và ~L606: `void ...navigator.clipboard?.writeText(uri)` rồi set trạng thái "copied" **bất kể** thành công. Ở context không bảo mật (http) hoặc bị chặn quyền, `clipboard` undefined ⇒ không copy nhưng vẫn báo "Copied". Account panel copy address cũng cùng kiểu.

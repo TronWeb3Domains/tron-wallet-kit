@@ -19,7 +19,9 @@
     "dist"
   ],
   "scripts": {
+    "prebuild": "node ../../scripts/gen-wallet-icons.mjs",
     "build": "tsup src/index.ts --format esm,cjs --dts --sourcemap --clean",
+    "prepack": "node ../../scripts/gen-wallet-icons.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -31,19 +33,20 @@
     "@tron-wallet-kit/ui": "workspace:*",
     "tronweb": "^6.4.0"
   },
-  "optionalDependencies": {
-    "@tronweb3/tronwallet-adapter-backpack": "1.1.0",
-    "@tronweb3/tronwallet-adapter-binance": "1.1.0",
-    "@tronweb3/tronwallet-adapter-bitkeep": "^1.2.0",
-    "@tronweb3/tronwallet-adapter-bybit": "1.1.0",
-    "@tronweb3/tronwallet-adapter-foxwallet": "1.1.0",
-    "@tronweb3/tronwallet-adapter-gatewallet": "1.1.0",
-    "@tronweb3/tronwallet-adapter-guarda": "1.1.0",
-    "@tronweb3/tronwallet-adapter-imtoken": "1.1.0",
-    "@tronweb3/tronwallet-adapter-metamask-tron": "^1.1.0",
-    "@tronweb3/tronwallet-adapter-okxwallet": "^1.1.0",
-    "@tronweb3/tronwallet-adapter-onekey": "1.1.0",
-    "@tronweb3/tronwallet-adapter-tokenpocket": "^1.1.0",
-    "@tronweb3/tronwallet-adapter-trust": "^1.1.0"
+  "peerDependencies": {
+    "@tronweb3/tronwallet-adapter-imtoken": "*",
+    "@tronweb3/tronwallet-adapter-ledger": "*",
+    "@tronweb3/tronwallet-adapter-metamask-tron": "*"
+  },
+  "peerDependenciesMeta": {
+    "@tronweb3/tronwallet-adapter-imtoken": {
+      "optional": true
+    },
+    "@tronweb3/tronwallet-adapter-ledger": {
+      "optional": true
+    },
+    "@tronweb3/tronwallet-adapter-metamask-tron": {
+      "optional": true
+    }
   }
 }

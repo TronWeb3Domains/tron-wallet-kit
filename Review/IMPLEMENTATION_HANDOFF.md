@@ -86,8 +86,10 @@ Nice-to-have (tuỳ nguồn lực): matchMedia listener cho theme auto-mode; `ar
 
 ## 5. P2 — Bridge (`TRONWALLET_ADAPTER_BRIDGE_SPEC.md`)
 
+> **⚠️ Thay đổi chiến lược (xem `WALLET_REGISTRY_SPEC.md`):** **Kit ship ZERO *hard* dep `@tronweb3`.** Ví chuẩn TronLink → **generic injected tự viết** (học từ @tronweb3, không phụ thuộc package). **Ledger ĐƯA VÀO v1** qua bridge: kit ship sẵn descriptor Ledger (lazy import `@tronweb3/tronwallet-adapter-ledger`), package khai **`optional peerDependency`** — app cài để bật, chưa cài → Ledger unavailable/ẩn êm. **KHÔNG tự reimplement hardware.** WalletConnect dùng adapter native. **MetaMask-TRON** mặc định không kèm (niche) — app bật qua bridge nếu cần (`@tronweb3/tronwallet-adapter-metamask-tron`, cũng optional peer).
+
 Phần code đã xong (đã verify khớp spec): package `@tron-wallet-kit/adapter-tronwallet-bridge`, `createTronwalletBridgeAdapter` + lazy variant, sign+broadcast, event forwarding, test mock. **Còn lại**:
-- QA extension thật cho 5 ví bridge (TronLink/TokenPocket/OKX/Bitget/Trust/MetaMask-TRON).
+- Bridge = **API interop công khai** (không hard dep `@tronweb3`; ledger + metamask-tron là **optional peer**). **Ledger v1**: ship descriptor + lazy import `@tronweb3/tronwallet-adapter-ledger`; graceful unavailable khi app chưa cài; QA thật với thiết bị Ledger. Docs hướng dẫn app `pnpm add @tronweb3/tronwallet-adapter-ledger` để bật. TokenPocket/OKX/Bitget/Trust chuyển sang injected — QA ở nhánh injected.
 - Docs app-side: cách cài + truyền instance + `tronweb3Bridge.tronWeb` để broadcast.
 - Quyết định đóng gói trước release: concrete adapter là optional-dep của `client` hay tách preset package.
 - (Lưu ý spec cũ ghi giữ Gate/Bybit/Binance/Guarda/OneKey/Backpack dạng injected; code đã gộp vào bridge + `injectedFallback` — **cập nhật lại spec cho khớp code** hoặc xác nhận hướng này.)
@@ -177,7 +179,12 @@ Hai kit đang tổ chức khác nhau, **KHÔNG bê nguyên XRPL sang TRON**. B�
 - `core`/`adapters`: không phụ thuộc `client`/`ui`. ✅
 
 **Lưu ý triển khai**:
-- Icon **inline trong descriptor** (SVG string / data-url) → đi kèm data lúc `setCatalog`, `ui` render `<img>`/inline. Không cần asset tĩnh ở ui.
+- **Icon** (workflow "drop file = id"):
+  - Thư mục thô **`client/src/wallets/icons/<id>.svg`** (tên file = id ví) — nơi đổ icon vào.
+  - **Prebuild codegen** `scripts/gen-wallet-icons.mjs` quét thư mục → normalize SVG → base64 data-url → sinh **`client/src/wallets/icons.generated.ts`**: `export const WALLET_ICONS: Record<string,string> = { safepal: "data:image/svg+xml;base64,…" }`. Gắn vào `prebuild`/`prepack` hook (contributor không chạy tay). **Base64 sinh lúc BUILD, không runtime** (browser không có `fs`). File generated commit vào repo (cũng là public export `walletIcons`).
+  - Builder resolve `descriptor.icon ?? WALLET_ICONS[descriptor.id]` → **builtin bỏ trống `icon`, auto theo id**; **third-party runtime** truyền `icon` (URL) inline vì không đổ file vào repo.
+  - **UI icon-agnostic**: BỎ `packages/ui/src/wallets/icons/` + mọi lookup icon trong ui; icon đến từ catalog runtime (`<img src=dataUrl>`); fallback chữ cái generic vẫn ở ui.
+  - Chỉ codegen cho **icon** (để có "push đúng file"); descriptor entries vẫn khai tay, không codegen.
 - `WalletDescriptor` + `defineWallet()` phải là **public API** của `client` (để runtime-plugin dùng). `wallets?: WalletDescriptor[]` trong `WalletClientConfig` = builtin ∪ custom.
 - "Static manifest dùng chung" (nếu cần cho website/docs) = **artifact GENERATE ra từ entries**, không phải nguồn khai báo → không ép ai split.
 - Bridge integration vẫn **lazy importer** (không static import `@tronweb3` vào bundle mặc định).

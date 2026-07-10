@@ -23,6 +23,8 @@ export type WalletDescriptorBase = {
 export type InjectedDetect = {
   providerPaths?: readonly string[];
   provider?: InjectedTronAdapterConfig["provider"];
+  availabilityProbe?: InjectedTronAdapterConfig["availabilityProbe"];
+  requestMethods?: InjectedTronAdapterConfig["requestMethods"];
 };
 
 export type Tronweb3BridgeWalletDescriptor = WalletDescriptorBase & {
@@ -39,6 +41,12 @@ export type InjectedWalletDescriptor = WalletDescriptorBase & {
   detect: InjectedDetect;
   requestMethods?: readonly string[];
   signMessageMode?: "signMessageV2" | "sign" | "request";
+  availabilityTimeoutMs?: number;
+  addressTimeoutMs?: number;
+  addressSettleMs?: number;
+  // For wallets whose request() hangs/re-prompts when already exposing an account (e.g. Gate):
+  // use the already-injected tronWeb.defaultAddress.base58 first and only call request() if absent.
+  preferInjectedAddress?: boolean;
 };
 
 export type WalletConnectWalletDescriptor = WalletDescriptorBase & {

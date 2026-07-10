@@ -113,8 +113,8 @@ export class WalletConnectAdapter implements WalletAdapter {
       const onUri =
         options.onUri || this.options.onUri
           ? (uri: string) => {
-              this.options.onUri?.(uri);
-              if (options.onUri !== this.options.onUri) options.onUri?.(uri);
+              options.onUri?.(uri);
+              if (options.onUri !== this.options.onUri) this.options.onUri?.(uri);
             }
           : undefined;
       const { address } = await wallet.connect(onUri ? { onUri } : undefined);

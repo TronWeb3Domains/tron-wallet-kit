@@ -1,8 +1,9 @@
 import { createWalletConnectAdapter } from "@tron-wallet-kit/adapter-walletconnect";
-import type { WalletAdapter } from "@tron-wallet-kit/core";
+import type { WalletAdapter, WalletMetadata } from "@tron-wallet-kit/core";
 import { createDefaultTronwalletBridgeAdapter, type DefaultTronwalletBridgeWalletConfig } from "../adapters/bridge";
 import { createInjectedTronAdapter } from "../adapters/injected";
 import type { DefaultAdaptersConfig, InjectedTronAdapterConfig } from "../types";
+import { getWalletIcon } from "./icons.generated";
 import type { WalletDescriptor } from "./types";
 
 export function buildAdapters(wallets: readonly WalletDescriptor[], config: DefaultAdaptersConfig = {}): WalletAdapter[] {
@@ -10,7 +11,7 @@ export function buildAdapters(wallets: readonly WalletDescriptor[], config: Defa
   for (const wallet of wallets) {
     if (wallet.enabled === false) continue;
     const adapter = buildAdapter(wallet, config);
-    if (adapter) adapters.push(adapter);
+    if (adapter) adapters.push(hydrateAdapterMetadata(wallet, adapter));
   }
   return adapters;
 }
@@ -40,6 +41,7 @@ function toBridgeConfig(wallet: Extract<WalletDescriptor, { integration: "tronwe
     id: wallet.id,
     name: wallet.name,
     homepage: wallet.homepage,
+    ...(wallet.platforms.includes("hardware") ? { type: "hardware" as const } : {}),
     platforms: [...wallet.platforms],
     ...(wallet.signMessageMode ? { signMessageMode: wallet.signMessageMode } : {}),
     ...(wallet.availabilityTimeoutMs ? { availabilityTimeoutMs: wallet.availabilityTimeoutMs } : {}),
@@ -55,6 +57,8 @@ function toInjectedFallback(wallet: Extract<WalletDescriptor, { integration: "tr
     name: wallet.name,
     providerPaths: wallet.injectedFallback?.providerPaths ?? [],
     ...(wallet.injectedFallback?.provider ? { provider: wallet.injectedFallback.provider } : {}),
+    ...(wallet.injectedFallback?.availabilityProbe ? { availabilityProbe: wallet.injectedFallback.availabilityProbe } : {}),
+    ...(wallet.injectedFallback?.requestMethods ? { requestMethods: wallet.injectedFallback.requestMethods } : {}),
     homepage: wallet.homepage,
     downloadUrl: wallet.downloadUrl ?? wallet.homepage,
     platforms: [...wallet.platforms]
@@ -62,16 +66,32 @@ function toInjectedFallback(wallet: Extract<WalletDescriptor, { integration: "tr
 }
 
 function toInjectedConfig(wallet: Extract<WalletDescriptor, { integration: "injected" }>): InjectedTronAdapterConfig {
+  const icon = wallet.icon ?? getWalletIcon(wallet.id);
   return {
     id: wallet.id,
     name: wallet.name,
     providerPaths: wallet.detect.providerPaths ?? [],
     ...(wallet.detect.provider ? { provider: wallet.detect.provider } : {}),
-    ...(wallet.icon ? { icon: wallet.icon } : {}),
+    ...(wallet.detect.availabilityProbe ? { availabilityProbe: wallet.detect.availabilityProbe } : {}),
+    ...(icon ? { icon } : {}),
     homepage: wallet.homepage,
     downloadUrl: wallet.downloadUrl ?? wallet.homepage,
     platforms: [...wallet.platforms],
     ...(wallet.requestMethods ? { requestMethods: wallet.requestMethods } : {}),
-    ...(wallet.signMessageMode ? { signMessageMode: wallet.signMessageMode } : {})
+    ...(wallet.signMessageMode ? { signMessageMode: wallet.signMessageMode } : {}),
+    ...(wallet.availabilityTimeoutMs ? { availabilityTimeoutMs: wallet.availabilityTimeoutMs } : {}),
+    ...(wallet.addressTimeoutMs ? { addressTimeoutMs: wallet.addressTimeoutMs } : {}),
+    ...(wallet.addressSettleMs ? { addressSettleMs: wallet.addressSettleMs } : {}),
+    ...(wallet.preferInjectedAddress ? { preferInjectedAddress: true } : {})
   };
+}
+
+function hydrateAdapterMetadata(wallet: WalletDescriptor, adapter: WalletAdapter): WalletAdapter {
+  const icon = wallet.icon ?? getWalletIcon(wallet.id);
+  if (!icon) return adapter;
+  (adapter as WalletAdapter & { metadata: WalletMetadata }).metadata = {
+    ...adapter.metadata,
+    icon
+  };
+  return adapter;
 }

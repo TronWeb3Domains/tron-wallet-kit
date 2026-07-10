@@ -22,6 +22,7 @@ import {
   renderWalletQr,
   resolveWalletUiConfig,
   resolveTheme,
+  resolveWalletEnvironment,
 } from "../src/index";
 
 describe("themeName presets", () => {
@@ -162,6 +163,8 @@ describe("wallet kit surfaces", () => {
     expect(styles).toContain(".twk-button-panel");
     expect(styles).toContain("backdrop-filter: blur(var(--twk-backdrop-blur))");
     expect(styles).toContain("outline: 2px solid var(--twk-focus-ring)");
+    expect(styles).toContain(".twk-modal:focus");
+    expect(styles).toContain("outline: none");
     expect(styles).not.toContain("#");
     expect(styles).not.toContain("rgba(");
   });
@@ -186,6 +189,7 @@ describe("wallet kit surfaces", () => {
     });
 
     expect(html).toContain('role="dialog"');
+    expect(html).toContain('tabindex="-1" data-twk-panel="true"');
     expect(html).toContain('data-twk-wallet-id="tronlink"');
     expect(html).toContain("Connecting");
     expect(html).toContain("QR CODE");
@@ -337,31 +341,26 @@ describe("wallet kit surfaces", () => {
     expect(html).not.toContain("Don&#39;t have WalletConnect?");
   });
 
-  it("ships generated SVG icons for every catalog wallet", () => {
-    const wallets = mergeWalletOptionsWithCatalog([]);
-    const expectedIconWallets = [
-      "walletconnect",
-      "tronlink",
-      "metamask",
-      "okx",
-      "bitget",
-      "binance",
-      "tokenpocket",
-      "trust",
-      "gate",
-      "foxwallet",
-      "bybit",
-      "imtoken",
-      "tomo",
-      "guarda",
-      "backpack",
-      "onekey",
-    ];
+  it("accepts runtime catalog icons without owning a static icon map", () => {
+    const wallets = mergeWalletOptionsWithCatalog(
+      [],
+      undefined,
+      [
+        {
+          id: "tronlink",
+          name: "TronLink",
+          enabled: true,
+          group: "featured",
+          transport: "extension",
+          platforms: ["extension"],
+          icon: "data:image/svg+xml;base64,PHN2Zy8+",
+          homepage: "https://www.tronlink.org/",
+          downloadUrl: "https://www.tronlink.org/"
+        }
+      ]
+    );
 
-    for (const walletId of expectedIconWallets) {
-      expect(wallets.find((wallet) => wallet.id === walletId)?.icon, walletId).toMatch(/^data:image\/svg\+xml,/);
-    }
-    expect(wallets.some((wallet) => wallet.id === "ledger")).toBe(false);
+    expect(wallets.find((wallet) => wallet.id === "tronlink")?.icon).toBe("data:image/svg+xml;base64,PHN2Zy8+");
   });
 
   it("carries registry metadata for future platform-specific wallet UX", () => {
@@ -377,7 +376,7 @@ describe("wallet kit surfaces", () => {
     expect(binance?.conflictMarkers).toContain("isBinance");
   });
 
-  it("supports advanced wallet list controls without overgrowing featured rows", () => {
+  it("supports advanced wallet list controls with explicit featured modes and layouts", () => {
     const wallets = mergeWalletOptionsWithCatalog([
       { id: "tronlink", name: "TronLink", readyState: "found" },
       { id: "tokenpocket", name: "TokenPocket", readyState: "notFound", transport: "extension" },
@@ -392,25 +391,36 @@ describe("wallet kit surfaces", () => {
       { id: "guarda", name: "Guarda", readyState: "notFound" },
     ]);
     const featuredWallets = getFeaturedWalletOptions(wallets, {
-      featuredLimit: 99,
+      featuredMode: "manual",
       featuredWallets: ["tronlink", "tokenpocket", "okx", "bitget", "trust", "binance", "walletconnect", "metamask", "gate", "bybit", "guarda"],
     });
-    const compactNineWallets = getFeaturedWalletOptions(wallets, {
-      featuredLimit: 9,
-      featuredWallets: ["tronlink", "tokenpocket", "okx", "bitget", "trust", "binance", "walletconnect", "metamask", "gate"],
+    const installedFirstWallets = getFeaturedWalletOptions(wallets, {
+      featuredMode: "installed-first",
     });
+    const installedOnlyWithoutInstalled = getFeaturedWalletOptions(
+      wallets.map((wallet) => ({ ...wallet, readyState: wallet.id === "walletconnect" ? "found" as const : "notFound" as const, available: wallet.id === "walletconnect" })),
+      { featuredMode: "installed-only" }
+    );
+    const installedFirstWithoutInstalled = getFeaturedWalletOptions(
+      wallets.map((wallet) => ({ ...wallet, readyState: wallet.id === "walletconnect" ? "found" as const : "notFound" as const, available: wallet.id === "walletconnect" })),
+      { featuredMode: "installed-first" }
+    );
 
-    expect(featuredWallets.map((wallet) => wallet.id)).toEqual(["tronlink", "tokenpocket", "okx", "bitget", "trust", "binance", "metamask", "gate", "bybit", "walletconnect"]);
-    expect(compactNineWallets.map((wallet) => wallet.id)).toEqual(["tronlink", "tokenpocket", "okx", "bitget", "trust", "binance", "metamask", "gate", "walletconnect"]);
+    expect(featuredWallets.map((wallet) => wallet.id)).toEqual(["tronlink", "tokenpocket", "okx", "bitget", "trust", "binance", "walletconnect", "metamask", "gate", "bybit", "guarda"]);
+    expect(installedFirstWallets.map((wallet) => wallet.id)).toEqual(["tronlink", "tokenpocket", "okx", "bitget", "walletconnect"]);
+    expect(installedOnlyWithoutInstalled.map((wallet) => wallet.id)).toEqual(["walletconnect"]);
+    expect(installedFirstWithoutInstalled[0]?.id).toBe("walletconnect");
 
     const html = createConnectModalHtml({
       wallets,
       walletList: {
-        featuredLimit: 10,
+        layout: "card",
+        featuredMode: "manual",
         featuredWallets: featuredWallets.map((wallet) => wallet.id),
       },
     });
-    expect(html).toContain('data-featured-layout="compact"');
+    expect(html).toContain('data-layout="card"');
+    expect(html).toContain('data-scope="featured"');
     expect(html).toContain("twk-wallet-card");
     expect(html).not.toContain("twk-wallet-compact");
     expect(html).toContain('data-status="installed"');
@@ -421,6 +431,12 @@ describe("wallet kit surfaces", () => {
     const styles = createWalletKitStyles("[data-twk-root]");
     expect(styles).toContain(".twk-wallet-status");
     expect(styles).toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
+    expect(styles).toContain('.twk-wallet-grid[data-scope="featured"]');
+    expect(styles).toContain("max-height: min(360px, 52vh)");
+    expect(styles).toContain('[data-overflow="bottom"]');
+    expect(styles).toContain('[data-overflow="top"]');
+    expect(styles).toContain('[data-overflow="both"]');
+    expect(styles).not.toContain('.twk-wallet-grid[data-scope="featured"] {\n  height: min(360px, 52vh)');
     expect(styles).toContain("height: 56px");
     expect(styles).toContain("height: 18px");
     expect(styles).toContain("height: 12px");
@@ -435,6 +451,45 @@ describe("wallet kit surfaces", () => {
       sortAvailableFirst: true,
     });
     expect(filtered.map((wallet) => wallet.id)).toEqual(["tronlink", "walletconnect", "okx"]);
+  });
+
+  it("applies platform-aware wallet visibility for desktop and mobile browser", () => {
+    const wallets = [
+      { id: "tronlink", name: "TronLink", readyState: "found" as const, platforms: ["extension", "mobile"] as const },
+      { id: "gate", name: "Gate Wallet", readyState: "notFound" as const, platforms: ["extension"] as const },
+      { id: "foxwallet", name: "FoxWallet", readyState: "notFound" as const, platforms: ["mobile"] as const, mobileDeepLink: { scheme: "foxwallet" } },
+      { id: "ledger", name: "Ledger", readyState: "notFound" as const, platforms: ["hardware"] as const, transport: "hardware" },
+      { id: "walletconnect", name: "WalletConnect", readyState: "found" as const, platforms: ["mobile"] as const, transport: "walletconnect", capabilities: ["qr"] },
+    ];
+
+    const desktopWallets = applyWalletListConfig(wallets, {}, { kind: "desktop-extension", isMobile: false, hasInjected: true });
+    expect(desktopWallets.map((wallet) => wallet.id)).toEqual(["tronlink", "walletconnect", "gate", "ledger"]);
+
+    const mobileWallets = applyWalletListConfig(
+      wallets,
+      { showUnavailable: false },
+      { kind: "mobile-browser", isMobile: true, hasInjected: false }
+    );
+    expect(mobileWallets.map((wallet) => wallet.id)).toEqual(["tronlink", "walletconnect", "foxwallet"]);
+
+    const mobileFeatured = getFeaturedWalletOptions(mobileWallets, { featuredMode: "installed-first" }, { kind: "mobile-browser", isMobile: true, hasInjected: false });
+    expect(mobileFeatured[0]?.id).toBe("walletconnect");
+
+    const mobileHtml = createConnectModalHtml({
+      wallets,
+      walletEnvironment: { kind: "mobile-browser", isMobile: true, hasInjected: false },
+      walletList: { showUnavailable: false },
+    });
+    expect(mobileHtml).toContain('data-twk-wallet-id="walletconnect"');
+    expect(mobileHtml).toContain('data-twk-wallet-id="foxwallet"');
+    expect(mobileHtml).not.toContain('data-twk-wallet-id="gate"');
+    expect(mobileHtml).not.toContain('data-twk-wallet-id="ledger"');
+  });
+
+  it("detects desktop, mobile browser, and mobile in-app wallet environments", () => {
+    expect(resolveWalletEnvironment({ navigator: { userAgent: "Mozilla/5.0", maxTouchPoints: 0 } } as unknown as Window).kind).toBe("desktop-extension");
+    expect(resolveWalletEnvironment({ navigator: { userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Mobile", maxTouchPoints: 5 } } as unknown as Window).kind).toBe("mobile-browser");
+    expect(resolveWalletEnvironment({ navigator: { userAgent: "Mozilla/5.0 (Linux; Android 14) Mobile", maxTouchPoints: 5 }, tronWeb: {} } as unknown as Window).kind).toBe("mobile-in-app");
   });
 
   it("renders all-wallets search, connecting detail, and QR views", () => {
@@ -462,6 +517,7 @@ describe("wallet kit surfaces", () => {
 
     const flatAllWalletsHtml = createConnectModalHtml({
       view: "all-wallets",
+      walletList: { layout: "card" },
       wallets: [
         {
           id: "tronlink",
@@ -922,9 +978,18 @@ describe("wallet kit surfaces", () => {
     expect(config.theme.name).toBe("dark");
     expect(config.theme.tokens.radius).toBe("18px");
     expect(config.modal.title).toBe("Connect TRON");
-    expect(config.walletList.layout).toBe("grid");
+    expect(config.walletList.layout).toBe("card");
+    expect(config.walletList.featuredMode).toBe("installed-first");
     expect(config.toast && config.toast.position).toBe("bottom-right");
     expect(createDefaultWalletUiConfig().accountPanel.showAddressQr).toBe(true);
+
+    const manualConfig = resolveWalletUiConfig({
+      walletList: {
+        featuredLimit: 3,
+        featuredWallets: ["tronlink", "tokenpocket", "okx", "bitget", "trust", "binance", "walletconnect", "metamask", "gate", "bybit", "guarda"],
+      },
+    });
+    expect(manualConfig.walletList.featuredWallets).toEqual(["tronlink", "tokenpocket", "okx", "bitget", "trust", "binance", "walletconnect", "metamask", "gate", "bybit", "guarda"]);
   });
 
   it("resolves built-in locales and app label overrides", () => {

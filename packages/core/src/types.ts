@@ -51,7 +51,7 @@ export interface WalletSession {
 }
 
 export type WalletAdapterType = "extension" | "walletconnect" | "hardware" | "mobile" | "embedded" | string;
-export type WalletPlatform = "extension" | "mobile";
+export type WalletPlatform = "extension" | "mobile" | "hardware";
 
 export interface WalletMetadata {
   id: string;
@@ -187,8 +187,10 @@ export interface WalletStorage {
   removeItem(key: string): void | Promise<void>;
 }
 
+export const WALLET_STORAGE_VERSION = 1 as const;
+
 export interface StoredWalletSessionEnvelope {
-  version: 1;
+  version: typeof WALLET_STORAGE_VERSION;
   session: WalletSession;
   updatedAt: number;
 }

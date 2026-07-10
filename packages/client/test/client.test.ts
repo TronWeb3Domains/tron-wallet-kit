@@ -7,7 +7,8 @@ import {
   createTronDomainIdentityResolver,
   createTronWeb3AdapterBridge,
   createWalletClient,
-  createWalletKit
+  createWalletKit,
+  WALLET_ICONS
 } from "../src/index";
 
 function createMockAdapter(id = "mock"): WalletAdapter {
@@ -100,12 +101,18 @@ describe("client entrypoints", () => {
     delete (globalThis as Record<string, unknown>).bitkeep;
     delete (globalThis as Record<string, unknown>).ethereum;
     delete (globalThis as Record<string, unknown>).gatewallet;
+    delete (globalThis as Record<string, unknown>).gateWallet;
+    delete (globalThis as Record<string, unknown>).GateWallet;
     delete (globalThis as Record<string, unknown>).bybitWallet;
     delete (globalThis as Record<string, unknown>).binancew3w;
+    delete (globalThis as Record<string, unknown>).backpack;
     delete (globalThis as Record<string, unknown>).guarda;
     delete (globalThis as Record<string, unknown>).$onekey;
+    delete (globalThis as Record<string, unknown>).SafePalHook;
+    delete (globalThis as Record<string, unknown>).sfpPlatform;
     delete (globalThis as Record<string, unknown>).trustwallet;
     delete (globalThis as Record<string, unknown>).foxwallet;
+    delete (globalThis as Record<string, unknown>).lateWallet;
     delete (globalThis as Record<string, unknown>).tronWeb;
     delete (globalThis as Record<string, unknown>).tronLink;
     delete (globalThis as Record<string, unknown>).isBitKeep;
@@ -240,9 +247,11 @@ describe("client entrypoints", () => {
       "bybit",
       "imtoken",
       "binance",
+      "safepal",
       "guarda",
       "onekey",
-      "backpack"
+      "backpack",
+      "ledger"
     ]);
     expect(createWalletClient({ walletConnectProjectId: "project" }).getWallets().map((wallet) => wallet.metadata.id)).toEqual([
       "tronlink",
@@ -256,9 +265,11 @@ describe("client entrypoints", () => {
       "bybit",
       "imtoken",
       "binance",
+      "safepal",
       "guarda",
       "onekey",
       "backpack",
+      "ledger",
       "walletconnect"
     ]);
   });
@@ -279,12 +290,44 @@ describe("client entrypoints", () => {
       "bybit",
       "imtoken",
       "binance",
+      "safepal",
       "guarda",
       "onekey",
       "backpack",
+      "ledger",
       "walletconnect"
     ]);
     expect(BUILTIN_WALLET_DESCRIPTORS.every((wallet) => wallet.homepage && wallet.platforms.length > 0)).toBe(true);
+  });
+
+  it("ships Ledger as an optional hardware bridge descriptor", () => {
+    const manager = createWalletClient({ wallets: ["ledger"] });
+    const [ledger] = manager.getWallets();
+    const catalog = buildCatalog(BUILTIN_WALLET_DESCRIPTORS);
+
+    expect(ledger?.metadata).toMatchObject({
+      id: "ledger",
+      name: "Ledger",
+      type: "hardware",
+      platforms: ["hardware"]
+    });
+    expect(ledger?.metadata.icon).toBe(WALLET_ICONS.ledger);
+    expect(catalog.find((wallet) => wallet.id === "ledger")).toMatchObject({
+      id: "ledger",
+      group: "hardware",
+      transport: "hardware",
+      platforms: ["hardware"],
+      icon: WALLET_ICONS.ledger
+    });
+  });
+
+  it("resolves builtin wallet icons from the client generated icon map", () => {
+    const catalog = buildCatalog(BUILTIN_WALLET_DESCRIPTORS);
+
+    for (const wallet of BUILTIN_WALLET_DESCRIPTORS) {
+      expect(WALLET_ICONS[wallet.id], wallet.id).toMatch(/^data:image\/(?:svg\+xml|png|webp);base64,/);
+      expect(catalog.find((item) => item.id === wallet.id)?.icon, wallet.id).toBe(WALLET_ICONS[wallet.id]);
+    }
   });
 
   it("accepts runtime wallet descriptors with inline catalog metadata", async () => {
@@ -335,8 +378,10 @@ describe("client entrypoints", () => {
       "bybit",
       "imtoken",
       "binance",
+      "safepal",
       "onekey",
-      "backpack"
+      "backpack",
+      "ledger"
     ]);
   });
 
@@ -344,8 +389,39 @@ describe("client entrypoints", () => {
     const wallets = createWalletClient({ walletConnectProjectId: "project" }).getWallets();
 
     for (const wallet of wallets) {
-      expect(wallet.metadata.icon, wallet.metadata.id).toMatch(/^data:image\/svg\+xml,/);
+      expect(wallet.metadata.icon, wallet.metadata.id).toMatch(/^data:image\/(?:svg\+xml|png|webp);base64,/);
+      expect(typeof wallet.connect, wallet.metadata.id).toBe("function");
     }
+  });
+
+  it("keeps TronLink class adapter methods after icon metadata hydration", async () => {
+    const manager = createWalletClient({
+      wallets: ["tronlink"],
+      tronlink: {
+        provider: () => ({
+          kind: "legacy" as const,
+          provider: {
+            isTronLink: true,
+            ready: true,
+            tronWeb: {
+              ready: true,
+              defaultAddress: { base58: "TTronLinkAddress", hex: "41tronlink" },
+              trx: {
+                getBlockByNumber: async () => ({ blockID: "000000000000000000000000000000000000000000000000000000002b6653dc" }),
+                sign: async <TTransaction,>(transaction: TTransaction) => transaction,
+                signMessageV2: async (message: string) => `tronlink:${message}`
+              }
+            },
+            request: async () => ({ code: 200 as const })
+          }
+        })
+      }
+    });
+    const [wallet] = manager.getWallets();
+
+    expect(wallet?.metadata.icon).toMatch(/^data:image\/svg\+xml;base64,/);
+    expect(typeof wallet?.connect).toBe("function");
+    await expect(manager.connect("tronlink")).resolves.toMatchObject({ account: { address: "TTronLinkAddress" } });
   });
 
   it("connects an injected extension adapter through a wallet-specific provider", async () => {
@@ -381,6 +457,65 @@ describe("client entrypoints", () => {
     await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "tp:hello" });
   });
 
+  it("falls back from tron_requestAccounts to eth_requestAccounts for injected extension providers", async () => {
+    const request = vi.fn(async ({ method }: { method: string }) => {
+      if (method === "tron_requestAccounts") throw new Error("method not supported");
+      if (method === "eth_requestAccounts") return ["TLegacyInjected"];
+      return undefined;
+    });
+    const manager = createWalletClient({
+      wallets: [],
+      adapters: [
+        createInjectedTronAdapter({
+          id: "legacy-injected",
+          name: "Legacy Injected",
+          providerPaths: [],
+          provider: () => ({
+            request,
+            tronWeb: {
+              defaultAddress: { base58: "TDefaultShouldNotWin" },
+              trx: {
+                getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" })
+              }
+            }
+          })
+        })
+      ]
+    });
+
+    await expect(manager.connect("legacy-injected")).resolves.toMatchObject({
+      account: { address: "TLegacyInjected" }
+    });
+    expect(request).toHaveBeenNthCalledWith(1, { method: "tron_requestAccounts" });
+    expect(request).toHaveBeenNthCalledWith(2, { method: "eth_requestAccounts" });
+  });
+
+  it("does not use generic tronWeb when an injected descriptor declares only wallet-specific roots", async () => {
+    (globalThis as Record<string, unknown>).tronWeb = {
+      defaultAddress: { base58: "TGenericShouldNotWin" },
+      trx: {
+        getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" })
+      }
+    };
+    const manager = createWalletClient({
+      wallets: [
+        {
+          id: "strict-injected",
+          name: "Strict Injected",
+          integration: "injected" as const,
+          homepage: "https://example.com",
+          platforms: ["extension"] as const,
+          detect: { providerPaths: ["strictWallet.tron"] }
+        }
+      ]
+    });
+
+    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(false);
+    await expect(manager.connect("strict-injected")).rejects.toMatchObject({
+      code: "WALLET_UNAVAILABLE"
+    });
+  });
+
   it("uses wallet-specific injected fallbacks when prominent upstream adapters miss installed extensions", async () => {
     const makeProvider = (address: string) => ({
       tronWeb: {
@@ -401,9 +536,9 @@ describe("client entrypoints", () => {
 
     const manager = createWalletClient({ wallets: ["tokenpocket", "okx", "bitget"] });
 
-    await expect(manager.getWallets().find((wallet) => wallet.metadata.id === "tokenpocket")?.isAvailable?.()).resolves.toBe(true);
-    await expect(manager.getWallets().find((wallet) => wallet.metadata.id === "okx")?.isAvailable?.()).resolves.toBe(true);
-    await expect(manager.getWallets().find((wallet) => wallet.metadata.id === "bitget")?.isAvailable?.()).resolves.toBe(true);
+    await expect(Promise.resolve(manager.getWallets().find((wallet) => wallet.metadata.id === "tokenpocket")?.isAvailable?.())).resolves.toBe(true);
+    await expect(Promise.resolve(manager.getWallets().find((wallet) => wallet.metadata.id === "okx")?.isAvailable?.())).resolves.toBe(true);
+    await expect(Promise.resolve(manager.getWallets().find((wallet) => wallet.metadata.id === "bitget")?.isAvailable?.())).resolves.toBe(true);
     await expect(manager.connect("okx")).resolves.toMatchObject({ account: { address: "TOKX" } });
     await manager.disconnect();
     await expect(manager.connect("bitget")).resolves.toMatchObject({ account: { address: "TBitget" } });
@@ -446,8 +581,56 @@ describe("client entrypoints", () => {
 
     const manager = createWalletClient({ wallets: ["bitget"] });
 
-    await expect(manager.getWallets().find((wallet) => wallet.metadata.id === "bitget")?.isAvailable?.()).resolves.toBe(true);
+    await expect(Promise.resolve(manager.getWallets().find((wallet) => wallet.metadata.id === "bitget")?.isAvailable?.())).resolves.toBe(true);
     await expect(manager.connect("bitget")).resolves.toMatchObject({ account: { address: "TBitgetGlobal" } });
+  });
+
+  it("does not crash Bitget availability when injected extension getters throw", async () => {
+    const bitgetLikeProvider = {
+      request: vi.fn(async () => ({ code: 200 })),
+      tronWeb: {
+        defaultAddress: { base58: "TBitgetSafe" },
+        trx: {
+          getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" })
+        }
+      }
+    };
+    Object.defineProperty(bitgetLikeProvider, "logger", {
+      enumerable: true,
+      get() {
+        throw new TypeError("logger is not a function");
+      }
+    });
+    (globalThis as typeof globalThis & { bitkeep?: unknown }).bitkeep = { tronLink: bitgetLikeProvider };
+
+    const manager = createWalletClient({ wallets: ["bitget"] });
+
+    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
+    await expect(manager.connect("bitget")).resolves.toMatchObject({ account: { address: "TBitgetSafe" } });
+  });
+
+  it("keeps Bitget injected request bound to the original provider object", async () => {
+    const bitgetLikeProvider = {
+      logger: {
+        debug: vi.fn()
+      },
+      tronWeb: {
+        defaultAddress: { base58: "TBitgetBound" },
+        trx: {
+          getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" })
+        }
+      },
+      async request(this: { logger?: { debug?: (message: string) => void } }, { method }: { method: string }) {
+        this.logger?.debug?.(method);
+        return { code: 200 };
+      }
+    };
+    (globalThis as typeof globalThis & { bitkeep?: unknown }).bitkeep = { tronLink: bitgetLikeProvider };
+
+    const manager = createWalletClient({ wallets: ["bitget"] });
+
+    await expect(manager.connect("bitget")).resolves.toMatchObject({ account: { address: "TBitgetBound" } });
+    expect(bitgetLikeProvider.logger.debug).toHaveBeenCalledWith("tron_requestAccounts");
   });
 
   it("uses the Trust-specific injected provider instead of shared TronLink globals", async () => {
@@ -476,7 +659,7 @@ describe("client entrypoints", () => {
 
     const manager = createWalletClient({ wallets: ["trust"] });
 
-    await expect(manager.getWallets()[0]?.isAvailable?.()).resolves.toBe(true);
+    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
     await expect(manager.connect("trust")).resolves.toMatchObject({ account: { address: "TTrustAddress" } });
   });
 
@@ -496,8 +679,128 @@ describe("client entrypoints", () => {
 
     const manager = createWalletClient({ wallets: ["guarda"] });
 
-    await expect(manager.getWallets()[0]?.isAvailable?.()).resolves.toBe(true);
+    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
     await expect(manager.connect("guarda")).resolves.toMatchObject({ account: { address: "TGuardaAddress" } });
+  });
+
+  it("connects FoxWallet through its wallet-specific injected provider", async () => {
+    (globalThis as Record<string, unknown>).foxwallet = {
+      tronLink: {
+        request: async () => ({ code: 200 }),
+        tronWeb: {
+          defaultAddress: { base58: "TFoxWallet" },
+          trx: {
+            getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" }),
+            signMessageV2: async (message: string) => `fox:${message}`,
+            sign: async <TTransaction,>(transaction: TTransaction) => transaction
+          }
+        }
+      }
+    };
+
+    const manager = createWalletClient({ wallets: ["foxwallet"] });
+
+    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
+    await expect(manager.connect("foxwallet")).resolves.toMatchObject({ account: { address: "TFoxWallet" } });
+    await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "fox:hello" });
+  });
+
+  it("connects FoxWallet when request or tronWeb live on the parent object", async () => {
+    const request = vi.fn(async ({ method }: { method: string }) => (method === "tron_requestAccounts" ? { code: 200 } : undefined));
+    (globalThis as Record<string, unknown>).foxwallet = {
+      request,
+      tronLink: {},
+      tronWeb: {
+        defaultAddress: { base58: "TFoxWalletParent" },
+        trx: {
+          getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" }),
+          signMessageV2: async (message: string) => `fox-parent:${message}`
+        }
+      }
+    };
+
+    const manager = createWalletClient({ wallets: ["foxwallet"] });
+
+    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
+    await expect(manager.connect("foxwallet")).resolves.toMatchObject({ account: { address: "TFoxWalletParent" } });
+    await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "fox-parent:hello" });
+    expect(request).toHaveBeenCalledWith({ method: "tron_requestAccounts" });
+  });
+
+  it("connects SafePal through SafePalHook and the global tronWeb", async () => {
+    const request = vi.fn(async () => ({ code: 200 }));
+    (globalThis as Record<string, unknown>).SafePalHook = {
+      request,
+      defaultAddress: { base58: "TSafePalHook", hex: "41safepal" }
+    };
+    (globalThis as Record<string, unknown>).tronWeb = {
+      trx: {
+        getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" }),
+        sign: async (payload: unknown) => (typeof payload === "string" ? `safepal:${payload}` : payload)
+      }
+    };
+
+    const manager = createWalletClient({ wallets: ["safepal"] });
+
+    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
+    await expect(manager.connect("safepal")).resolves.toMatchObject({ account: { address: "TSafePalHook" } });
+    await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "safepal:hello" });
+    expect(request).toHaveBeenCalledWith({ method: "tron_requestAccounts" });
+  });
+
+  it("does not mark SafePal available without the required tronWeb surface", async () => {
+    (globalThis as Record<string, unknown>).SafePalHook = {
+      request: vi.fn(async () => ({ code: 200 })),
+      defaultAddress: { base58: "TSafePalHookOnly" }
+    };
+
+    const manager = createWalletClient({ wallets: ["safepal"] });
+
+    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(false);
+  });
+
+  it("connects SafePal when defaultAddress is populated after approval", async () => {
+    const safePalHook: Record<string, unknown> = {};
+    const request = vi.fn(async () => {
+      safePalHook.defaultAddress = { base58: "TSafePalAfterApproval", hex: "41after" };
+      return { code: 200 };
+    });
+    safePalHook.request = request;
+    (globalThis as Record<string, unknown>).SafePalHook = safePalHook;
+    (globalThis as Record<string, unknown>).tronWeb = {
+      trx: {
+        getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" }),
+        sign: async (payload: unknown) => (typeof payload === "string" ? `safepal-late:${payload}` : payload)
+      }
+    };
+
+    const manager = createWalletClient({ wallets: ["safepal"] });
+
+    await expect(manager.connect("safepal")).resolves.toMatchObject({
+      account: { address: "TSafePalAfterApproval", hexAddress: "41after" }
+    });
+    await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "safepal-late:hello" });
+  });
+
+  it("connects SafePal in-app when address is already available and no request method is exposed", async () => {
+    (globalThis as Record<string, unknown>).SafePalHook = {
+      defaultAddress: { base58: "TSafePalInApp", hex: "41inapp" }
+    };
+    (globalThis as Record<string, unknown>).sfpPlatform = "iOS";
+    (globalThis as Record<string, unknown>).tronWeb = {
+      trx: {
+        getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" }),
+        sign: async (payload: unknown) => (typeof payload === "string" ? `safepal-app:${payload}` : payload)
+      }
+    };
+
+    const manager = createWalletClient({ wallets: ["safepal"] });
+
+    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
+    await expect(manager.connect("safepal")).resolves.toMatchObject({
+      account: { address: "TSafePalInApp", hexAddress: "41inapp" }
+    });
+    await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "safepal-app:hello" });
   });
 
   it("uses wallet-specific injected fallbacks for second phase extension wallets", async () => {
@@ -513,22 +816,241 @@ describe("client entrypoints", () => {
     });
     const gateProvider = makeProvider("TGate");
     const bybitProvider = makeProvider("TBybit");
-    const binanceProvider = makeProvider("TBinance");
+    const binanceProvider = {
+      getAccount: vi.fn(async () => ({ address: "TBinance" })),
+      getChainId: vi.fn(() => "0x2b6653dc"),
+      signMessageV2: vi.fn(async (message: string) => `TBinance:${message}`),
+      signTransaction: vi.fn(async <TTransaction,>(transaction: TTransaction) => transaction)
+    };
     const oneKeyProvider = makeProvider("TOneKey");
+    const backpackProvider = makeProvider("TBackpack");
     (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = { tron: gateProvider };
     (globalThis as typeof globalThis & { bybitWallet?: unknown }).bybitWallet = { tronLink: bybitProvider };
     (globalThis as typeof globalThis & { binancew3w?: unknown }).binancew3w = { tron: binanceProvider };
     (globalThis as typeof globalThis & { $onekey?: unknown }).$onekey = { tron: oneKeyProvider };
+    (globalThis as typeof globalThis & { backpack?: unknown }).backpack = { tron: backpackProvider };
 
-    const manager = createWalletClient({ wallets: ["gate", "bybit", "binance", "onekey"] });
+    const manager = createWalletClient({ wallets: ["gate", "bybit", "binance", "onekey", "backpack"] });
 
-    await expect(manager.getWallets().find((wallet) => wallet.metadata.id === "gate")?.isAvailable?.()).resolves.toBe(true);
-    await expect(manager.getWallets().find((wallet) => wallet.metadata.id === "bybit")?.isAvailable?.()).resolves.toBe(true);
-    await expect(manager.getWallets().find((wallet) => wallet.metadata.id === "binance")?.isAvailable?.()).resolves.toBe(true);
-    await expect(manager.getWallets().find((wallet) => wallet.metadata.id === "onekey")?.isAvailable?.()).resolves.toBe(true);
+    await expect(Promise.resolve(manager.getWallets().find((wallet) => wallet.metadata.id === "gate")?.isAvailable?.())).resolves.toBe(true);
+    await expect(Promise.resolve(manager.getWallets().find((wallet) => wallet.metadata.id === "bybit")?.isAvailable?.())).resolves.toBe(true);
+    await expect(Promise.resolve(manager.getWallets().find((wallet) => wallet.metadata.id === "binance")?.isAvailable?.())).resolves.toBe(true);
+    await expect(Promise.resolve(manager.getWallets().find((wallet) => wallet.metadata.id === "onekey")?.isAvailable?.())).resolves.toBe(true);
+    await expect(Promise.resolve(manager.getWallets().find((wallet) => wallet.metadata.id === "backpack")?.isAvailable?.())).resolves.toBe(true);
     await expect(manager.connect("gate")).resolves.toMatchObject({ account: { address: "TGate" } });
     await manager.disconnect();
     await expect(manager.connect("bybit")).resolves.toMatchObject({ account: { address: "TBybit" } });
+    await manager.disconnect();
+    await expect(manager.connect("binance")).resolves.toMatchObject({ account: { address: "TBinance" } });
+    await manager.disconnect();
+    await expect(manager.connect("backpack")).resolves.toMatchObject({ account: { address: "TBackpack" } });
+  });
+
+  it("merges Gate parent tronWeb when the request provider is nested", async () => {
+    (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = {
+      tronLink: {
+        request: async () => ({ code: 200 })
+      },
+      tronWeb: {
+        defaultAddress: { base58: "TGateParent", hex: "41gate" },
+        trx: {
+          signMessageV2: async (message: string) => `gate:${message}`,
+          sign: async <TTransaction,>(transaction: TTransaction) => transaction
+        }
+      }
+    };
+
+    const manager = createWalletClient({ wallets: ["gate"] });
+
+    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
+    await expect(manager.connect("gate")).resolves.toMatchObject({
+      account: { address: "TGateParent", hexAddress: "41gate" }
+    });
+    await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "gate:hello" });
+  });
+
+  it("treats Gate tronLink marker with parent tronWeb as available", async () => {
+    (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = {
+      tronLink: {},
+      tronWeb: {
+        defaultAddress: { base58: "TGateMarker", hex: "41gatemarker" },
+        trx: {
+          signMessageV2: async (message: string) => `gate-marker:${message}`,
+          sign: async <TTransaction,>(transaction: TTransaction) => transaction
+        }
+      }
+    };
+
+    const manager = createWalletClient({ wallets: ["gate"] });
+
+    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
+    await expect(manager.connect("gate")).resolves.toMatchObject({
+      account: { address: "TGateMarker", hexAddress: "41gatemarker" }
+    });
+  });
+
+  it("marks Gate available from its upstream installed marker before provider is connect-ready", async () => {
+    (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = {
+      tronLink: {}
+    };
+
+    const manager = createWalletClient({ wallets: ["gate"] });
+
+    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
+  });
+
+  it("connects Gate from the documented preferred gatewallet.tronWeb object", async () => {
+    (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = {
+      tronWeb: {
+        defaultAddress: { base58: "TGateDocs", hex: "41gatedocs" },
+        trx: {
+          signMessageV2: async (message: string) => `gate-docs:${message}`,
+          sign: async <TTransaction,>(transaction: TTransaction) => transaction
+        },
+        transactionBuilder: {
+          sendTrx: async () => ({ txID: "gate-docs-tx" })
+        }
+      }
+    };
+
+    const manager = createWalletClient({ wallets: ["gate"] });
+
+    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
+    await expect(manager.connect("gate")).resolves.toMatchObject({
+      account: { address: "TGateDocs", hexAddress: "41gatedocs" }
+    });
+    await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "gate-docs:hello" });
+  });
+
+  it("uses Gate injected address directly when it is already exposed", async () => {
+    const request = vi.fn(async ({ method }: { method: string }) => {
+      if (method === "eth_requestAccounts") return ["TGateRequested"];
+      return undefined;
+    });
+    (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = {
+      request,
+      tronWeb: {
+        defaultAddress: { base58: "TGateDefaultShouldNotWin", hex: "41default" },
+        trx: {
+          signMessageV2: async (message: string) => `gate-requested:${message}`
+        }
+      }
+    };
+
+    const manager = createWalletClient({ wallets: ["gate"] });
+
+    await expect(manager.connect("gate")).resolves.toMatchObject({
+      account: { address: "TGateDefaultShouldNotWin", hexAddress: "41default" }
+    });
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it("waits for Gate to hydrate tronWeb after a first approval request", async () => {
+    const gatewallet: Record<string, unknown> = {
+      tronWeb: {
+        trx: {
+          signMessageV2: async (message: string) => `gate-late:${message}`
+        }
+      }
+    };
+    const request = vi.fn(async ({ method }: { method: string }) => {
+      if (method === "eth_requestAccounts") {
+        setTimeout(() => {
+          gatewallet.tronWeb = {
+            defaultAddress: { base58: "TGateHydrated", hex: "41hydrated" },
+            trx: {
+              signMessageV2: async (message: string) => `gate-late:${message}`
+            }
+          };
+        }, 10);
+        return [];
+      }
+      return undefined;
+    });
+    gatewallet.request = request;
+    (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = gatewallet;
+
+    const manager = createWalletClient({ wallets: ["gate"] });
+
+    await expect(manager.connect("gate")).resolves.toMatchObject({
+      account: { address: "TGateHydrated", hexAddress: "41hydrated" }
+    });
+    expect(request).toHaveBeenCalledWith({ method: "eth_requestAccounts" });
+  });
+
+  it("marks Gate available from camelCase and EIP-6963 Gate markers", async () => {
+    (globalThis as typeof globalThis & { gateWallet?: unknown }).gateWallet = {
+      tron: {}
+    };
+    const aliasManager = createWalletClient({ wallets: ["gate"] });
+
+    await expect(Promise.resolve(aliasManager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
+    delete (globalThis as Record<string, unknown>).gateWallet;
+
+    const eventTarget = new EventTarget();
+    const previousAddEventListener = (globalThis as Record<string, unknown>).addEventListener;
+    const previousRemoveEventListener = (globalThis as Record<string, unknown>).removeEventListener;
+    const previousDispatchEvent = (globalThis as Record<string, unknown>).dispatchEvent;
+    (globalThis as Record<string, unknown>).addEventListener = eventTarget.addEventListener.bind(eventTarget);
+    (globalThis as Record<string, unknown>).removeEventListener = eventTarget.removeEventListener.bind(eventTarget);
+    (globalThis as Record<string, unknown>).dispatchEvent = eventTarget.dispatchEvent.bind(eventTarget);
+    const listener = (event: Event) => {
+      if (event.type !== "eip6963:requestProvider") return;
+      globalThis.dispatchEvent(
+        new CustomEvent("eip6963:announceProvider", {
+          detail: {
+            info: { name: "Gate Wallet", rdns: "io.gate.wallet" },
+            provider: {}
+          }
+        })
+      );
+    };
+    globalThis.addEventListener("eip6963:requestProvider", listener);
+    try {
+      const eip6963Manager = createWalletClient({ wallets: ["gate"] });
+      await expect(Promise.resolve(eip6963Manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
+    } finally {
+      globalThis.removeEventListener("eip6963:requestProvider", listener);
+      if (previousAddEventListener) {
+        (globalThis as Record<string, unknown>).addEventListener = previousAddEventListener;
+      } else {
+        delete (globalThis as Record<string, unknown>).addEventListener;
+      }
+      if (previousRemoveEventListener) {
+        (globalThis as Record<string, unknown>).removeEventListener = previousRemoveEventListener;
+      } else {
+        delete (globalThis as Record<string, unknown>).removeEventListener;
+      }
+      if (previousDispatchEvent) {
+        (globalThis as Record<string, unknown>).dispatchEvent = previousDispatchEvent;
+      } else {
+        delete (globalThis as Record<string, unknown>).dispatchEvent;
+      }
+    }
+  });
+
+  it("waits briefly for late injected providers when configured", async () => {
+    const manager = createWalletClient({
+      wallets: [],
+      adapters: [
+        createInjectedTronAdapter({
+          id: "late-injected",
+          name: "Late Injected",
+          providerPaths: ["lateWallet.tron"],
+          availabilityTimeoutMs: 80
+        })
+      ]
+    });
+    setTimeout(() => {
+      (globalThis as Record<string, unknown>).lateWallet = {
+        tron: {
+          tronWeb: { defaultAddress: { base58: "TLateInjected" } }
+        }
+      };
+    }, 10);
+
+    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
+    delete (globalThis as Record<string, unknown>).lateWallet;
   });
 
   it("detects MetaMask from ethereum providers before the upstream adapter leaves loading", async () => {

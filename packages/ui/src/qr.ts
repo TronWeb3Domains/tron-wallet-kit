@@ -6,6 +6,27 @@ export const QR_FALLBACK_DARK = "#111827";
 export const QR_FALLBACK_LIGHT = "#ffffff";
 
 export async function createQrDataUrl(value: string, options: QrCodeOptions = {}): Promise<string> {
+  if (typeof window === "undefined") {
+    return createPlainQrDataUrl(value, options);
+  }
+  const width = options.width ?? 256;
+  const foreground = options.foreground ?? QR_FALLBACK_DARK;
+  const background = options.background ?? QR_FALLBACK_LIGHT;
+  const QRCodeStyling = await loadQrCodeStyling();
+  const styled = new QRCodeStyling(buildStyledQrOptions(value, {
+    width,
+    margin: options.margin ?? 2,
+    foreground,
+    background,
+    errorCorrectionLevel: options.errorCorrectionLevel ?? "H"
+  }));
+  const raw = await styled.getRawData("svg");
+  const svgText = raw && typeof raw.text === "function" ? await raw.text() : "";
+  if (!svgText.includes("<svg")) throw new Error("qr-code-styling did not return SVG data.");
+  return `data:image/svg+xml,${encodeURIComponent(svgText)}`;
+}
+
+function createPlainQrDataUrl(value: string, options: QrCodeOptions = {}): Promise<string> {
   return QRCode.toDataURL(value, {
     errorCorrectionLevel: options.errorCorrectionLevel ?? "H",
     margin: options.margin ?? 2,
@@ -115,7 +136,7 @@ export async function renderWalletQr(target: HTMLElement, value: string, options
 export async function createStyledQrDataUrl(value: string, options: RenderWalletQrOptions = {}): Promise<string> {
   const width = options.width ?? 264;
   const foreground = options.foreground ?? QR_FALLBACK_DARK;
-  const background = options.background ?? "transparent";
+  const background = options.background ?? QR_FALLBACK_LIGHT;
   try {
     const QRCodeStyling = await loadQrCodeStyling();
     const styled = new QRCodeStyling(buildStyledQrOptions(value, {
@@ -130,7 +151,7 @@ export async function createStyledQrDataUrl(value: string, options: RenderWallet
     const svgText = raw && typeof raw.text === "function" ? await raw.text() : "";
     if (svgText.includes("<svg")) return `data:image/svg+xml,${encodeURIComponent(svgText)}`;
   } catch {
-    // fall through to plain QR
+    // Fall through to the same styled renderer with conservative QR defaults.
   }
   return createQrDataUrl(value, {
     ...options,

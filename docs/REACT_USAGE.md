@@ -48,3 +48,13 @@ export function App() {
 - Address QR can use `createQrDataUrl(address)`.
 - Transaction toast markup is available through `createTransactionToastContainerHtml`.
 - WalletConnect real-wallet QA still needs TokenPocket/mobile testing with the project ID above.
+
+## Optional Ledger Support
+
+Ledger is shipped as a wallet descriptor, but the hardware adapter package is not bundled as a hard dependency. Install the upstream package in the app when Ledger should be enabled:
+
+```sh
+pnpm add @tronweb3/tronwallet-adapter-ledger
+```
+
+If the package is not installed, Ledger remains gracefully unavailable and the rest of the wallet list continues to work. Real-device QA still requires a Ledger device with the TRON app open.

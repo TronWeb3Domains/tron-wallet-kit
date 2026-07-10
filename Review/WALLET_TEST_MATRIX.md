@@ -20,7 +20,7 @@ Track expected wallet behavior for MVP and future adapters.
 | Backpack | tronweb3 bridge + injected fallback | Bridge wired | Backlog | Pending | Backlog | Backlog | Backlog | Backlog | Extension metadata; SVG icon generated; real QA pending |
 | OneKey | tronweb3 bridge + injected fallback | Bridge wired + fallback mock-tested | Mock-tested via fallback | Pending | Mock foundation | Mock foundation | Backlog | Mock foundation | Extension metadata; real QA pending |
 | Ledger | tronweb3 bridge candidate | Catalog wired | Backlog | Backlog | Backlog | Backlog | Backlog | Backlog | Hardware/manual flow; SVG icon generated |
-| GateWallet | tronweb3 bridge + injected fallback | Bridge wired + fallback mock-tested | Mock-tested via fallback | Pending | Mock foundation | Mock foundation | Backlog | Mock foundation | Extension metadata; real QA pending |
+| GateWallet | injected extension adapter | Injected wired + HTTPS-origin requirement + late-injection wait | Mock-tested via fallback | Default resolver path mapped | Mock foundation | Mock foundation | Backlog | Mock foundation | Extension metadata; real QA pending on HTTPS dev origin |
 | Guarda | tronweb3 bridge + injected fallback | Bridge wired | Backlog | Pending | Backlog | Backlog | Backlog | Backlog | Extension metadata; real QA pending |
 | FoxWallet | tronweb3 bridge | Bridge wired | Backlog | Default resolver mock-tested | Backlog | Backlog | Backlog | Backlog | App/mobile-only in upstream adapter; PC extension should not be shown as installed |
 | imToken | tronweb3 bridge | Bridge wired | Backlog | Backlog | Backlog | Backlog | Backlog | Backlog | Mobile/app group; real QA pending |
@@ -89,8 +89,14 @@ Track expected wallet behavior for MVP and future adapters.
 | UI hardening P1.5 | Clipboard fallback only reports copied on success, wallet icon image failure falls back to initial, QR render errors show an error surface | UI/React type-tested and UI unit-tested on 2026-07-07 |
 | Client split P3 | Public types, injected detect/registry-map, adapter bridge/default/combinators, balance, identity, client factory, kit factory, and barrel index split into modules | Client typecheck/test plus React/example typecheck passed on 2026-07-07 |
 | Bitget parent TronWeb fallback | Bitget connect handles `{ code: 200 }` request responses and reads address/balance from `bitkeep.tronWeb` or Bitget-marked global `tronWeb` | Client unit-tested on 2026-07-07 |
+| Gate parent TronWeb fallback | Gate connect handles nested `gatewallet.tronLink` request providers while reading address/balance from parent `gatewallet.tronWeb` | Client unit-tested on 2026-07-08; real extension QA pending |
+| Gate late injected availability | Gate waits briefly for `gatewallet` late injection and uses `gatewallet.tronLink` support marker instead of freezing as disabled | Client unit-tested on 2026-07-08; real extension QA pending |
+| Injected installed marker probe | Injected wallets can separate installed-state marker detection from connect-ready provider resolution | Client unit-tested for Gate on 2026-07-08 |
+| Gate multi-chain marker probe | Gate installed state accepts upstream globals, camelCase aliases, EIP-1193 flags, and EIP-6963 provider announcements | Client unit-tested on 2026-07-08; real extension QA pending |
+| Gate HTTPS origin requirement | Gate does not inject `window.gatewallet` on HTTP localhost; desktop Gate QA must use HTTPS dev server or deployed HTTPS | Confirmed by user on 2026-07-08; examples `dev:https` added |
 | Wallet descriptor registry P3 phase 1 | Default runtime adapters are built from one descriptor per wallet; descriptor IDs are unique and default adapter order is preserved | Client unit-tested on 2026-07-07 |
 | Wallet descriptor registry 5c runtime catalog | Runtime descriptors can carry inline icon/catalog metadata, build adapters, build catalog, and sign through SafePal-style `tronWeb.trx.sign(message)` | Client unit-tested and UI/React/example typechecked on 2026-07-07 |
+| SafePal injected composer | Requires `SafePalHook + tronWeb`, avoids raw hook fallback, supports post-approval `defaultAddress`, and supports in-app preconnected sessions without request method | Client unit-tested on 2026-07-08; real SafePal extension QA still pending |
 | Clean adapter result shapes | TronLink and WalletConnect return `ConnectResult`, `SignMessageResult`, `SignTransactionResult`, and `TxResult` | Mock-tested |
 | React hooks | Provider and shared UI surfaces render with new kit hooks | Server-render tested |
 | Browser/CDN clean API | HTML/CDN example uses `createBrowserKit`, `kit.manager`, and `kit.openModal` | Build-tested |

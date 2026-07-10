@@ -2051,3 +2051,1005 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - direct `vitest run` in `packages/ui` (37 tests)
 - Backward compatibility note:
   - legacy `core/wallet-registry.ts` and static UI catalog still exist as fallback for standalone UI rendering, but client-created kits now inject descriptor catalog at runtime.
+
+## 2026-07-07 Wallet Icon Registry Spec Alignment
+
+- Re-read the updated `Review/IMPLEMENTATION_HANDOFF.md` section 5c and `Review/WALLET_REGISTRY_SPEC.md`.
+- The specs now match the agreed icon direction:
+  - raw wallet SVG files live in `packages/client/src/wallets/icons/<wallet-id>.svg`
+  - a prebuild/prepack codegen script generates `packages/client/src/wallets/icons.generated.ts`
+  - builtin descriptors can leave `icon` empty and let `buildCatalog()` resolve `descriptor.icon ?? WALLET_ICONS[id]`
+  - runtime third-party descriptors still pass `icon` inline as URL/data URI
+  - UI must be icon-agnostic and receive icons only through runtime catalog data
+- Implemented client-side generated icon map:
+  - added `scripts/gen-wallet-icons.mjs`
+  - generated `packages/client/src/wallets/icons.generated.ts` from `packages/client/src/wallets/icons/*.svg`
+  - root `icons:wallets` now runs the local generator from the checked-in `packages/client/src/wallets/icons/` folder
+  - `packages/client` runs the generator on `prebuild` and `prepack`
+  - `buildCatalog()` and default adapter metadata now resolve icons from `descriptor.icon ?? WALLET_ICONS[id]`
+- Legacy note:
+  - `packages/ui/src/wallets/icons.generated.ts` and static UI lookup still exist only as fallback for standalone UI rendering; client-created kits inject descriptor catalog icons at runtime.
+- Follow-up bug fix:
+  - Hydrating adapter metadata must not clone class adapters with object spread because prototype methods such as `TronLinkAdapter.connect()` are lost.
+  - `buildAdapters()` now updates the original adapter metadata and returns the same adapter instance.
+  - Added regression coverage that TronLink still exposes `connect()` and can connect after icon hydration.
+
+## 2026-07-07 Remove Legacy UI Icon Lookup
+
+- Removed UI-owned wallet icon lookup from `packages/ui/src/wallet-catalog.ts`.
+- Deleted the old `packages/ui/src/wallets/` generated icon assets; UI now remains catalog-agnostic and only renders icons passed on `TronWalletCatalogItem.icon` or adapter metadata.
+- `WalletKit` now exposes `catalog`, built by `@tron-wallet-kit/client` from wallet descriptors and `packages/client/src/wallets/icons.generated.ts`.
+- React `ConnectModal` now defaults to `props.catalog ?? kit.catalog`, so React surfaces receive the client runtime catalog automatically.
+- Browser entrypoint remains routed through `createWalletKit(config)`, so browser kits also receive the client runtime catalog.
+- Updated tests:
+  - UI tests now assert runtime catalog icons are accepted without static UI icon lookup.
+  - React tests assert server-rendered `ConnectModal` receives generated data-URI icons from `kit.catalog`.
+
+## 2026-07-08 P2 Ledger Optional Peer
+
+- Implemented the P2 Ledger direction from `IMPLEMENTATION_HANDOFF.md` and `WALLET_REGISTRY_SPEC.md`.
+- Added client descriptor `ledger` with hardware metadata, bridge integration, lazy importer, and generated icon lookup.
+- Added `@tronweb3/tronwallet-adapter-ledger` as an optional peer of `@tron-wallet-kit/client`; apps install it to enable Ledger.
+- Extended catalog/UI platform typing to support `hardware` transport without hardcoding UI behavior.
+- Added docs/checklist notes for install-to-enable behavior and real-device QA.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 29 tests.
+- Remaining:
+  - Real Ledger QA with a physical device and TRON app open.
+  - The older non-Ledger `@tronweb3` optional dependencies still need a separate packaging decision to fully satisfy the "zero hard bridge deps by default" strategy.
+
+## 2026-07-08 Handoff Re-read
+
+- Re-read `Review/IMPLEMENTATION_HANDOFF.md` after the new updates.
+- Key active priorities from the handoff:
+  - P1: UI i18n and missing UI config knobs remain open.
+  - P1.5: copy fallback, wallet icon image fallback, and QR render error surfacing remain open.
+  - P1.5 identity: replace `trondomainjs` with direct mainnet contract resolver using shared tronWeb.
+  - P2: keep bridge as public interop, ship Ledger as optional peer, move TokenPocket/OKX/Bitget/Trust toward injected QA, and avoid hard `@tronweb3` dependencies in default kit packaging.
+  - P3: continue client modularization, with identity/balance/tronweb extraction as the next natural step.
+- Noted process constraints:
+  - Do not commit `PROJECT_MEMORY.md`.
+  - Treat `docs/` as local-only until release/public-docs policy is clarified.
+
+## 2026-07-08 Wallet Registry Spec Re-read
+
+- Re-read `Review/WALLET_REGISTRY_SPEC.md`.
+- Confirmed the current direction:
+  - `WalletDescriptor` is the single source for metadata, icon, and integration.
+  - Builtin icons live in `packages/client/src/wallets/icons/<id>.svg` and are generated into `icons.generated.ts`.
+  - UI must stay catalog-agnostic and receive catalog data at runtime from client/kit.
+  - Runtime third-party wallets should use the same descriptor shape and can pass inline icon URLs/data URIs.
+  - Integrator display control stays in `ui.walletList`; descriptor `featured` is only a suggestion.
+- Gap noted:
+  - The desired strategy is default injected integration for most TRON wallets, with bridge reserved for Ledger, MetaMask-TRON opt-in, and special cases.
+  - Current code still has bridge/optional dependency wiring for several prominent extension wallets from earlier phases; this needs a controlled follow-up migration to injected descriptors and packaging cleanup.
+
+## 2026-07-08 P2 Injected Packaging Migration Plan
+
+- Added `Review/P2_INJECTED_PACKAGING_MIGRATION_PLAN.md`.
+- Migration plan:
+  - Phase 0: add/confirm injected adapter tests and cheap availability-probe guardrails.
+  - Phase 1: migrate TokenPocket, OKX, Bitget, and Trust to `integration: "injected"` only after real extension QA.
+  - Phase 2: migrate Gate/Bybit, Guarda/OneKey, Binance/Backpack in smaller batches.
+  - Hold FoxWallet/imToken until mobile/app QA.
+  - Keep Ledger on optional-peer bridge; keep MetaMask TRON opt-in bridge.
+  - Remove upstream optional dependencies only after the matching injected batch passes QA.
+
+## 2026-07-08 P2 Phase 0 Guardrails
+
+- Added client tests before migrating bridge wallets to injected:
+  - injected providers fall back from `tron_requestAccounts` to `eth_requestAccounts`.
+  - injected descriptors with only wallet-specific roots do not accept generic `window.tronWeb`.
+- Extended `scripts/gen-wallet-icons.mjs` to generate data URIs from SVG, PNG, and WEBP wallet icon files.
+- Regenerated `packages/client/src/wallets/icons.generated.ts`; 18 icons are now emitted.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 31 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+
+## 2026-07-08 TokenPocket Injected Canary
+
+- Converted TokenPocket descriptor from `tronweb3-bridge` to `injected`.
+- Detection now uses TokenPocket-owned roots only:
+  - `tokenpocket.tron`
+  - `tokenpocket.tronWeb`
+- Removed generic `tronWeb` fallback from TokenPocket detection to avoid wallet-global collisions.
+- Kept `@tronweb3/tronwallet-adapter-tokenpocket` in `packages/client/package.json` optional dependencies until real extension QA passes.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 31 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 37 tests.
+- Pending:
+  - Real TokenPocket extension QA with TronLink also installed.
+
+## 2026-07-08 OKX Injected Canary
+
+- Converted OKX Wallet descriptor from `tronweb3-bridge` to `injected`.
+- Detection now uses the OKX-owned root `okxwallet.tronLink`.
+- Kept `@tronweb3/tronwallet-adapter-okxwallet` in `packages/client/package.json` optional dependencies until real extension QA passes.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 31 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 37 tests.
+- Pending:
+  - Real OKX extension QA.
+
+## 2026-07-08 Bitget Injected Canary
+
+- Converted Bitget Wallet descriptor from `tronweb3-bridge` to `injected`.
+- Detection keeps `getBitgetInjectedProvider()` and Bitget-owned roots:
+  - `bitkeep.tronLink`
+  - `bitkeep.tron`
+- Existing tests still cover parent `bitkeep.tronWeb` address resolution and `window.isBitKeep` global-marker behavior.
+- Kept `@tronweb3/tronwallet-adapter-bitkeep` in `packages/client/package.json` optional dependencies until real extension QA passes.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 31 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 37 tests.
+- Pending:
+  - Real Bitget extension QA with TronLink also installed.
+
+## 2026-07-08 React Basic StrictMode Modal Fix
+
+- Investigated `http://127.0.0.1:5174/react-basic/` after user reported an error.
+- Browser findings:
+  - Page loaded with no Vite/runtime error overlay.
+  - Console only showed Lit dev-mode warnings.
+  - Modal DOM had duplicated featured wallet rows under React StrictMode.
+- Fix:
+  - Added `destroy()` to `WalletKit`.
+  - `createWalletKit().destroy()` now destroys button, toast, modal, manager, and clears identity cache.
+  - `TronWalletProvider` now keeps internally-created kit stable and calls full kit destroy on unmount.
+- Verification:
+  - Browser reload/open modal showed 5 featured wallet rows, not 10.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react test` passed with 3 tests.
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 31 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 37 tests.
+
+## 2026-07-08 Bitget Injected Getter Safety
+
+- Fixed user-reported browser error:
+  - `Uncaught TypeError: e.logger is not a function`
+  - stack pointed at Bitget provider probing in `packages/client/src/injected/detect.ts`.
+- Root cause:
+  - Bitget/injected wallet provider objects can be proxy-like and expose throwing getters.
+  - Spreading the provider in `getBitgetInjectedProvider()` executed those getters during `isAvailable()`.
+- Fix:
+  - Added safe property reads in injected detection.
+  - Replaced provider object spread with selective clone of `request` and `tronWeb`.
+  - Wrapped `createInjectedTronAdapter` provider resolution so `isAvailable()` returns false instead of crashing when a probe throws.
+- Added regression test with a Bitget-like provider containing an enumerable throwing `logger` getter.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 32 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser typecheck` passed.
+  - Browser reload/open modal on `http://127.0.0.1:5174/react-basic/` showed no app console errors.
+
+## 2026-07-08 Bitget Injected Request Binding
+
+- User reported Bitget connect still failed with `Connection declined e.logger is not a function`.
+- Root cause:
+  - The previous safe clone copied `request` as a bare function.
+  - Bitget's injected request implementation can depend on `this.logger`, so calling the detached function loses provider context.
+- Fix:
+  - `cloneInjectedProvider()` now binds `request` to the original provider object.
+- Added regression test for a Bitget-like provider whose `request()` reads `this.logger`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 33 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser typecheck` passed.
+
+## 2026-07-08 Trust Injected Canary
+
+- Converted Trust Wallet descriptor from `tronweb3-bridge` to `injected`.
+- Detection now uses Trust-owned roots:
+  - `trustwallet.tronLink`
+  - `trustwallet.tron`
+- Existing Trust-vs-TronLink collision regression still passes.
+- Kept `@tronweb3/tronwallet-adapter-trust` in `packages/client/package.json` optional dependencies until real extension QA passes.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 33 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 37 tests.
+- Pending:
+  - Real Trust extension QA with TronLink also installed.
+
+## 2026-07-08 Phase 1 Cleanup + Gate/Bybit Injected Canary
+
+- User confirmed Phase 1 real-wallet QA passed.
+- Removed upstream optional packages for the QA'd injected wallets from `@tron-wallet-kit/client`:
+  - `@tronweb3/tronwallet-adapter-tokenpocket`
+  - `@tronweb3/tronwallet-adapter-okxwallet`
+  - `@tronweb3/tronwallet-adapter-bitkeep`
+  - `@tronweb3/tronwallet-adapter-trust`
+- Ran `pnpm install --ignore-scripts`; package manager removed 4 packages and updated `pnpm-lock.yaml`.
+- Converted Gate Wallet descriptor from `tronweb3-bridge` to `injected`.
+  - Detection roots: `gatewallet.tron`, `gatewallet.tronLink`.
+- Converted Bybit Wallet descriptor from `tronweb3-bridge` to `injected`.
+  - Detection roots: `bybitWallet.tronLink`, `bybitWallet.tron`.
+- Updated `Review/P2_INJECTED_PACKAGING_MIGRATION_PLAN.md` and `Review/ADAPTER_BEHAVIOR_NOTES.md` with Phase 1 cleanup and Gate/Bybit canary status.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 33 tests.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 37 tests.
+- Pending:
+  - Real Gate extension QA for installed state, connect/address, signMessage, signTransaction, and collision behavior.
+  - Real Bybit extension QA for installed state, connect/address, signMessage, signTransaction, and collision behavior.
+  - Only after Gate/Bybit QA passes, remove `@tronweb3/tronwallet-adapter-gatewallet` and `@tronweb3/tronwallet-adapter-bybit` from optional dependencies.
+
+## 2026-07-08 Guarda/OneKey Injected Canary
+
+- Converted Guarda descriptor from `tronweb3-bridge` to `injected`.
+  - Detection uses `getGuardaInjectedProvider()` plus roots `guarda.tron` and `guarda`.
+  - Hardened `getGuardaInjectedProvider()` to avoid object-spreading injected provider proxies and to bind `request` to the original provider.
+- Converted OneKey descriptor from `tronweb3-bridge` to `injected`.
+  - Detection roots: `$onekey.tron`, `$onekey.tronLink`.
+- Updated `Review/P2_INJECTED_PACKAGING_MIGRATION_PLAN.md` and `Review/ADAPTER_BEHAVIOR_NOTES.md`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 33 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 37 tests.
+- Pending:
+  - Real Guarda extension QA for installed state, connect/address, signMessage, signTransaction, and collision behavior.
+  - Real OneKey extension QA for installed state, connect/address, signMessage, signTransaction, and collision behavior.
+  - Only after Guarda/OneKey QA passes, remove `@tronweb3/tronwallet-adapter-guarda` and `@tronweb3/tronwallet-adapter-onekey` from optional dependencies.
+
+## 2026-07-08 Guarda/OneKey Cleanup + Binance/Backpack Injected Canary
+
+- User confirmed Guarda/OneKey real-wallet QA passed.
+- Removed upstream optional packages for the QA'd injected wallets from `@tron-wallet-kit/client`:
+  - `@tronweb3/tronwallet-adapter-guarda`
+  - `@tronweb3/tronwallet-adapter-onekey`
+- Ran `pnpm install --ignore-scripts`; package manager removed 2 packages and updated `pnpm-lock.yaml`.
+- Converted Binance Web3 Wallet descriptor from `tronweb3-bridge` to `injected`.
+  - Detection roots: `binancew3w.tron`, `binancew3w.tronLink`.
+  - Kept `supportsWalletConnect: true` as metadata for later mobile/UI optimization.
+- Converted Backpack descriptor from `tronweb3-bridge` to `injected`.
+  - Detection roots: `backpack.tron`, `backpack.tronLink`.
+- Extended client regression coverage so Backpack is included in the second-phase injected wallet test.
+- Updated `Review/P2_INJECTED_PACKAGING_MIGRATION_PLAN.md` and `Review/ADAPTER_BEHAVIOR_NOTES.md`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 33 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 37 tests.
+- Pending:
+  - Real Binance Web3 Wallet extension QA for installed state, connect/address, signMessage, signTransaction, and collision behavior.
+  - Real Backpack extension QA for installed state, connect/address, signMessage, signTransaction, and collision behavior.
+  - Only after Binance/Backpack QA passes, remove `@tronweb3/tronwallet-adapter-binance` and `@tronweb3/tronwallet-adapter-backpack` from optional dependencies.
+
+## 2026-07-08 Binance Extension Detection Fix
+
+- User reported Binance Web3 Wallet extension was not detected after the injected canary.
+- Inspected the installed upstream `@tronweb3/tronwallet-adapter-binance` package.
+  - Upstream checks `window.binancew3w.tron`.
+  - The Binance provider is not TIP-1193-shaped; it exposes methods like `getAccount`, `getChainId`, `signMessageV2`, and `signTransaction`.
+- Added `getBinanceInjectedProvider()` in `packages/client/src/injected/detect.ts`.
+  - Maps `getAccount()` to account request methods.
+  - Maps `getChainId()` into the kit's network resolver path.
+  - Maps `signMessageV2()` and `signTransaction()` into the injected adapter's signing surface.
+- Updated Binance descriptor to use `getBinanceInjectedProvider()` instead of plain provider-path probing.
+- Updated client tests to cover a Binance-style injected provider and connect through it.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 33 tests.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 37 tests.
+- Pending:
+  - Re-QA Binance installed badge and connect flow in `react-basic`.
+
+## 2026-07-08 Binance Cleanup After QA
+
+- User confirmed Binance Web3 Wallet QA passed after the injected helper fix.
+- Removed `@tronweb3/tronwallet-adapter-binance` from `@tron-wallet-kit/client` optional dependencies.
+- Ran `pnpm install --ignore-scripts`; package manager removed 75 packages because Binance upstream pulled its own WalletConnect/Reown dependency tree.
+- Updated `Review/P2_INJECTED_PACKAGING_MIGRATION_PLAN.md` and `Review/ADAPTER_BEHAVIOR_NOTES.md`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 33 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 37 tests.
+- Pending:
+  - Backpack remains the next QA target in this batch.
+  - Gate/Bybit cleanup is still blocked until real QA confirmation.
+  - FoxWallet/imToken remain hold items because they are mobile/app-browser oriented.
+
+## 2026-07-08 Backpack/Bybit/Gate Cleanup After QA
+
+- User confirmed Backpack and Bybit QA passed; Gate extension was not installed but user accepted temporary QA status.
+- Removed upstream optional packages for the accepted injected wallets from `@tron-wallet-kit/client`:
+  - `@tronweb3/tronwallet-adapter-backpack`
+  - `@tronweb3/tronwallet-adapter-bybit`
+  - `@tronweb3/tronwallet-adapter-gatewallet`
+- Ran `pnpm install --ignore-scripts`; package manager removed 3 packages and updated `pnpm-lock.yaml`.
+- Updated `Review/P2_INJECTED_PACKAGING_MIGRATION_PLAN.md` and `Review/ADAPTER_BEHAVIOR_NOTES.md`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 33 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 37 tests.
+- Remaining optional upstream wallet packages in client:
+  - `@tronweb3/tronwallet-adapter-foxwallet` and `@tronweb3/tronwallet-adapter-imtoken` remain hold items for mobile/app-browser QA.
+  - `@tronweb3/tronwallet-adapter-metamask-tron` remains opt-in/special-case pending final packaging decision.
+  - Ledger remains an optional peer, not an optional dependency.
+
+## 2026-07-08 FoxWallet Extension Canary + SafePal Built-in
+
+- Rechecked FoxWallet upstream adapter package.
+  - The package README and types use `window.foxwallet.tronLink`.
+  - The current upstream adapter is app/mobile-oriented and marks non-mobile browser contexts as not found, so it is unsuitable as the default desktop extension path.
+- Converted FoxWallet descriptor from `tronweb3-bridge` to `injected`.
+  - Detection root: `foxwallet.tronLink`.
+  - Platforms now include `extension` and `mobile`.
+  - Kept `@tronweb3/tronwallet-adapter-foxwallet` in optional dependencies until real FoxWallet extension/app QA passes.
+- Added SafePal as a built-in wallet descriptor.
+  - New file: `packages/client/src/wallets/entries/safepal.ts`.
+  - Detection uses `getSafePalInjectedProvider()` over `window.SafePalHook` and `window.tronWeb`.
+  - SafePal supports extension/mobile metadata and `supportsWalletConnect: true`.
+  - SafePal icon was already present in `packages/client/src/wallets/icons/safepal.png`.
+- Synchronized legacy/core fallback metadata:
+  - `packages/core/src/wallet-registry.ts` now includes SafePal.
+  - FoxWallet registry metadata now includes both extension and mobile platforms.
+  - `packages/client/src/tronweb.ts` includes SafePal balance/identity path via global `tronWeb`.
+- Added client regression coverage:
+  - FoxWallet injected connect/sign through `window.foxwallet.tronLink`.
+  - SafePal connect/sign through `SafePalHook` + global `tronWeb`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 35 tests.
+  - `pnpm --filter @tron-wallet-kit/core typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 37 tests.
+- Pending:
+  - Real FoxWallet extension QA to decide whether to remove upstream optional package.
+  - Real SafePal extension QA for installed badge, connect/address, signMessage, and signTransaction.
+
+## 2026-07-08 FoxWallet Activation Resolver Tightening
+
+- Followed up on real UI QA where FoxWallet still did not become active.
+- Added `getFoxWalletInjectedProvider()` in `packages/client/src/injected/detect.ts`.
+  - Detects only inside `window.foxwallet` to avoid collisions with TronLink, Trust, TokenPocket, or generic `window.tronWeb`.
+  - Accepts `foxwallet.tronLink`, `foxwallet.tron`, and parent-level `foxwallet.request/tronWeb` variants.
+  - Merges parent `request` or `tronWeb` into child provider roots when the extension splits capability across objects.
+- Updated `packages/client/src/wallets/entries/foxwallet.ts`.
+  - Provider paths are now `foxwallet.tronLink` and `foxwallet.tron`.
+  - Descriptor uses the dedicated FoxWallet resolver.
+- Added client regression coverage for parent-level FoxWallet `request/tronWeb`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 36 tests.
+- Pending:
+  - Real FoxWallet extension QA. If it is still inactive, capture the provider shape from `window.foxwallet` so we can add the exact variant instead of broadening into unsafe globals.
+
+## 2026-07-08 FoxWallet Desktop Extension Reclassification
+
+- User confirmed FoxWallet still does not become active in desktop QA.
+- Rechecked FoxWallet official TRON docs.
+  - Their TRON docs state TRON is currently supported only in the FoxWallet mobile app and Chrome extension support is coming soon.
+  - Their provider docs still describe the app provider as `window.foxwallet.tronLink`.
+- Reclassified FoxWallet metadata back to mobile/app-only until FoxWallet ships TRON Chrome extension support.
+  - `packages/client/src/wallets/entries/foxwallet.ts` now has `platforms: ["mobile"]` plus FoxWallet deep link metadata.
+  - `packages/core/src/wallet-registry.ts` now uses `transport: "mobile"` and `platforms: ["mobile"]` for FoxWallet.
+  - Kept `getFoxWalletInjectedProvider()` for FoxWallet mobile in-app browser compatibility.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 36 tests.
+  - `pnpm --filter @tron-wallet-kit/core typecheck` passed.
+- Pending:
+  - Do not expect FoxWallet desktop extension to show installed/active for TRON until FoxWallet official docs change.
+
+## 2026-07-08 SafePal Injected QA Hardening
+
+- Continued P2 QA with SafePal after FoxWallet was reclassified as mobile-only.
+- Rechecked SafePal official TRON docs.
+  - Installed check is `window.SafePalHook && window.tronWeb`.
+  - Platform is `window.sfpPlatform` (`"ext"` on PC extension, `"iOS"`/`"Android"` in SafePal app).
+  - Extension connect uses `SafePalHook.request({ method: "tron_requestAccounts" })`, then reads `SafePalHook.defaultAddress.base58`.
+  - Signing uses `tronWeb.trx.sign(...)`.
+- Hardened `getSafePalInjectedProvider()`:
+  - requires both `SafePalHook` and `tronWeb`
+  - removes raw `SafePalHook` provider-path fallback from the SafePal client descriptor
+  - re-reads `SafePalHook.defaultAddress` after approval
+  - normalizes `tronWeb.defaultAddress` from either global `tronWeb` or `SafePalHook.defaultAddress`
+  - supports SafePal in-app sessions where address is already available and no request method is exposed
+- Added client regression tests:
+  - SafePal is unavailable with only `SafePalHook`
+  - SafePal connects when `defaultAddress` appears after approval
+  - SafePal in-app preconnected mode connects without `request`
+- Browser QA on `http://127.0.0.1:5174/react-basic/`:
+  - page loaded with no framework overlay
+  - All Wallets modal rendered and included SafePal
+  - only Lit dev-mode warnings were present
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 39 tests.
+  - `pnpm --filter @tron-wallet-kit/core typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+- Pending:
+  - Real SafePal extension QA for installed badge, connect/address, signMessage, signTransaction, and balance.
+
+## 2026-07-08 WalletConnect QR Panel + Dev Server Stabilization
+
+- Investigated user report that WalletConnect QR was not displayed in the correct modal position and local dev appeared to hang.
+- Findings:
+  - `@tron-wallet-kit/adapter-walletconnect` does not render a WalletConnect/Reown modal; it only uses `@tronweb3/walletconnect-tron` to create a session and emit the `wc:` URI.
+  - `@walletconnect/modal` is not installed.
+  - `@tronweb3/walletconnect-tron` does pull `@reown/appkit` / `@reown/appkit-ui` transitively, including `qrcode@1.5.3`, even though the kit does not use that modal UI.
+  - `@tron-wallet-kit/ui` still needs `qrcode` as a non-DOM/SSR fallback because `qr-code-styling` requires `window`.
+- UI QR changes:
+  - WalletConnect QR panel now uses a stable square QR frame up to 340px.
+  - QR code, SVG/canvas/img, and skeleton now fill the same reserved square to avoid position shift.
+  - Removed transparent QR background usage in modal rendering so dark theme still gets a white QR scan surface.
+  - Kept `qr-code-styling` as the primary browser renderer and `qrcode` as fallback only.
+- Dev server fix:
+  - Removed stale `optimizeDeps.include` entries from `examples/vite.config.ts`.
+  - The old include list referenced many `@tronweb3` packages that are no longer dependencies after injected migration, causing Vite dependency optimization failures and the appearance of a hanging server.
+  - Restarted examples server successfully on `http://127.0.0.1:5174/`; log reports Vite ready in about 2.5s.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 37 tests.
+  - `pnpm --filter @tron-wallet-kit/adapter-walletconnect typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-walletconnect test` passed with 7 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `git diff --check` passed for touched files with only Windows LF/CRLF warnings.
+- Pending:
+  - Real browser visual QA for the WalletConnect modal QR panel with a live URI after the user reloads `react-basic`.
+  - Future optional optimization: consider a direct WalletConnect implementation to avoid `@reown/appkit` transitive UI weight from `@tronweb3/walletconnect-tron`.
+
+## 2026-07-08 WalletConnect QR Modal Auto-Close Fix
+
+- User reloaded `react-basic` and confirmed the WalletConnect URI/preview appeared outside the kit, but the kit QR modal closed right after the QR URI returned.
+- Root cause:
+  - Portal modal `connectWallet()` applied `config.modal.closeOnSelect` after `manager.connect()` resolved for every wallet.
+  - WalletConnect/QR flows can resolve or progress after emitting the URI, and the QR panel must remain visible for scan/copy/retry instead of being treated like a direct extension selection.
+- Fix:
+  - `packages/ui/src/modal.ts` now classifies QR flows up front (`capabilities.includes("qr")`, `transport: "walletconnect" | "qr"`, or `id: "walletconnect"`).
+  - `closeOnSelect` still closes direct extension connect success.
+  - QR flows no longer auto-close the portal modal on connect resolution; the user must close/back intentionally.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 37 tests.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `http://127.0.0.1:5174/react-basic/` returned 200 with title `TRON Wallet Kit React Example`.
+- Pending:
+  - User real-browser QA that WalletConnect QR now remains in the modal after the URI appears.
+
+## 2026-07-08 WalletConnect QR Sticky Flow Guard
+
+- User still saw the WalletConnect QR modal close after the QR URI loaded, which meant the first portal-only `closeOnSelect` guard was not strict enough for every rendered controller path.
+- Fix:
+  - Added an `activeConnectIsQrFlow` sticky guard to both portal modal and inline modal controllers.
+  - QR flow is now identified up front by wallet capability/transport/id and reinforced again when a `qr` event arrives.
+  - When `manager.connect()` resolves for a QR flow, the UI re-renders the QR view instead of closing or falling back to a direct extension success path.
+  - Back, close, and switching wallet flows still cancel the pending QR state by incrementing `connectFlowId` and clearing active QR state.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 37 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+- Pending:
+  - User real-browser QA on `http://127.0.0.1:5174/react-basic/` that WalletConnect QR remains open after URI emission and external QR preview update.
+
+## 2026-07-08 WalletConnect QR Provider-Safe Preview Fix
+
+- Follow-up QA still reproduced the modal disappearing after the external WalletConnect URI preview appeared.
+- Additional root cause:
+  - The React basic example stored `walletConnectUri` in `ExampleApp`, which wraps `TronWalletProvider`.
+  - When WalletConnect emitted a URI, the parent state update could re-render/remount the provider subtree in dev/Strict mode and leave the portal modal hidden while the external compact QR preview appeared.
+  - The WalletConnect adapter also called the configured external `onUri` callback before the per-connect `options.onUri` used by the modal flow.
+- Fix:
+  - `packages/adapters/walletconnect/src/index.ts` now calls `options.onUri` first, then the configured adapter callback, so the active modal flow receives the URI before external app callbacks run.
+  - `examples/react-basic/src/main.tsx` no longer sets WalletConnect URI state above `TronWalletProvider`; the preview subscribes to `kit.manager.on("qr")` inside `ExampleWorkspace`.
+  - `packages/ui/src/modal.ts` keeps QR flows sticky for both portal and inline controllers and blocks non-forced auto-close for active WalletConnect QR flows.
+  - Rebuilt `@tron-wallet-kit/ui` and `@tron-wallet-kit/adapter-walletconnect` dist outputs so package exports and dev source stay aligned.
+- Verification:
+  - Browser QA on `http://127.0.0.1:5174/react-basic/`: Open modal -> WalletConnect -> URI preview appears -> modal remains visible with `data-twk-view="qr"`, QR image rendered, Copy link/Try again visible, no console errors.
+  - `pnpm --filter @tron-wallet-kit/adapter-walletconnect typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-walletconnect test` passed with 7 tests.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 37 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui build` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-walletconnect build` passed.
+- Pending:
+  - User manual scan QA with a real mobile WalletConnect wallet.
+
+## 2026-07-08 Gate Injected Detector Hardening
+
+- Continued P2 extension QA pass for Gate Wallet after the user said Gate is available for testing.
+- In-app Codex browser cannot see real wallet extensions, so local visual QA cannot prove installed state for Gate; user real-browser QA is still required.
+- Hardened Gate detection:
+  - Added `getGateInjectedProvider()` in `packages/client/src/injected/detect.ts`.
+  - Gate now composes from `window.gatewallet.tron`, `window.gatewallet.tronLink`, or parent `window.gatewallet`.
+  - If `tronWeb` lives on parent `window.gatewallet`, the detector merges it into the nested request provider.
+  - `packages/client/src/wallets/entries/gate.ts` now uses the custom Gate provider composer while keeping Gate-owned provider paths.
+  - Balance/identity TronWeb resolver now also checks `gatewallet.tronWeb`.
+- Added regression coverage for nested Gate request provider + parent `tronWeb.defaultAddress`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 40 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client build` passed.
+  - `git diff --check` passed for touched files with only Windows LF/CRLF warnings.
+- Dev server:
+  - `http://127.0.0.1:5174/react-basic/` remains served by PID 1848.
+- Pending:
+  - User real-browser QA for Gate installed badge, connect/address, balance, signMessage, signTransaction, and disconnect/reconnect.
+
+## 2026-07-08 Gate Disabled-State Follow-Up
+
+- User reported Gate still appeared disabled in the connect UI.
+- Checked upstream `@tronweb3/tronwallet-adapter-gatewallet` source:
+  - Gate support check is `window.gatewallet && window.gatewallet.tronLink`.
+  - Gate extension uses `eth_requestAccounts`; Gate app uses `tron_requestAccounts`.
+  - Upstream polls because Gate provider injection can arrive after page/modal initialization.
+- Fix:
+  - Added optional `availabilityTimeoutMs` for injected descriptors/adapters.
+  - Gate descriptor sets `availabilityTimeoutMs: 1500`, so availability can wait briefly for late injection instead of freezing as `NOT INSTALLED`.
+  - Gate descriptor now requests `eth_requestAccounts` before `tron_requestAccounts`.
+  - Gate detector treats `gatewallet.tronLink` plus parent `gatewallet.tronWeb` as available, matching Gate's support marker while still avoiding generic globals.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 42 tests.
+  - `pnpm --filter @tron-wallet-kit/client build` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `git diff --check` passed for touched files with only Windows LF/CRLF warnings.
+- Pending:
+  - User should reload `http://127.0.0.1:5174/react-basic/` in the browser with Gate installed and re-check the Gate badge/connect flow.
+
+## 2026-07-08 Gate Installed Marker Probe
+
+- User reported Gate still did not show `INSTALLED`.
+- Root cause refinement:
+  - A Gate install marker can be present as `window.gatewallet.tronLink` even before a full connect-ready provider exposes `request` or `tronWeb`.
+  - The previous detector still required a provider-like object, so the UI could keep Gate as unavailable even when the extension marker existed.
+- Fix:
+  - Added `availabilityProbe` to injected wallet descriptors/adapters.
+  - Gate now uses `hasGateInjectedMarker()` as an installed-state probe while keeping `getGateInjectedProvider()` for connect/sign provider resolution.
+  - Availability polling checks both provider resolution and the installed marker.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 43 tests.
+  - `pnpm --filter @tron-wallet-kit/client build` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `git diff --check` passed for touched files with only Windows LF/CRLF warnings.
+- Pending:
+  - User real-browser QA that Gate now shows `INSTALLED`; if not, inspect which global Gate exposes in that browser.
+
+## 2026-07-08 Gate Reverted To Upstream Bridge
+
+- User reported Gate still did not show installed after the injected marker probe.
+- Re-read upstream GateWallet adapter package and treated it as a special case:
+  - upstream uses a wallet-specific state machine and delayed readiness checks
+  - extension connect path uses `window.gatewallet.tron` with `eth_requestAccounts`
+  - support marker can be `window.gatewallet.tronLink`
+  - app path uses `window.gatewallet.tronLink` with `tron_requestAccounts`
+- Decision:
+  - Reverted Gate descriptor from injected-only back to `tronweb3-bridge`.
+  - Re-added `@tronweb3/tronwallet-adapter-gatewallet` as an optional dependency.
+  - Kept injected fallback and `availabilityProbe` as backup, but primary runtime now uses the official Gate adapter.
+  - Increased Gate bridge availability wait to 5000ms to match delayed injection behavior better.
+- Verification:
+  - `pnpm install --ignore-scripts` completed and lockfile updated.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 43 tests.
+  - `pnpm --filter @tron-wallet-kit/client build` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `git diff --check` passed for touched files with only Windows LF/CRLF warnings.
+  - Restarted dev server on `http://127.0.0.1:5174/react-basic/`, PID 15140.
+- Pending:
+  - User reload QA for Gate installed badge/connect using the official upstream bridge path.
+
+## 2026-07-08 Gate Multi-Chain Marker Probe
+
+- User reported Gate still rendered as `Gate Wallet: Unavailable`.
+- Added broader Gate installed marker detection while keeping Gate-specific scope:
+  - `window.gatewallet`
+  - `window.gateWallet`
+  - `window.GateWallet`
+  - EIP-1193 provider flags such as `isGateWallet` / `isGate`
+  - EIP-6963 `announceProvider` info with Gate-like `name` or `rdns`
+- Rationale:
+  - Gate Wallet is multi-chain and may announce as an EVM-style extension before its TRON provider is ready.
+  - The UI installed badge should use the installed marker, while connect still relies on the official Gate bridge/injected TRON provider.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 44 tests.
+  - `pnpm --filter @tron-wallet-kit/client build` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `git diff --check` passed for touched files with only Windows LF/CRLF warnings.
+  - Restarted dev server on `http://127.0.0.1:5174/react-basic/`, PID 10332.
+- Pending:
+  - If Gate still reports unavailable, collect actual browser globals because the known upstream/global/EIP marker set did not match the installed extension.
+
+## 2026-07-08 Gate Runtime Diagnostics Panel
+
+- User reported Gate still was not detected after upstream bridge, injected fallback, global aliases, EIP-1193, and EIP-6963 marker probes.
+- Added a temporary `Gate diagnostics` panel to `examples/react-basic/src/main.tsx`.
+  - Refreshes every second.
+  - Shows summarized `window.gatewallet`, `window.gateWallet`, `window.GateWallet`, and `window.ethereum/providers` Gate markers.
+  - Avoids dumping circular provider objects by summarizing keys/booleans only.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `git diff --check` passed for the example file with only Windows LF/CRLF warning.
+  - Restarted dev server on `http://127.0.0.1:5174/react-basic/`, PID 7296.
+- Pending:
+  - User should copy the `Gate diagnostics` panel output so the actual injected shape can be mapped.
+
+## 2026-07-08 Gate Diagnostics Result
+
+- User provided `Gate diagnostics` output from `react-basic`:
+  - `window.gatewallet`: `null`
+  - `window.gateWallet`: `null`
+  - `window.GateWallet`: `null`
+  - `window.ethereum`: `{}`
+- Conclusion:
+  - The current page does not receive a Gate TRON provider or useful Gate EVM marker.
+  - With this runtime shape, `Gate Wallet: Unavailable` is correct behavior from the kit and upstream bridge.
+  - The issue is likely outside the kit detection path: extension not injecting on `127.0.0.1`, site access disabled for the extension, Gate extension not unlocked/active for this page, or current Gate extension build not exposing TRON provider on desktop.
+- Pending:
+  - Confirm Gate extension site access for `http://127.0.0.1:5174`.
+  - If Gate still does not inject, keep Gate as unavailable or move it to WalletConnect/mobile fallback until Gate desktop TRON injection can be observed.
+
+## 2026-07-08 Gate Manual Browser Probe
+
+- User asked to manually call the upstream Gate checks in browser:
+  - `supportGateWallet() => !!(window.gatewallet && window.gatewallet.tronLink)`
+  - `isInGateApp() => /GateApp/i.test(userAgent) || !!(window.gatewallet?.tronLink && !window.gatewallet.tron)`
+- Ran the checks in Codex in-app browser at `http://127.0.0.1:5174/react-basic/`.
+- Result:
+  - `supportGateWallet`: `false`
+  - `isInGateApp`: `false`
+  - `window.gatewallet`: `null`
+  - `window.gateWallet`: `null`
+  - `window.GateWallet`: `null`
+  - `window.ethereum`: `null`
+  - EIP-6963 announcements: `[]`
+- Conclusion:
+  - Codex in-app browser has no Gate extension injection, so it cannot verify the real Gate extension path.
+  - The upstream adapter logic would also return unavailable in this browser because `supportGateWallet()` is false.
+  - Further Gate debugging must happen in the user's extension-enabled browser or via a visible diagnostic panel/output copied from that browser.
+
+## 2026-07-08 Gate Official Wallet API Tron Docs
+
+- User pointed to the official Gate Wallet API docs: `https://gateweb3.gitbook.io/wallet-api`.
+- Read the English Tron page markdown: `https://gateweb3.gitbook.io/wallet-api/en/tron-tronweb-tronlink-style.md`.
+- Important difference from old upstream adapter marker:
+  - Official Tron docs list available objects in priority order:
+    - `window.gatewallet.tronWeb`
+    - `window.gatewallet.tron`
+    - `window.gatewallet.tronLink`
+  - Example builds/signs/broadcasts through `window.gatewallet.tronWeb`.
+- Fix:
+  - Updated Gate injected fallback provider paths to include `gatewallet.tronWeb` first.
+  - Added client regression coverage for the documented preferred `window.gatewallet.tronWeb` object.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 45 tests.
+  - `pnpm --filter @tron-wallet-kit/client build` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `git diff --check` passed for touched files with only Windows LF/CRLF warnings.
+  - Restarted dev server on `http://127.0.0.1:5174/react-basic/`, PID 18424.
+- Pending:
+  - User QA in browser with Gate extension; if diagnostic still shows `gatewallet: null`, the docs path also cannot be used because Gate is not injecting any `window.gatewallet` object.
+
+## 2026-07-08 Gate HTTPS Dev Server Requirement
+
+- User confirmed the root cause with direct cross-origin testing:
+  - `https://walletadapter.org` receives `window.gatewallet` with `.tron` and `.tronLink`, and Gate connects successfully.
+  - `http://127.0.0.1:5174` receives `window.gatewallet === undefined`.
+  - Gate Wallet does not inject `window.gatewallet` on `http://` localhost; it requires `https://`.
+- Conclusion:
+  - Gate detection/adapter code was not the root bug.
+  - Gate extension QA must use HTTPS dev origin or deployed/tunneled HTTPS.
+  - TronLink/Bitget can inject on HTTP localhost, which made Gate look like a kit-specific bug.
+- Fix:
+  - Added `@vitejs/plugin-basic-ssl` to the examples package.
+  - Added `pnpm --filter @tron-wallet-kit/examples dev:https`.
+  - `examples/vite.config.ts` enables Basic SSL when Vite mode is `https` or `TWK_EXAMPLES_HTTPS=true`.
+  - Gate injected fallback now explicitly prioritizes `eth_requestAccounts` before `tron_requestAccounts`, matching Gate extension behavior.
+- Verification:
+  - `pnpm install --ignore-scripts` completed and lockfile updated.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 45 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client build` passed.
+  - `pnpm --filter @tron-wallet-kit/examples build` passed.
+  - `git diff --check` passed for touched files with only Windows LF/CRLF warnings.
+  - `curl.exe -k -I https://127.0.0.1:5174/react-basic/ --max-time 10` returned `HTTP/1.1 200 OK`.
+- Pending:
+  - User should open `https://127.0.0.1:5174/react-basic/` and accept the local dev certificate warning if prompted, then QA Gate installed/connect.
+
+## 2026-07-08 Gate Back To Injected
+
+- User asked whether Gate can return to injected after confirming the root cause was HTTP-origin injection policy.
+- Decision:
+  - Yes. Gate is back to `integration: "injected"`.
+  - The official upstream Gate adapter package is no longer needed for the default client path.
+  - Removed `@tronweb3/tronwallet-adapter-gatewallet` from `@tron-wallet-kit/client` optional dependencies and lockfile.
+- Gate injected descriptor:
+  - provider paths: `gatewallet.tronWeb`, `gatewallet.tron`, `gatewallet.tronLink`
+  - provider composer: `getGateInjectedProvider`
+  - availability probe: `hasGateInjectedMarker`
+  - request order: `eth_requestAccounts`, then `tron_requestAccounts`
+  - availability wait: `5000ms`
+- Verification:
+  - `pnpm install --ignore-scripts` completed and removed one package.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 45 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client build` passed.
+  - `pnpm --filter @tron-wallet-kit/examples build` passed with existing bundle-size warnings only.
+  - `git diff --check` passed for touched files with only Windows LF/CRLF warnings.
+  - Restarted HTTPS dev server; `curl.exe -k -I https://127.0.0.1:5174/react-basic/ --max-time 10` returned `HTTP/1.1 200 OK`.
+- Pending:
+  - User QA Gate injected on `https://127.0.0.1:5174/react-basic/`.
+
+## 2026-07-08 Gate/Bitget QA Isolation
+
+- User reported that first page load auto-connected Bitget and clicking Gate looked like it was confused with Bitget.
+- Fixes:
+  - `react-basic` now passes `autoReconnect={false}` explicitly.
+  - `react-basic` uses a new storage key: `react-basic-session-v2`, so old saved Bitget sessions are ignored during wallet QA.
+  - Gate provider composer now binds parent `gatewallet.request` onto child/provider surfaces when the child only exposes `tronWeb`.
+  - Added regression coverage that Gate must prefer `eth_requestAccounts` over a prefilled `gatewallet.tronWeb.defaultAddress`, preventing silent connect with a stale/default address.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 46 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client build` passed.
+  - `git diff --check` passed for touched files with only Windows LF/CRLF warnings.
+  - Restarted HTTPS dev server; `curl.exe -k -I https://127.0.0.1:5174/react-basic/ --max-time 10` returned `HTTP/1.1 200 OK`.
+- Pending:
+  - User QA Gate on HTTPS after a hard reload. If Bitget still appears connected, clear `tron-wallet-kit:react-basic-session-v2` from localStorage and report the Gate diagnostics output.
+
+## 2026-07-08 All Wallets UI Polish
+
+- User requested UI fixes against `Review/UI_CONFIG_GAPS_SPEC.md` section 2c and supplied screenshots for the All Wallets skeleton/search and QR install row.
+- Fixes:
+  - All Wallets search is now a full-width form group with the search icon on the right, instead of a detached icon tile on the left.
+  - Initial All Wallets skeleton wallet cards reserve centered icon/name placeholders so the loading grid no longer reads as left-shifted inside cards.
+  - Featured-view All wallets trigger now uses a sentence-case label in English and the wallet-count badge shrinks to fit its text instead of reserving a wide pill.
+  - QR/connecting install row is slimmer, token-driven, and closer to the requested "Don't have ...? Get" treatment, with a smaller Get action.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 37 tests.
+  - `pnpm --filter @tron-wallet-kit/ui build` passed.
+  - `curl.exe -k -I https://127.0.0.1:5174/react-basic/ --max-time 10` returned `HTTP/1.1 200 OK`.
+  - `git diff --check -- packages/ui/src/modal.ts packages/ui/src/styles.ts` passed with only Windows LF/CRLF warnings.
+- Notes:
+  - In-app browser validation timed out on local HTTPS twice, so screenshot proof was not captured in this session.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` timed out twice before completion; no error output was produced.
+
+## 2026-07-08 Search Field Focus Polish
+
+- User reported the All Wallets search input showing an unwanted blue inner focus/hover outline.
+- Fix:
+  - Disabled the native/focus-visible outline on `.twk-wallet-search-input` so the full search form group keeps the intended single-frame visual treatment.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `git diff --check -- packages/ui/src/styles.ts` passed with only Windows LF/CRLF warnings.
+  - `curl.exe -k -I https://127.0.0.1:5174/react-basic/ --max-time 10` returned `HTTP/1.1 200 OK`.
+
+## 2026-07-08 All Wallets Search Focus Preservation
+
+- User reported that typing into All Wallets search moved focus to the close button, showing the close-button focus ring.
+- Root cause:
+  - The search input handler re-rendered the modal via `root.innerHTML`, replacing the focused input, then the generic focus routine could move focus to another control.
+- Fix:
+  - Modal and inline wallet controllers now call `render({ preserveSearchFocus: true })` for search input events.
+  - After re-render, the new `.twk-wallet-search-input` is focused with `preventScroll` and its selection range is restored.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 37 tests.
+  - `git diff --check -- packages/ui/src/modal.ts packages/ui/src/styles.ts` passed with only Windows LF/CRLF warnings.
+  - `curl.exe -k -I https://127.0.0.1:5174/react-basic/ --max-time 10` returned `HTTP/1.1 200 OK`.
+
+## 2026-07-08 UI Config 2c Re-read
+
+- Re-read `Review/UI_CONFIG_GAPS_SPEC.md` section 2c, including 2c.1 and 2c.2, after the user noted many new proposals.
+- Key deltas vs current implementation:
+  - `walletList.layout` should officially be `"list" | "card"` with `"grid"` only as a backward-compatible alias.
+  - Current UI still auto-switches featured into card/compact mode when `featuredWallets.length > 6`; spec says layout must only follow `walletList.layout`.
+  - Current config still treats `featuredLimit` as active; spec says no visible cap, keep `featuredLimit` only as deprecated/no-op compatibility.
+  - Need `featuredMode: "manual" | "installed-first" | "installed-only"`, defaulting to `installed-first`.
+  - Featured resolver must be installed-aware and rank-aware: installed group first, then TRON rank/descriptor `featured`, then fallback ordering.
+  - WalletConnect should move to top only when dynamic modes detect zero installed wallets; manual mode must not reorder.
+  - Featured wallet area should become a fixed/max-height scroll viewport with overflow fade; All Wallets trigger stays outside that scroll area.
+  - All Wallets sorting remains controlled by `sortAvailableFirst`, separate from `featuredMode`.
+  - Mobile behavior needs platform-aware branching: desktop extension, mobile in-app, and mobile browser/deeplink/WC-first are different cases.
+- Implementation note:
+  - The current code is not fully aligned with 2c yet; this should be handled as a focused migration, with tests for layout aliasing, featured modes, zero-installed WalletConnect ordering, and All Wallets config separation.
+
+## 2026-07-08 UI Config 2c Desktop Migration
+
+- Implemented the desktop/testable portion of `Review/UI_CONFIG_GAPS_SPEC.md` section 2c.
+- Changes:
+  - `WalletListLayout` now supports `"list" | "card"` with `"grid"` retained as a backward-compatible alias that resolves to `"card"`.
+  - Added `featuredMode: "manual" | "installed-first" | "installed-only"` with default `"installed-first"`.
+  - `featuredLimit` remains in types/config only as deprecated compatibility; featured rendering no longer uses it as a visible cap.
+  - Featured resolver now supports:
+    - manual ordering from `featuredWallets` without installed reordering,
+    - installed-first ordering with installed extension wallets first and TRON rank after,
+    - installed-only ordering,
+    - WalletConnect fallback/top behavior when no extension wallet is installed in dynamic modes.
+  - Featured and All Wallets now both respect `walletList.layout`.
+  - Featured wallets render in a fixed scroll viewport with fade mask; the All wallets trigger is outside that viewport.
+  - Wallet row markup now also carries `data-twk-platforms`, matching card metadata.
+  - `react-basic` now exposes UI controls for wallet layout, featured mode, manual featured preset, All Wallets preset, and unavailable wallet visibility.
+- Deferred:
+  - Mobile platform-aware resolver/deeplink branching from 2c.2 is still pending; this change intentionally focuses on desktop extension QA.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 37 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui build` passed.
+  - `curl.exe -k -I https://127.0.0.1:5174/react-basic/ --max-time 10` returned `HTTP/1.1 200 OK`.
+
+## 2026-07-08 Search Layout And TronLink Availability Stabilization
+
+- User reported:
+  - TronLink availability was intermittent and slower to leave loading than other wallets.
+  - Search results stretched to fill the wallet viewport height when few results matched.
+  - Focus could still jump from search to the close button during search.
+- Fixes:
+  - Wallet result grid now uses `align-content: start` and `grid-auto-rows: max-content`, keeping row/card heights stable during search filtering.
+  - Modal and inline render paths now snapshot active search focus before any render, then restore the new search input and caret after render. This covers async availability renders, not just direct input events.
+  - TronLink descriptor now sets a shorter default `checkTimeoutMs: 800` while still allowing app config override via `config.tronlink`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 37 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 46 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `git diff --check -- packages/ui/src/modal.ts packages/ui/src/styles.ts packages/client/src/wallets/entries/tronlink.ts` passed with only Windows LF/CRLF warnings.
+  - `curl.exe -k -I https://127.0.0.1:5174/react-basic/ --max-time 10` returned `HTTP/1.1 200 OK`.
+
+## 2026-07-08 Close Focus Ring Hardening
+
+- User reported that some operations still triggered a visible focus ring on the close button in the connect modal.
+- Root cause:
+  - The modal primary-focus helper used one broad `querySelector()` containing `[data-twk-action='close']`.
+  - Browser `querySelector()` returns the first matching element in DOM order, and the header close button appears before wallet rows/search body controls.
+  - Availability refreshes and view renders could therefore programmatically focus close and show the tokenized focus ring even when the user did not tab to it.
+- Fix:
+  - Modal and inline panels now include an invisible `tabindex="-1"` panel focus target.
+  - Primary focus no longer includes close/back/wallet/action buttons as a broad fallback.
+  - Search input remains the only preserved control across render, with caret restore.
+  - Non-search view transitions focus the panel target; normal async refresh renders do not move focus.
+  - Panel focus outline is explicitly suppressed while keyboard focus rings remain for actual interactive controls.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 37 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui build` passed.
+  - `git diff --check -- packages/ui/src/modal.ts packages/ui/src/styles.ts packages/ui/test/theme.test.ts` passed with only Windows LF/CRLF warnings.
+  - `curl.exe -k -I https://127.0.0.1:5174/react-basic/ --max-time 10` returned `HTTP/1.1 200 OK`.
+- Browser note:
+  - In-app browser validation could not proceed because the local HTTPS dev server uses a self-signed certificate and Browser Use blocked `ERR_CERT_AUTHORITY_INVALID`; no safety interstitial was bypassed.
+
+## 2026-07-08 UI Config 2c Featured Cap And Overflow Fix
+
+- User pointed out a spec-breaking bug in `packages/ui/src/config.ts`:
+  - `featuredWallets` was sliced to `FEATURED_MAX_LIMIT` 10 during config resolution.
+  - This silently dropped integrator-provided wallet IDs after the 10th item and contradicted UI config 2c, where featured wallets should render all configured entries.
+- Fixes:
+  - Removed the `featuredWallets.slice(0, 10)` behavior.
+  - Removed the max-cap concept from config resolution. `featuredLimit` remains normalized only as deprecated/backward-compatible config data and does not cap visible wallets.
+  - Featured wallet grid now uses content-sized `height: auto` plus `max-height: min(360px, 52vh)` instead of a hard fixed height, so small featured lists do not create empty scroll boxes.
+  - Featured fade masks now depend on measured overflow state via `data-overflow="bottom" | "top" | "both"` and are absent when the list does not overflow.
+  - Added focus/scroll handling so keyboard focus inside the featured scroller calls `scrollIntoView({ block: "nearest" })`.
+- Regression coverage:
+  - `resolveWalletUiConfig()` preserves 11 configured featured wallet IDs even when `featuredLimit` is set lower.
+  - `installed-first` with zero installed extension wallets puts WalletConnect first.
+  - CSS asserts featured scroller uses max-height and data-overflow fade states rather than fixed height/fade always-on.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 37 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui build` passed.
+  - `curl.exe -k -I https://127.0.0.1:5174/react-basic/ --max-time 10` returned `HTTP/1.1 200 OK`.
+
+## 2026-07-08 UI Config 2c.2 Mobile Platform-Aware Lists
+
+- User confirmed the desktop featured cap/overflow fix was OK and asked to continue.
+- Implemented the next 2c.2 step from `Review/UI_CONFIG_GAPS_SPEC.md`:
+  - Added `WalletEnvironment` typing and `resolveWalletEnvironment()` in UI.
+  - Runtime modal/inline controllers now classify the browser as:
+    - `desktop-extension`
+    - `mobile-in-app`
+    - `mobile-browser`
+  - Environment detection uses cheap UA/touch + known injected TRON globals and does not import adapters.
+  - Static `createConnectModalHtml()` remains desktop-default unless a `walletEnvironment` is provided, preserving SSR/test behavior.
+- Wallet list behavior:
+  - Desktop keeps extension/hardware wallets and WalletConnect; mobile-only wallets are hidden.
+  - Mobile browser keeps mobile-capable wallets and WalletConnect; extension-only wallets are hidden.
+  - Mobile browser `installed-first` puts WalletConnect first, then all mobile-capable wallets sorted by TRON rank/name.
+  - Mobile browser `showUnavailable:false` no longer hides mobile-capable wallets just because injected detection is impossible in normal mobile browsers.
+- Regression coverage:
+  - Desktop environment hides mobile-only wallets but keeps WalletConnect.
+  - Mobile browser hides extension-only wallets but keeps mobile-capable unavailable wallets.
+  - Mobile browser featured list puts WalletConnect first.
+  - Environment detection distinguishes desktop, mobile browser, and mobile in-app.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 39 tests.
+  - `pnpm --filter @tron-wallet-kit/ui build` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+
+## 2026-07-08 Ledger Desktop Visibility
+
+- User clarified that Ledger should also be enabled on PC.
+- Findings:
+  - Client descriptor already treated Ledger as `platforms: ["hardware"]`.
+  - Core fallback wallet registry still had Ledger `enabled: false` and `platforms: ["extension"]`, so static/UI fallback catalog could omit or misclassify Ledger.
+- Fixes:
+  - Enabled Ledger in `packages/core/src/wallet-registry.ts`.
+  - Normalized Ledger registry platforms to `["hardware"]`.
+  - Added UI regression coverage that desktop platform filtering keeps Ledger while mobile browser filtering hides Ledger.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/core typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test` passed with 39 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test` passed with 46 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+
+## 2026-07-10 Gate First-Connect And Reviewer Gaps
+
+- User asked to restart the local server, commit the latest work, and check Gate first-connect hanging before `Gate Wallet did not return an address`.
+- Server:
+  - Restarted examples server on HTTPS for Gate extension testing.
+  - Confirmed `https://127.0.0.1:5174/react-basic/` returns `HTTP/1.1 200 OK`.
+- Gate injected adapter fix:
+  - Added `addressSettleMs` to injected wallet descriptors/config.
+  - Gate now uses `addressTimeoutMs: 15000` and `addressSettleMs: 4000`.
+  - Injected address acquisition no longer waits the full 60s after a request settles without an address; it waits a wallet-specific settle window for `tronWeb.defaultAddress` hydration.
+  - Preserved request-account priority for normal injected wallets; only descriptors with `preferInjectedAddress` shortcut existing injected addresses.
+  - Added regression coverage for Gate first approval where `eth_requestAccounts` returns empty first and `gatewallet.tronWeb.defaultAddress` is hydrated shortly after.
+- Reviewer gaps:
+  - Verified core timeout cancellation was already wired for connect/sign/submit timeout branches.
+  - Moved `WALLET_STORAGE_VERSION` into core types and reused it in manager/tests to avoid version drift.
+  - Verified `@tronweb3/tronwallet-adapter-imtoken`, Ledger, and MetaMask TRON are optional peer dependencies in `packages/client/package.json`; no dead foxwallet package dependency remains.
+  - Removed orphan `tomo.svg` from client wallet icons and regenerated `icons.generated.ts`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 47 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/core typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/core test -- --run` passed with 18 tests.

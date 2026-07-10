@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { MemoryWalletStorage, TRON_MAINNET, WalletKitError, WalletManager, normalizeWalletError, type WalletAdapter, type WalletSession } from "../src/index";
+import { MemoryWalletStorage, TRON_MAINNET, WALLET_STORAGE_VERSION, WalletKitError, WalletManager, normalizeWalletError, type WalletAdapter, type WalletSession } from "../src/index";
 
 function createAdapter(): WalletAdapter {
   return {
@@ -264,7 +264,7 @@ describe("WalletManager", () => {
   it("restores a stale cached session when an adapter has no restoreSession", async () => {
     const storage = new MemoryWalletStorage();
     const session = createStoredSession();
-    await storage.setItem("session", JSON.stringify({ version: 1, session, updatedAt: Date.now() }));
+    await storage.setItem("session", JSON.stringify({ version: WALLET_STORAGE_VERSION, session, updatedAt: Date.now() }));
     const { restoreSession: _restoreSession, ...adapterWithoutRestore } = createAdapter();
     const adapter: WalletAdapter = {
       ...adapterWithoutRestore,
@@ -281,7 +281,7 @@ describe("WalletManager", () => {
 
   it("expires invalid or stale stored sessions", async () => {
     const storage = new MemoryWalletStorage();
-    await storage.setItem("session", JSON.stringify({ version: 1, session: createStoredSession({ expiresAt: Date.now() - 1 }), updatedAt: Date.now() }));
+    await storage.setItem("session", JSON.stringify({ version: WALLET_STORAGE_VERSION, session: createStoredSession({ expiresAt: Date.now() - 1 }), updatedAt: Date.now() }));
     const manager = new WalletManager({ adapters: [createAdapter()], autoReconnect: true, storage });
     let expired = 0;
     manager.on("session_expired", () => {

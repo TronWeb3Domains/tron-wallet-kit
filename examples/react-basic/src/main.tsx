@@ -8,11 +8,13 @@ const kitFontFamily = 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacS
 
 type ButtonVariant = "default" | "pill" | "minimal";
 type AccountPanelMode = "dropdown" | "modal";
-type FeaturedPreset = "default" | "extended" | "max";
+type WalletLayout = "list" | "card";
+type FeaturedMode = "manual" | "installed-first" | "installed-only";
+type FeaturedPreset = "recommended" | "extended" | "max";
 type AllWalletsPreset = "all" | "core";
 
 const featuredWalletPresets: Record<FeaturedPreset, string[]> = {
-  default: ["tronlink", "tokenpocket", "okx", "bitget", "walletconnect"],
+  recommended: ["tronlink", "tokenpocket", "okx", "bitget", "walletconnect"],
   extended: ["tronlink", "tokenpocket", "okx", "bitget", "trust", "binance", "metamask", "gate", "walletconnect"],
   max: ["tronlink", "tokenpocket", "okx", "bitget", "trust", "binance", "walletconnect", "metamask", "gate", "bybit"]
 };
@@ -29,27 +31,27 @@ function ExampleApp() {
   const [showBalance, setShowBalance] = useState(true);
   const [resolveIdentity, setResolveIdentity] = useState(true);
   const [showRecentTransactions, setShowRecentTransactions] = useState(true);
-  const [featuredPreset, setFeaturedPreset] = useState<FeaturedPreset>("default");
+  const [walletLayout, setWalletLayout] = useState<WalletLayout>("list");
+  const [featuredMode, setFeaturedMode] = useState<FeaturedMode>("installed-first");
+  const [featuredPreset, setFeaturedPreset] = useState<FeaturedPreset>("recommended");
   const [allWalletsPreset, setAllWalletsPreset] = useState<AllWalletsPreset>("all");
   const [showUnavailableWallets, setShowUnavailableWallets] = useState(true);
-  const [walletConnectUri, setWalletConnectUri] = useState("");
   const walletList = useMemo<WalletListConfig>(() => {
-    const featuredWallets = featuredWalletPresets[featuredPreset];
     return {
-      featuredLimit: featuredWallets.length,
-      featuredWallets,
+      layout: walletLayout,
+      featuredMode,
+      featuredWallets: featuredMode === "manual" ? featuredWalletPresets[featuredPreset] : [],
       wallets: allWalletPresets[allWalletsPreset],
       showUnavailable: showUnavailableWallets,
       sortAvailableFirst: true
     };
-  }, [allWalletsPreset, featuredPreset, showUnavailableWallets]);
+  }, [allWalletsPreset, featuredMode, featuredPreset, showUnavailableWallets, walletLayout]);
 
   return (
     <TronWalletProvider
       walletConnectProjectId={walletConnectProjectId}
       network="mainnet"
       walletConnectNetwork="mainnet"
-      onWalletConnectUri={setWalletConnectUri}
       identity={{
         enabled: resolveIdentity,
         failSilently: true,
@@ -63,6 +65,8 @@ function ExampleApp() {
         modal: { subtitle: "" },
         accountPanel: { mode: accountPanelMode === "modal" ? "modal" : "inline", showRecentTransactions }
       }}
+      autoReconnect={false}
+      storageKey="react-basic-session-v2"
       useBrowserStorage
     >
       <ExampleWorkspace
@@ -71,16 +75,19 @@ function ExampleApp() {
         showBalance={showBalance}
         resolveIdentity={resolveIdentity}
         showRecentTransactions={showRecentTransactions}
+        walletLayout={walletLayout}
+        featuredMode={featuredMode}
         featuredPreset={featuredPreset}
         allWalletsPreset={allWalletsPreset}
         showUnavailableWallets={showUnavailableWallets}
         themeName={themeName}
-        walletConnectUri={walletConnectUri}
         onAccountPanelModeChange={setAccountPanelMode}
         onButtonVariantChange={setButtonVariant}
         onShowBalanceChange={setShowBalance}
         onResolveIdentityChange={setResolveIdentity}
         onShowRecentTransactionsChange={setShowRecentTransactions}
+        onWalletLayoutChange={setWalletLayout}
+        onFeaturedModeChange={setFeaturedMode}
         onFeaturedPresetChange={setFeaturedPreset}
         onAllWalletsPresetChange={setAllWalletsPreset}
         onShowUnavailableWalletsChange={setShowUnavailableWallets}
@@ -96,16 +103,19 @@ type ExampleWorkspaceProps = {
   showBalance: boolean;
   resolveIdentity: boolean;
   showRecentTransactions: boolean;
+  walletLayout: WalletLayout;
+  featuredMode: FeaturedMode;
   featuredPreset: FeaturedPreset;
   allWalletsPreset: AllWalletsPreset;
   showUnavailableWallets: boolean;
   themeName: ThemeName;
-  walletConnectUri: string;
   onAccountPanelModeChange: (mode: AccountPanelMode) => void;
   onButtonVariantChange: (variant: ButtonVariant) => void;
   onShowBalanceChange: (showBalance: boolean) => void;
   onResolveIdentityChange: (resolveIdentity: boolean) => void;
   onShowRecentTransactionsChange: (showRecentTransactions: boolean) => void;
+  onWalletLayoutChange: (layout: WalletLayout) => void;
+  onFeaturedModeChange: (mode: FeaturedMode) => void;
   onFeaturedPresetChange: (preset: FeaturedPreset) => void;
   onAllWalletsPresetChange: (preset: AllWalletsPreset) => void;
   onShowUnavailableWalletsChange: (showUnavailable: boolean) => void;
@@ -118,7 +128,9 @@ function ExampleWorkspace(props: ExampleWorkspaceProps) {
   const status = useWalletStatus();
   const [log, setLog] = useState("Ready.");
   const [walletConnectQr, setWalletConnectQr] = useState<string | undefined>();
+  const [walletConnectUri, setWalletConnectUri] = useState("");
   const [toastHtml, setToastHtml] = useState("");
+  const [gateDiagnostics, setGateDiagnostics] = useState("");
   const kitThemeStyle = useMemo(() => {
     const properties = createThemeStyleProperties({ themeName: props.themeName });
     const { "color-scheme": colorScheme, ...variables } = properties;
@@ -131,21 +143,34 @@ function ExampleWorkspace(props: ExampleWorkspaceProps) {
 
   useEffect(() => {
     let cancelled = false;
-    if (!props.walletConnectUri) {
+    if (!walletConnectUri) {
       setWalletConnectQr(undefined);
       return () => {
         cancelled = true;
       };
     }
 
-    void createQrDataUrl(props.walletConnectUri).then((dataUrl) => {
+    void createQrDataUrl(walletConnectUri).then((dataUrl) => {
       if (!cancelled) setWalletConnectQr(dataUrl);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [props.walletConnectUri]);
+  }, [walletConnectUri]);
+
+  useEffect(() => {
+    return kit.manager.on("qr", ({ adapterId, uri }) => {
+      if (adapterId === "walletconnect") setWalletConnectUri(uri);
+    });
+  }, [kit]);
+
+  useEffect(() => {
+    const refresh = () => setGateDiagnostics(JSON.stringify(readGateDiagnostics(), null, 2));
+    refresh();
+    const interval = window.setInterval(refresh, 1000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   const signMessage = async () => {
     try {
@@ -258,7 +283,7 @@ function ExampleWorkspace(props: ExampleWorkspaceProps) {
                 </div>
                 <label className="field">
                   <span>WalletConnect URI</span>
-                  <textarea className="textarea compact" readOnly value={props.walletConnectUri} />
+                  <textarea className="textarea compact" readOnly value={walletConnectUri} />
                 </label>
               </div>
             ) : null}
@@ -296,11 +321,26 @@ function ExampleWorkspace(props: ExampleWorkspaceProps) {
                 </select>
               </label>
               <label className="field">
-                <span>Featured wallets</span>
+                <span>Wallet layout</span>
+                <select aria-label="Wallet layout" className="select" value={props.walletLayout} onChange={(event) => props.onWalletLayoutChange(event.target.value as WalletLayout)}>
+                  <option value="list">list</option>
+                  <option value="card">card</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>Featured mode</span>
+                <select aria-label="Featured mode" className="select" value={props.featuredMode} onChange={(event) => props.onFeaturedModeChange(event.target.value as FeaturedMode)}>
+                  <option value="installed-first">installed-first</option>
+                  <option value="installed-only">installed-only</option>
+                  <option value="manual">manual</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>Manual featured</span>
                 <select aria-label="Featured wallets" className="select" value={props.featuredPreset} onChange={(event) => props.onFeaturedPresetChange(event.target.value as FeaturedPreset)}>
-                  <option value="default">5 recommended</option>
-                  <option value="extended">9 compact</option>
-                  <option value="max">10 compact max</option>
+                  <option value="recommended">5 recommended</option>
+                  <option value="extended">9 manual</option>
+                  <option value="max">10 manual max</option>
                 </select>
               </label>
               <label className="field">
@@ -354,6 +394,14 @@ function ExampleWorkspace(props: ExampleWorkspaceProps) {
             <pre className="log">{log}</pre>
             <pre className="log session-log">{JSON.stringify({ status, session: sessionSummary }, null, 2)}</pre>
           </section>
+
+          <section className="panel log-panel">
+            <div className="section-heading">
+              <span>Gate diagnostics</span>
+              <small>Injected markers</small>
+            </div>
+            <pre className="log session-log">{gateDiagnostics}</pre>
+          </section>
         </div>
       </section>
 
@@ -364,6 +412,60 @@ function ExampleWorkspace(props: ExampleWorkspaceProps) {
 
 function formatError(error: unknown): string {
   return error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+}
+
+function readGateDiagnostics() {
+  const source = window as typeof window & {
+    gatewallet?: unknown;
+    gateWallet?: unknown;
+    GateWallet?: unknown;
+    ethereum?: {
+      isGateWallet?: unknown;
+      isGate?: unknown;
+      providers?: Array<Record<string, unknown>>;
+      info?: unknown;
+      providerInfo?: unknown;
+    };
+  };
+  return {
+    gatewallet: summarizeGateObject(source.gatewallet),
+    gateWallet: summarizeGateObject(source.gateWallet),
+    GateWallet: summarizeGateObject(source.GateWallet),
+    ethereum: source.ethereum
+      ? {
+          isGateWallet: source.ethereum.isGateWallet,
+          isGate: source.ethereum.isGate,
+          info: source.ethereum.info,
+          providerInfo: source.ethereum.providerInfo,
+          providers: source.ethereum.providers?.map((provider) => ({
+            isGateWallet: provider.isGateWallet,
+            isGate: provider.isGate,
+            info: provider.info,
+            providerInfo: provider.providerInfo,
+            keys: Object.keys(provider).slice(0, 20)
+          }))
+        }
+      : undefined
+  };
+}
+
+function summarizeGateObject(value: unknown) {
+  if (!value || typeof value !== "object") return value ?? null;
+  const record = value as Record<string, unknown>;
+  return {
+    keys: Object.keys(record).slice(0, 30),
+    hasTron: Boolean(record.tron),
+    hasTronLink: Boolean(record.tronLink),
+    hasTronWeb: Boolean(record.tronWeb),
+    hasRequest: typeof record.request === "function",
+    tronKeys: summarizeObjectKeys(record.tron),
+    tronLinkKeys: summarizeObjectKeys(record.tronLink),
+    tronWebKeys: summarizeObjectKeys(record.tronWeb)
+  };
+}
+
+function summarizeObjectKeys(value: unknown) {
+  return value && typeof value === "object" ? Object.keys(value as Record<string, unknown>).slice(0, 20) : [];
 }
 
 const rootElement = document.getElementById("root") as HTMLElement & {

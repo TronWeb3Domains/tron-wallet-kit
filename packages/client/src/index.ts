@@ -12,3 +12,4 @@ export * from "./wallets/types";
 export * from "./wallets/registry";
 export * from "./wallets/build-adapters";
 export * from "./wallets/build-catalog";
+export * from "./wallets/icons.generated";

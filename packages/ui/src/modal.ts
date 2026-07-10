@@ -14,6 +14,7 @@ import type {
   ConnectModalView,
   ConnectModalViewModel,
   ThemeConfig,
+  WalletEnvironment,
   WalletInline,
   WalletModal,
   WalletOptionViewModel,
@@ -43,7 +44,7 @@ function resolveModalBodyModel(viewModel: ConnectModalViewModel): {
 } {
   const labels = { ...defaultConnectModalLabels, ...viewModel.labels };
   const view = viewModel.view ?? "featured";
-  const wallets = applyWalletListConfig(mergeWalletOptionsWithCatalog(viewModel.wallets, labels, viewModel.catalog), viewModel.walletList);
+  const wallets = applyWalletListConfig(mergeWalletOptionsWithCatalog(viewModel.wallets, labels, viewModel.catalog), viewModel.walletList, viewModel.walletEnvironment);
   const activeWallet = resolveActiveWallet(wallets, viewModel.activeWalletId ?? viewModel.selectedWalletId);
   const bodyModel: ConnectModalViewModel & { view: ConnectModalView; labels: ConnectModalLabels } = {
     ...viewModel,
@@ -70,7 +71,7 @@ export function createConnectModalHtml(viewModel: ConnectModalViewModel): string
       : `<button class="twk-close" type="button" data-twk-action="close" aria-label="${escapeAttribute(labels.close)}">${closeIcon()}</button>`;
 
   return `<div class="twk-overlay" data-twk-action="backdrop">
-  <section class="twk-modal" role="dialog" aria-modal="true" aria-labelledby="twk-connect-title">
+  <section class="twk-modal" role="dialog" aria-modal="true" aria-labelledby="twk-connect-title" tabindex="-1" data-twk-panel="true">
     <header class="twk-header">
       ${backButton}
       <div class="twk-header-main">
@@ -92,7 +93,7 @@ export function createConnectModalElement(viewModel: ConnectModalViewModel, docu
 
 export function createWalletInlineHtml(viewModel: ConnectModalViewModel): string {
   const { bodyModel, view } = resolveModalBodyModel(viewModel);
-  return `<section class="twk-inline" data-twk-view="${escapeAttribute(view)}">
+  return `<section class="twk-inline" data-twk-view="${escapeAttribute(view)}" tabindex="-1" data-twk-panel="true">
   <div class="twk-body">
     ${createConnectModalBodyHtml(bodyModel)}
   </div>
@@ -119,6 +120,7 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
   let errorMessage: string | undefined;
   let connectFlowId = 0;
   let activeConnectAdapterId: string | undefined;
+  let activeConnectIsQrFlow = false;
   const availability = new Map<string, WalletAvailability>();
   let removeQrListener: (() => void) | undefined;
   let allWalletsPrimed = false;
@@ -143,9 +145,10 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
     }, 600);
   };
 
-  const render = () => {
+  const render = (renderOptions?: { preserveSearchFocus?: boolean; searchSelectionStart?: number | null; searchSelectionEnd?: number | null }) => {
     if (!root) return;
     const entering = root.dataset.twkRenderedView !== view;
+    const searchFocus = getSearchFocusSnapshot(root);
     root.dataset.twkRenderedView = view;
     root.innerHTML = createConnectModalHtml({
       wallets: getWalletOptions(),
@@ -167,11 +170,17 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
       showCloseButton: config.modal.showCloseButton,
       showPoweredBy: config.modal.branding.showPoweredBy ?? true,
       poweredByText: config.modal.branding.poweredByText ?? config.labels.connectModal.poweredBy,
-      walletList: config.walletList
+      walletList: config.walletList,
+      walletEnvironment: resolveWalletEnvironment(documentRef.defaultView)
     });
     if (entering && !config.modal.disableAnimations) root.querySelector(".twk-body")?.setAttribute("data-twk-entering", "true");
     renderQrIntoRoot();
-    focusPrimaryControl(root);
+    updateWalletGridOverflow(root);
+    if (renderOptions?.preserveSearchFocus || searchFocus) {
+      restoreSearchFocus(root, renderOptions?.searchSelectionStart ?? searchFocus?.selectionStart, renderOptions?.searchSelectionEnd ?? searchFocus?.selectionEnd);
+      return;
+    }
+    if (entering) focusPrimaryControl(root);
   };
 
   const refreshAvailability = () => {
@@ -213,6 +222,7 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
       retryTimer = undefined;
     }
     activeConnectAdapterId = undefined;
+    activeConnectIsQrFlow = false;
     view = "featured";
     viewStack = ["featured"];
     selectedWalletId = undefined;
@@ -233,6 +243,7 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
       retryTimer = undefined;
     }
     activeConnectAdapterId = undefined;
+    activeConnectIsQrFlow = false;
     qrUri = undefined;
     qrImageSrc = undefined;
     qrRenderFailed = false;
@@ -255,12 +266,14 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
 
   const connectWallet = (wallet: WalletOptionViewModel, connectOptions?: { retry?: boolean }) => {
     const adapterId = wallet.adapterId ?? wallet.id;
+    const isQrFlow = wallet.capabilities?.includes("qr") || wallet.transport === "walletconnect" || wallet.transport === "qr" || wallet.id === "walletconnect" || adapterId === "walletconnect";
     const flowId = connectFlowId + 1;
     connectFlowId = flowId;
     activeConnectAdapterId = adapterId;
+    activeConnectIsQrFlow = isQrFlow;
     selectedWalletId = wallet.id;
     activeWalletId = wallet.id;
-    pushView(wallet.capabilities?.includes("qr") || wallet.transport === "walletconnect" ? "qr" : "connecting");
+    pushView(isQrFlow ? "qr" : "connecting");
     qrUri = undefined;
     qrImageSrc = undefined;
     qrRenderFailed = false;
@@ -273,7 +286,13 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
         if (flowId === connectFlowId && activeConnectAdapterId === adapterId) options.manager.emitQr(adapterId, uri);
       }
     }).then(() => {
-      if (config.modal.closeOnSelect) api.close();
+      if (flowId !== connectFlowId || activeConnectAdapterId !== adapterId) return;
+      if (isQrFlow || activeConnectIsQrFlow) {
+        view = "qr";
+        render();
+        return;
+      }
+      if (config.modal.closeOnSelect) closeModal({ force: false });
     }).catch((error: unknown) => {
       if (flowId !== connectFlowId || activeConnectAdapterId !== adapterId) return;
       retryBusy = false;
@@ -291,7 +310,7 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
       const targetElement = event.target instanceof Element ? event.target : null;
       if (!targetElement) return;
       if (targetElement.closest("[data-twk-action='close']")) {
-        api.close();
+        closeModal({ force: true });
         return;
       }
       if (targetElement.closest("[data-twk-action='back']")) {
@@ -299,7 +318,7 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
         return;
       }
       if (targetElement === root?.querySelector(".twk-overlay") && config.modal.closeOnBackdropClick) {
-        api.close();
+        closeModal({ force: true });
         return;
       }
       if (targetElement.closest("[data-twk-action='show-all-wallets']")) {
@@ -349,19 +368,37 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
       const targetElement = event.target;
       if (!(targetElement instanceof HTMLInputElement) || targetElement.getAttribute("data-twk-search") !== "wallets") return;
       searchQuery = targetElement.value;
-      render();
+      render({
+        preserveSearchFocus: true,
+        searchSelectionStart: targetElement.selectionStart,
+        searchSelectionEnd: targetElement.selectionEnd
+      });
     });
     root.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
-        api.close();
+        closeModal({ force: true });
         return;
       }
       if (event.key === "Tab" && root) trapFocus(event, root);
     });
+    root.addEventListener("focusin", (event) => {
+      const targetElement = event.target instanceof HTMLElement ? event.target : null;
+      if (!targetElement || !root) return;
+      const grid = targetElement.closest<HTMLElement>(".twk-wallet-grid[data-scope='featured']");
+      if (!grid) return;
+      targetElement.scrollIntoView({ block: "nearest", inline: "nearest" });
+      updateWalletGridOverflow(root);
+    });
+    root.addEventListener("scroll", (event) => {
+      if (!(event.target instanceof HTMLElement) || !root) return;
+      if (!event.target.matches(".twk-wallet-grid[data-scope='featured']")) return;
+      updateWalletGridOverflow(root);
+    }, true);
     removeQrListener = options.manager.on("qr", ({ adapterId, uri }) => {
       const wallet = resolveQrEventWallet(getWalletOptions(), adapterId, activeWalletId ?? selectedWalletId);
       if (!activeConnectAdapterId || adapterId !== activeConnectAdapterId) return;
       const flowId = connectFlowId;
+      activeConnectIsQrFlow = true;
       activeWalletId = wallet?.id ?? adapterId;
       selectedWalletId = wallet?.id ?? adapterId;
       replaceView("qr");
@@ -393,6 +430,19 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
     refreshAvailability();
   };
 
+  const closeModal = (options: { force?: boolean } = {}) => {
+    const hasActiveQrFlow = activeConnectIsQrFlow || activeConnectAdapterId === "walletconnect";
+    if (!options.force && hasActiveQrFlow) {
+      view = "qr";
+      if (root) root.hidden = false;
+      render();
+      return;
+    }
+    if (root) root.hidden = true;
+    resetFlow();
+    lastFocusedElement?.focus?.();
+  };
+
   const api: WalletModal = {
     open() {
       if (!root) mount();
@@ -403,9 +453,7 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
       }
     },
     close() {
-      if (root) root.hidden = true;
-      resetFlow();
-      lastFocusedElement?.focus?.();
+      closeModal({ force: true });
     },
     mount,
     setTheme(theme) {
@@ -432,7 +480,6 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
     void renderWalletQr(target, qrUri, {
       width: config.qr.size,
       margin: config.qr.margin,
-      background: "transparent",
       errorCorrectionLevel: config.qr.errorCorrectionLevel,
       ...(config.qr.includeWalletLogo && wallet?.icon ? { logo: wallet.icon } : {})
     }).catch(() => {
@@ -464,6 +511,7 @@ export function createWalletInline(options: { manager: WalletManager; ui?: Walle
   let errorMessage: string | undefined;
   let connectFlowId = 0;
   let activeConnectAdapterId: string | undefined;
+  let activeConnectIsQrFlow = false;
   const availability = new Map<string, WalletAvailability>();
   let removeQrListener: (() => void) | undefined;
   let allWalletsPrimed = false;
@@ -488,8 +536,11 @@ export function createWalletInline(options: { manager: WalletManager; ui?: Walle
     }, 600);
   };
 
-  const render = () => {
+  const render = (renderOptions?: { preserveSearchFocus?: boolean; searchSelectionStart?: number | null; searchSelectionEnd?: number | null }) => {
     if (!root) return;
+    const entering = root.dataset.twkRenderedView !== view;
+    const searchFocus = getSearchFocusSnapshot(root);
+    root.dataset.twkRenderedView = view;
     const network = options.manager.getNetwork();
     root.innerHTML = createWalletInlineHtml({
       wallets: getWalletOptions(),
@@ -511,9 +562,16 @@ export function createWalletInline(options: { manager: WalletManager; ui?: Walle
       showCloseButton: config.modal.showCloseButton,
       showPoweredBy: config.modal.branding.showPoweredBy ?? true,
       poweredByText: config.modal.branding.poweredByText ?? config.labels.connectModal.poweredBy,
-      walletList: config.walletList
+      walletList: config.walletList,
+      walletEnvironment: resolveWalletEnvironment(documentRef.defaultView)
     });
     renderQrIntoRoot();
+    updateWalletGridOverflow(root);
+    if (renderOptions?.preserveSearchFocus || searchFocus) {
+      restoreSearchFocus(root, renderOptions?.searchSelectionStart ?? searchFocus?.selectionStart, renderOptions?.searchSelectionEnd ?? searchFocus?.selectionEnd);
+      return;
+    }
+    if (entering) focusPrimaryControl(root);
   };
 
   const refreshAvailability = () => {
@@ -557,6 +615,7 @@ export function createWalletInline(options: { manager: WalletManager; ui?: Walle
       retryTimer = undefined;
     }
     activeConnectAdapterId = undefined;
+    activeConnectIsQrFlow = false;
     qrUri = undefined;
     qrImageSrc = undefined;
     qrRenderFailed = false;
@@ -571,12 +630,14 @@ export function createWalletInline(options: { manager: WalletManager; ui?: Walle
 
   const connectWallet = (wallet: WalletOptionViewModel, connectOptions?: { retry?: boolean }) => {
     const adapterId = wallet.adapterId ?? wallet.id;
+    const isQrFlow = wallet.capabilities?.includes("qr") || wallet.transport === "walletconnect" || wallet.transport === "qr" || wallet.id === "walletconnect" || adapterId === "walletconnect";
     const flowId = connectFlowId + 1;
     connectFlowId = flowId;
     activeConnectAdapterId = adapterId;
+    activeConnectIsQrFlow = isQrFlow;
     selectedWalletId = wallet.id;
     activeWalletId = wallet.id;
-    pushView(wallet.capabilities?.includes("qr") || wallet.transport === "walletconnect" ? "qr" : "connecting");
+    pushView(isQrFlow ? "qr" : "connecting");
     qrUri = undefined;
     qrImageSrc = undefined;
     qrRenderFailed = false;
@@ -587,6 +648,12 @@ export function createWalletInline(options: { manager: WalletManager; ui?: Walle
     void options.manager.connect(adapterId, {
       onUri: (uri) => {
         if (flowId === connectFlowId && activeConnectAdapterId === adapterId) options.manager.emitQr(adapterId, uri);
+      }
+    }).then(() => {
+      if (flowId !== connectFlowId || activeConnectAdapterId !== adapterId) return;
+      if (isQrFlow || activeConnectIsQrFlow) {
+        view = "qr";
+        render();
       }
     }).catch((error: unknown) => {
       if (flowId !== connectFlowId || activeConnectAdapterId !== adapterId) return;
@@ -654,12 +721,30 @@ export function createWalletInline(options: { manager: WalletManager; ui?: Walle
       const targetElement = event.target;
       if (!(targetElement instanceof HTMLInputElement) || targetElement.getAttribute("data-twk-search") !== "wallets") return;
       searchQuery = targetElement.value;
-      render();
+      render({
+        preserveSearchFocus: true,
+        searchSelectionStart: targetElement.selectionStart,
+        searchSelectionEnd: targetElement.selectionEnd
+      });
     });
+    root.addEventListener("focusin", (event) => {
+      const targetElement = event.target instanceof HTMLElement ? event.target : null;
+      if (!targetElement || !root) return;
+      const grid = targetElement.closest<HTMLElement>(".twk-wallet-grid[data-scope='featured']");
+      if (!grid) return;
+      targetElement.scrollIntoView({ block: "nearest", inline: "nearest" });
+      updateWalletGridOverflow(root);
+    });
+    root.addEventListener("scroll", (event) => {
+      if (!(event.target instanceof HTMLElement) || !root) return;
+      if (!event.target.matches(".twk-wallet-grid[data-scope='featured']")) return;
+      updateWalletGridOverflow(root);
+    }, true);
     removeQrListener = options.manager.on("qr", ({ adapterId, uri }) => {
       if (!activeConnectAdapterId || adapterId !== activeConnectAdapterId) return;
       const flowId = connectFlowId;
       const wallet = resolveQrEventWallet(getWalletOptions(), adapterId, activeWalletId ?? selectedWalletId);
+      activeConnectIsQrFlow = true;
       activeWalletId = wallet?.id ?? adapterId;
       selectedWalletId = wallet?.id ?? adapterId;
       if (viewStack.at(-1) !== "qr") viewStack.push("qr");
@@ -720,7 +805,6 @@ export function createWalletInline(options: { manager: WalletManager; ui?: Walle
     void renderWalletQr(target, qrUri, {
       width: config.qr.size,
       margin: config.qr.margin,
-      background: "transparent",
       errorCorrectionLevel: config.qr.errorCorrectionLevel,
       ...(config.qr.includeWalletLogo && wallet?.icon ? { logo: wallet.icon } : {})
     }).catch(() => {
@@ -742,20 +826,19 @@ function createConnectModalBodyHtml(viewModel: ConnectModalViewModel & { view: C
 
 function createFeaturedHtml(viewModel: ConnectModalViewModel & { labels: ConnectModalLabels }): string {
   const labels = viewModel.labels;
-  const featuredWallets = getFeaturedWalletOptions(viewModel.wallets, viewModel.walletList);
-  const compact = featuredWallets.length > 6;
-  const walletRows = featuredWallets.map((wallet) => compact ? createWalletCardHtml(wallet, labels, viewModel.selectedWalletId) : createWalletRowHtml(wallet, labels, viewModel.selectedWalletId)).join("");
+  const featuredWallets = getFeaturedWalletOptions(viewModel.wallets, viewModel.walletList, viewModel.walletEnvironment);
+  const layout = resolveWalletListLayout(viewModel.walletList);
+  const walletRows = createWalletCollectionHtml(featuredWallets, labels, viewModel.selectedWalletId, layout, "featured");
   const total = viewModel.wallets.length;
   const status = createStatusHtml(viewModel.errorMessage, viewModel.errorMessage ? "danger" : "idle");
   const footer = viewModel.showPoweredBy === false ? "" : `<div class="twk-footer">${escapeHtml(viewModel.poweredByText ?? labels.poweredBy)}</div>`;
+  const allWalletsLabel = createAllWalletsTriggerLabel(labels.allWallets);
   return `${createNetworkBadgeHtml(viewModel)}
-  <div class="twk-wallet-list" data-featured-layout="${compact ? "compact" : "rows"}">
-    ${walletRows}
-    <button class="twk-search-trigger" type="button" data-twk-action="show-all-wallets">
-      <span class="twk-search-label"><span class="twk-search-icon">${searchIcon()}</span><span class="twk-wallet-name">${escapeHtml(labels.allWallets)}</span></span>
-      <span class="twk-badge" data-tone="muted">${escapeHtml(`${total}+`)}</span>
-    </button>
-  </div>
+  ${walletRows}
+  <button class="twk-search-trigger" type="button" data-twk-action="show-all-wallets">
+    <span class="twk-search-label"><span class="twk-search-icon">${searchIcon()}</span><span class="twk-wallet-name">${escapeHtml(allWalletsLabel)}</span></span>
+    <span class="twk-badge" data-tone="muted">${escapeHtml(`${total}+`)}</span>
+  </button>
   ${status}
   ${footer}`;
 }
@@ -763,38 +846,42 @@ function createFeaturedHtml(viewModel: ConnectModalViewModel & { labels: Connect
 function createAllWalletsHtml(viewModel: ConnectModalViewModel & { labels: ConnectModalLabels }): string {
   const labels = viewModel.labels;
   const wallets = filterWalletOptions(viewModel.wallets, viewModel.searchQuery);
+  const layout = resolveWalletListLayout(viewModel.walletList);
   const gridBody = viewModel.walletsLoading
-    ? createWalletSkeletonGridHtml(Math.max(6, Math.min(wallets.length || 8, 9)))
+    ? createWalletSkeletonGridHtml(Math.max(6, Math.min(wallets.length || 8, 9)), layout)
     : wallets.length > 0
-      ? `<div class="twk-wallet-grid">${wallets.map((wallet) => createWalletCardHtml(wallet, labels, viewModel.selectedWalletId)).join("")}</div>`
+      ? createWalletCollectionHtml(wallets, labels, viewModel.selectedWalletId, layout, "all")
       : `<div class="twk-no-wallets">${escapeHtml(labels.noWalletsFound)}</div>`;
   return `<div class="twk-all-wallets">
     ${createNetworkBadgeHtml(viewModel)}
     <label class="twk-search-field">
-      <span class="twk-search-icon">${searchIcon()}</span>
       <span class="twk-sr-only">${escapeHtml(labels.searchWallet)}</span>
       <input class="twk-wallet-search-input" data-twk-search="wallets" type="search" value="${escapeAttribute(viewModel.searchQuery ?? "")}" placeholder="${escapeAttribute(labels.searchPlaceholder)}" autocomplete="off" />
+      <span class="twk-search-icon" aria-hidden="true">${searchIcon()}</span>
     </label>
     ${gridBody}
     ${createStatusHtml(viewModel.errorMessage, viewModel.errorMessage ? "danger" : "idle")}
   </div>`;
 }
 
-function createWalletSkeletonGridHtml(count: number): string {
-  const card = `<span class="twk-wallet-card" data-loading="true" aria-hidden="true"><span class="twk-wallet-icon" data-loading="true"><span class="twk-skeleton"></span></span><span class="twk-wallet-name" data-loading="true"><span class="twk-skeleton"></span></span></span>`;
-  return `<div class="twk-wallet-grid" data-loading="true">${card.repeat(count)}</div>`;
+function createWalletSkeletonGridHtml(count: number, layout: "list" | "card"): string {
+  const card = layout === "card"
+    ? `<span class="twk-wallet-card" data-loading="true" aria-hidden="true"><span class="twk-wallet-icon" data-loading="true"><span class="twk-skeleton"></span></span><span class="twk-wallet-name" data-loading="true"><span class="twk-skeleton"></span></span></span>`
+    : `<span class="twk-wallet-row" data-loading="true" aria-hidden="true"><span class="twk-wallet-main"><span class="twk-wallet-icon" data-loading="true"><span class="twk-skeleton"></span></span><span class="twk-wallet-name" data-loading="true"><span class="twk-skeleton"></span></span></span><span class="twk-badge" data-loading="true" data-tone="muted"><span class="twk-skeleton"></span></span></span>`;
+  return `<div class="twk-wallet-grid" data-layout="${escapeAttribute(layout)}" data-loading="true">${card.repeat(count)}</div>`;
 }
 
-function getWalletPlatforms(wallet: WalletOptionViewModel): Array<"extension" | "mobile"> {
-  if (wallet.platforms?.length) return wallet.platforms.filter((platform) => platform === "extension" || platform === "mobile");
+function getWalletPlatforms(wallet: WalletOptionViewModel): Array<"extension" | "mobile" | "hardware"> {
+  if (wallet.platforms?.length) return wallet.platforms.filter((platform) => platform === "extension" || platform === "mobile" || platform === "hardware");
   if (wallet.transport === "mobile" || wallet.transport === "qr" || wallet.transport === "walletconnect" || wallet.capabilities?.includes("qr")) return ["mobile"];
+  if (wallet.transport === "hardware") return ["hardware"];
   if (wallet.transport === "extension") return ["extension"];
   return ["extension"];
 }
 
 function createInstallRowHtml(name: string, installUrl: string | undefined, labels: ConnectModalLabels): string {
   if (!installUrl) return "";
-  return `<div class="twk-install-row"><span>${escapeHtml(`${labels.dontHave} ${name}?`)}</span><a class="twk-action twk-link" href="${escapeAttribute(installUrl)}" target="_blank" rel="noreferrer">${createActionContentHtml(externalIcon(), labels.getWallet)}</a></div>`;
+  return `<div class="twk-install-row"><span>${escapeHtml(`${labels.dontHave} ${name}?`)}</span><a class="twk-action twk-link twk-install-action" href="${escapeAttribute(installUrl)}" target="_blank" rel="noreferrer">${createActionContentHtml(externalIcon(), labels.getWallet)}</a></div>`;
 }
 
 function createConnectingHtml(viewModel: ConnectModalViewModel & { labels: ConnectModalLabels }): string {
@@ -851,7 +938,7 @@ function createWalletRowHtml(wallet: WalletOptionViewModel, labels: ConnectModal
   const isConnecting = selectedWalletId === wallet.id || wallet.status === "connecting";
   const badge = wallet.badge ?? createFallbackBadge(wallet, labels);
   const statusLabel = wallet.disabledReason ?? (disabled ? labels.unavailable : isConnecting ? labels.connecting : badge.label);
-  return `<button class="twk-wallet-row" type="button" data-twk-wallet-id="${escapeAttribute(wallet.id)}" data-twk-adapter-id="${escapeAttribute(wallet.adapterId ?? wallet.id)}" aria-label="${escapeAttribute(`${wallet.name}: ${statusLabel}`)}" ${disabled ? "disabled" : ""}>
+  return `<button class="twk-wallet-row" type="button" data-twk-wallet-id="${escapeAttribute(wallet.id)}" data-twk-adapter-id="${escapeAttribute(wallet.adapterId ?? wallet.id)}" data-twk-platforms="${escapeAttribute(getWalletPlatforms(wallet).join(" "))}" aria-label="${escapeAttribute(`${wallet.name}: ${statusLabel}`)}" ${disabled ? "disabled" : ""}>
   <span class="twk-wallet-main">
     ${createWalletIconHtml(wallet)}
     ${createWalletNameHtml(wallet)}
@@ -870,6 +957,15 @@ function createWalletCardHtml(wallet: WalletOptionViewModel, labels: ConnectModa
     <span class="twk-wallet-icon-wrap">${createWalletIconHtml(wallet)}${indicator}</span>
     ${createWalletNameHtml(wallet)}
   </button>`;
+}
+
+function createWalletCollectionHtml(wallets: readonly WalletOptionViewModel[], labels: ConnectModalLabels, selectedWalletId: string | undefined, layout: "list" | "card", scope: "featured" | "all"): string {
+  const items = wallets.map((wallet) => layout === "card" ? createWalletCardHtml(wallet, labels, selectedWalletId) : createWalletRowHtml(wallet, labels, selectedWalletId)).join("");
+  return `<div class="twk-wallet-grid" data-layout="${escapeAttribute(layout)}" data-scope="${escapeAttribute(scope)}">${items}</div>`;
+}
+
+function resolveWalletListLayout(config: ConnectModalViewModel["walletList"]): "list" | "card" {
+  return config?.layout === "card" || config?.layout === "grid" ? "card" : "list";
 }
 
 function createWalletStatusIndicatorHtml(wallet: WalletOptionViewModel, labels: ConnectModalLabels, isConnecting: boolean): string {
@@ -943,6 +1039,32 @@ function createFallbackBadge(wallet: WalletOptionViewModel, labels: ConnectModal
   return { label: labels.tron.toUpperCase(), tone: "tron" };
 }
 
+function createAllWalletsTriggerLabel(label: string): string {
+  return label === "All Wallets" ? "All wallets" : label;
+}
+
+export function resolveWalletEnvironment(windowRef: (Window & typeof globalThis) | Window | null | undefined = (globalThis as unknown as { window?: Window & typeof globalThis }).window): WalletEnvironment {
+  const navigatorRef = windowRef?.navigator;
+  const userAgent = navigatorRef?.userAgent ?? "";
+  const touchPoints = navigatorRef?.maxTouchPoints ?? 0;
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(userAgent) || touchPoints > 1 && /Macintosh/i.test(userAgent);
+  const hasInjected = hasInjectedTronProvider(windowRef);
+  if (isMobile && hasInjected) return { kind: "mobile-in-app", isMobile, hasInjected };
+  if (isMobile) return { kind: "mobile-browser", isMobile, hasInjected };
+  return { kind: "desktop-extension", isMobile, hasInjected };
+}
+
+function hasInjectedTronProvider(windowRef: (Window & typeof globalThis) | Window | null | undefined): boolean {
+  const candidate = windowRef as unknown as Record<string, unknown> | undefined;
+  if (!candidate) return false;
+  if (candidate.tronWeb || candidate.tronLink || candidate.tron) return true;
+  for (const key of ["okxwallet", "bitkeep", "trustwallet", "tokenpocket", "binancew3w", "bybitWallet", "gatewallet", "guarda", "$onekey", "backpack"]) {
+    const value = candidate[key] as Record<string, unknown> | undefined;
+    if (value?.tron || value?.tronLink || value?.tronWeb) return true;
+  }
+  return false;
+}
+
 function createErrorHtml(message?: string): string {
   return message ? `<div class="twk-error" role="alert">${escapeHtml(message)}</div>` : "";
 }
@@ -984,8 +1106,52 @@ function resolveHeaderTitle(view: ConnectModalView, labels: ConnectModalLabels, 
 function focusPrimaryControl(root: HTMLElement): void {
   const activeElement = root.ownerDocument.activeElement;
   if (activeElement instanceof HTMLInputElement && root.contains(activeElement)) return;
-  const control = root.querySelector<HTMLElement>(".twk-wallet-search-input, [data-twk-action='retry'], [data-twk-wallet-id], [data-twk-action='close']");
-  control?.focus?.();
+  const searchInput = root.querySelector<HTMLElement>(".twk-wallet-search-input");
+  if (searchInput) {
+    searchInput.focus?.({ preventScroll: true });
+    return;
+  }
+  focusModalPanel(root);
+}
+
+function focusModalPanel(root: HTMLElement): void {
+  const panel = root.querySelector<HTMLElement>("[data-twk-panel='true']");
+  panel?.focus?.({ preventScroll: true });
+}
+
+function updateWalletGridOverflow(root: HTMLElement): void {
+  for (const grid of root.querySelectorAll<HTMLElement>(".twk-wallet-grid[data-scope='featured']")) {
+    const overflow = grid.scrollHeight - grid.clientHeight > 1;
+    if (!overflow) {
+      delete grid.dataset.overflow;
+      continue;
+    }
+    const atTop = grid.scrollTop <= 1;
+    const atBottom = grid.scrollTop + grid.clientHeight >= grid.scrollHeight - 1;
+    grid.dataset.overflow = atTop ? "bottom" : atBottom ? "top" : "both";
+  }
+}
+
+function restoreSearchFocus(root: HTMLElement, selectionStart?: number | null, selectionEnd?: number | null): void {
+  const input = root.querySelector<HTMLInputElement>(".twk-wallet-search-input");
+  if (!input) return;
+  input.focus({ preventScroll: true });
+  const start = selectionStart ?? input.value.length;
+  const end = selectionEnd ?? start;
+  try {
+    input.setSelectionRange(start, end);
+  } catch {
+    // Some input modes can reject selection ranges; focus preservation is still useful.
+  }
+}
+
+function getSearchFocusSnapshot(root: HTMLElement): { selectionStart: number | null; selectionEnd: number | null } | undefined {
+  const activeElement = root.ownerDocument.activeElement;
+  if (!(activeElement instanceof HTMLInputElement) || activeElement.getAttribute("data-twk-search") !== "wallets" || !root.contains(activeElement)) return undefined;
+  return {
+    selectionStart: activeElement.selectionStart,
+    selectionEnd: activeElement.selectionEnd
+  };
 }
 
 function trapFocus(event: KeyboardEvent, root: HTMLElement): void {

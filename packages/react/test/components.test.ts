@@ -16,6 +16,7 @@ describe("React wallet surfaces", () => {
     expect(html).toContain("--twk-accent");
     expect(html).toContain("TronLink");
     expect(html).toContain("Connect Wallet");
+    expect(html).toContain("data:image/svg+xml;base64,");
   });
 
   it("renders the wallet button from the shared UI kit renderer", () => {

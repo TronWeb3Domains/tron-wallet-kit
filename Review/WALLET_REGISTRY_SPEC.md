@@ -6,6 +6,14 @@ Bối cảnh: hiện khai báo ví bị **rải 3 nơi** — `core/wallet-regist
 
 > **⚠️ QUYẾT ĐỊNH CUỐI (đọc mục 5c `IMPLEMENTATION_HANDOFF.md` trước — ưu tiên hơn mọi mô tả bên dưới):** `WalletDescriptor` **TỰ CHỨA trọn vẹn** (metadata + icon inline + integration) ở **1 chỗ** (`client/src/wallets/entries/<id>.ts`). KHÔNG tách manifest ra `core`, KHÔNG để icon ở `ui`. `ui` **catalog-agnostic**: nhận catalog qua `ui.setCatalog(...)` lúc runtime (client bơm xuống → không reverse-dep). Descriptor là **public API** để bên thứ ba tự đăng ký runtime: `createWalletKit({ wallets: [...builtIn, myWalletDescriptor] })` — không cần sửa kit. Các mục 2–5 dưới đây giữ ý tưởng descriptor/union nhưng **bỏ mọi chỗ nói "manifest ở core" / "icon ở ui riêng" / "3-package"**; đóng góp ví mới = **1 file entry (client) + 1 dòng registry**, icon inline.
 
+> **⚠️ CHIẾN LƯỢC TÍCH HỢP (mặc định = injected, KHÔNG mặc định bridge):** đa số ví TRON theo **chuẩn inject TronLink** (`window.tronWeb` + hook `tron_requestAccounts`, ký `tronWeb.trx.sign/signMessageV2`). ⇒ **`integration:"injected"` là mặc định** cho hầu hết ví (TokenPocket, OKX, Bitget, Trust, imToken, Gate, Foxwallet, Bybit, OneKey, Binance…) → **bỏ import package `@tronweb3`**, kit nhẹ hẳn. `"tronweb3-bridge"` chỉ dùng khi generic không kham nổi; `"custom"` cho ví đặc biệt. **Kit ship ZERO dep `@tronweb3`.** Chia 3 nhóm:
+- **Ví inject chuẩn TronLink (đa số)** → `integration:"injected"`, **tự viết**, học provider path/quirk/event từ source @tronweb3 làm tham chiếu (KHÔNG phụ thuộc package). **Generic injected adapter phải implement giao thức `message`-event của TronLink MỘT LẦN** → mọi ví chuẩn tự có onAccountChanged/onNetworkChanged. Provider path mỗi ví **QA thật, đừng đoán** (vd OKX `okxwallet.tronLink`, Bitget `bitkeep`).
+- **MetaMask-TRON** (niche, tích hợp không tầm thường): **mặc định KHÔNG kèm**. App cần thì tự cài `@tronweb3/tronwallet-adapter-metamask-tron` và truyền instance qua **bridge** (dep thuộc app).
+- **Ledger/hardware**: **ĐƯA VÀO v1** qua bridge — **KHÔNG tự reimplement hardware** (transport/APDU rủi ro cao). Kit ship sẵn **descriptor Ledger** (`integration:"tronweb3-bridge"`, lazy importer `() => import("@tronweb3/tronwallet-adapter-ledger")`); package này khai là **`optional peerDependency`** (không bundle). App cài `@tronweb3/tronwallet-adapter-ledger` → Ledger bật; chưa cài → importer fail êm → Ledger hiện **unavailable/ẩn** (không vỡ). ⇒ "zero **hard** dep @tronweb3" vẫn giữ (peer optional).
+- **WalletConnect**: adapter native sẵn có.
+
+**Bridge = API interop CÔNG KHAI, không phải hard dependency của kit**: `@tronweb3/tronwallet-adapter-*` (ledger, và metamask-tron nếu app muốn) là **optional peer** — app cài để bật; kit không gánh trong `dependencies`. Bridge cũng là escape hatch cho ví injected quá quirky.
+
 ---
 
 ## 1. Descriptor: union theo cách tích hợp
@@ -23,8 +31,7 @@ type BaseWalletDescriptor = {
   group?: "popular" | "hardware" | "more";
   featured?: number;                  // vị trí ưu tiên màn đầu; bỏ trống = chỉ trong "All Wallets"
   description?: string;
-  // icon: lấy theo id từ packages/ui/src/wallets/icons/<id>.svg (hoặc icon?: string inline)
-  icon?: string;
+  icon?: string;  // builtin: BỎ trống → builder lấy WALLET_ICONS[id] (từ icons/<id>.svg). runtime: truyền URL/data-url.
 };
 
 // (A) Ví có adapter chính thức @tronweb3 → bọc bằng bridge
@@ -73,22 +80,22 @@ export type WalletDescriptor =
 ```
 packages/client/src/wallets/
   types.ts               — WalletDescriptor (mục 1)
+  icons/                 — icon THÔ, tên file = id ví (đổ vào đây)
+    tronlink.svg
+    safepal.svg
+  icons.generated.ts     — codegen: export const WALLET_ICONS = { safepal: "data:image/svg+xml;base64,…" } (= public `walletIcons`)
   registry.ts            — export const WALLETS: WalletDescriptor[] = [ tronlink, tokenpocket, okx, ..., safepal ]
   entries/
     _template.ts         — MẪU để copy
-    tronlink.ts
-    tokenpocket.ts
-    okx.ts
-    bitget.ts
-    trust.ts
-    metamask.ts
-    safepal.ts           ← dev thêm file này
-  build-catalog.ts       — WalletDescriptor[] → catalog UI (TronWalletCatalogItem)
+    tronlink.ts … safepal.ts   ← 1 file/ví (BỎ trống icon → auto theo id)
+  build-catalog.ts       — WalletDescriptor[] → catalog UI (đẩy xuống ui.setCatalog); icon = descriptor.icon ?? WALLET_ICONS[id]
   build-adapters.ts      — WalletDescriptor[] → adapter runtime (bridge/injected/wc/custom), lazy
+scripts/gen-wallet-icons.mjs — quét icons/*.svg → normalize SVG → base64 → sinh icons.generated.ts (chạy ở prebuild/prepack hook)
 ```
-- Mỗi ví = **1 file trong `entries/`** export 1 descriptor.
-- `registry.ts` import tường minh (giữ tree-shaking/bundle dự đoán được) → thêm ví = thêm 1 dòng import + 1 phần tử mảng.
-- Icon để ở `packages/ui/src/wallets/icons/<id>.svg`, resolve theo `id` (hoặc `icon` inline trong descriptor).
+- Mỗi ví = **1 file `entries/`** export descriptor; **`icon` để trống** → builder tự lấy `WALLET_ICONS[id]`.
+- **Icon workflow "drop file = id"**: đổ `icons/<id>.svg` (tên = id) → codegen sinh base64 vào `icons.generated.ts`. **Base64 sinh lúc BUILD** (browser không có `fs`); file generated commit repo.
+- **Icon KHÔNG ở `ui` nữa**: UI icon-agnostic, icon đến từ catalog runtime. Third-party runtime tự truyền `icon` (URL) inline (không đổ file vào repo).
+- Chỉ **icon** dùng codegen; `registry.ts`/entries vẫn khai tay (import tường minh, bundle dự đoán được).
 
 ---
 
@@ -149,7 +156,7 @@ export const safepal: WalletDescriptor = {
   }
 };
 ```
-Thêm `entries/safepal.ts` + `icons/safepal.svg` + 1 dòng trong `registry.ts`. Xong — hiện trong list, badge INSTALLED tự chạy theo detect.
+Đổ `icons/safepal.svg` (tên = id) + tạo `entries/safepal.ts` (bỏ trống `icon`) + 1 dòng `registry.ts`. Codegen tự đưa icon vào `WALLET_ICONS["safepal"]`. Xong — hiện trong list, badge INSTALLED tự chạy theo detect.
 
 Ví có `@tronweb3` (vd một ví X publish package) thì file entry chỉ khác `integration`:
 ```ts
@@ -166,7 +173,7 @@ export const x: WalletDescriptor = {
 
 Dev muốn thêm ví mới **push đúng 3 thứ**:
 1. `packages/client/src/wallets/entries/<id>.ts` — 1 descriptor (copy `_template.ts`).
-2. `packages/ui/src/wallets/icons/<id>.svg` — icon (ưu tiên SVG; PNG data-URL cũng được).
+2. `packages/client/src/wallets/icons/<id>.svg` — đổ icon thô (tên file = id); codegen tự base64. (Không cần sửa `icons.generated.ts` bằng tay.)
 3. Thêm 1 dòng vào `packages/client/src/wallets/registry.ts` (import + push vào `WALLETS`).
 
 `_template.ts` (mẫu bắt buộc, có comment hướng dẫn chọn `integration`):
@@ -187,7 +194,7 @@ export const myWallet: WalletDescriptor = {
 ```
 
 **PR checklist** (đưa vào `.github/PULL_REQUEST_TEMPLATE` hoặc `CONTRIBUTING.md`):
-- [ ] 1 file `entries/<id>.ts` + icon `<id>.svg` + 1 dòng `registry.ts`.
+- [ ] 1 file `entries/<id>.ts` (bỏ trống `icon`) + `icons/<id>.svg` (tên = id) + 1 dòng `registry.ts`.
 - [ ] Chọn đúng `integration`; điền đủ field bắt buộc (TS ép).
 - [ ] QA thật: detect / connect / address / signMessage / signTransaction (+ mobile nếu có).
 - [ ] `pnpm -r typecheck && pnpm test && pnpm build:browser` xanh.

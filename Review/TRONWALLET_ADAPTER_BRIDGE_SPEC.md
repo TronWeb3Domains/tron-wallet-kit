@@ -197,3 +197,12 @@ Sau đó QA thật từng ví (connect/sign/scan/deeplink).
   - real installed-extension QA for all five prominent bridge wallets
   - docs explaining default lazy wallet packages and `tronweb3Bridge.tronWeb` for broadcast
   - packaging decision before release: keep concrete adapter packages as optional deps of client, or split them into a preset package
+
+## Implementation Update 2026-07-08 - Ledger Optional Peer
+
+- Added Ledger as the first hardware wallet descriptor in the client registry.
+- Ledger uses bridge integration with a lazy importer for `@tronweb3/tronwallet-adapter-ledger`.
+- `@tron-wallet-kit/client` declares the Ledger package as an optional peer dependency so apps can install it to enable Ledger without making the kit bundle it by default.
+- UI/catalog metadata now supports `hardware` platform and transport values.
+- Graceful-unavailable behavior remains owned by the lazy bridge adapter: importer failure maps to unavailable/connect failure without breaking other wallets.
+- Real-device QA is pending and must be done with a Ledger device plus the TRON app open.

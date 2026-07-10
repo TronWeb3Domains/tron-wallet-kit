@@ -1,8 +1,8 @@
 # Identity
 
-TRON Wallet Kit resolves wallet identity through TRX Domains by using `trondomainjs`.
+TRON Wallet Kit resolves wallet identity from TRX Domains by calling the TRX Domains smart contract directly — no `trondomainjs` dependency. Resolution is **mainnet-only** (other networks resolve to no identity, without error) and reuses the kit's shared TronWeb instance.
 
-Identity resolution lives in the client layer. Adapters return TRON addresses; the client can optionally enrich the connected account with a default `.trx` domain and metadata. UI components only render the normalized `account.domain` / `account.displayName` fields.
+Identity resolution lives in the client layer. Adapters return TRON addresses; the client can optionally enrich the connected account with the wallet's default TRX Domains name (any TLD — `.trx`, `.sun`, `.usdd`, …) and metadata. UI components only render the normalized `account.domain` / `account.displayName` fields.
 
 ## React
 

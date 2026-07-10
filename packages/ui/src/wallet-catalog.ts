@@ -1,9 +1,8 @@
 import { TRON_WALLET_REGISTRY, type TronWalletGroup, type TronWalletTransport } from "@tron-wallet-kit/core";
 import { en } from "./locales/en";
-import type { ConnectModalLabels, TronWalletCatalogItem, WalletListConfig, WalletOptionViewModel } from "./types";
-import { walletIcons } from "./wallets/icons.generated";
+import type { ConnectModalLabels, TronWalletCatalogItem, WalletEnvironment, WalletListConfig, WalletOptionViewModel } from "./types";
 
-type WalletPlatform = "extension" | "mobile";
+type WalletPlatform = "extension" | "mobile" | "hardware";
 
 const catalogBadgeTones: Record<string, NonNullable<WalletOptionViewModel["badge"]>["tone"]> = {
   tronlink: "installed",
@@ -22,13 +21,6 @@ export const TRON_WALLET_CATALOG: readonly TronWalletCatalogItem[] = TRON_WALLET
 });
 
 const featuredOrder = ["tronlink", "tokenpocket", "okx", "bitget", "walletconnect"];
-const FEATURED_DEFAULT_LIMIT = 5;
-const FEATURED_MAX_LIMIT = 10;
-
-export function getTronWalletCatalogIcon(walletId: string): string | undefined {
-  const item = TRON_WALLET_CATALOG.find((wallet) => wallet.id === walletId);
-  return item?.icon ?? walletIcons[walletId];
-}
 
 export function mergeWalletOptionsWithCatalog(
   wallets: readonly WalletOptionViewModel[],
@@ -71,8 +63,7 @@ export function mergeWalletOptionsWithCatalog(
       capabilities: transport === "qr" || transport === "walletconnect" ? ["qr"] : [],
       badge: createCatalogBadge({ ...item, group, transport }, hasNativeAdapter || canUseWalletConnect, labels)
     };
-    const icon = item.icon ?? getTronWalletCatalogIcon(item.id);
-    if (icon) option.icon = icon;
+    if (item.icon) option.icon = item.icon;
     if (item.homepage) option.homepage = item.homepage;
     if (item.downloadUrl) option.downloadUrl = item.downloadUrl;
     merged.push(option);
@@ -81,26 +72,38 @@ export function mergeWalletOptionsWithCatalog(
   return [...merged, ...byId.values()];
 }
 
-export function getFeaturedWalletOptions(wallets: readonly WalletOptionViewModel[], config: Pick<WalletListConfig, "featuredLimit" | "featuredWallets"> | number = FEATURED_DEFAULT_LIMIT): WalletOptionViewModel[] {
-  const limit = clampFeaturedLimit(typeof config === "number" ? config : config.featuredLimit);
-  const descriptorOrder = [...wallets]
-    .filter((wallet) => typeof wallet.featured === "number")
-    .sort((a, b) => (a.featured ?? 0) - (b.featured ?? 0))
-    .map((wallet) => wallet.id);
-  const orderedIds =
-    typeof config === "number" || !config.featuredWallets?.length
-      ? descriptorOrder.length > 0
-        ? descriptorOrder
-        : featuredOrder
-      : config.featuredWallets.slice(0, FEATURED_MAX_LIMIT);
+export function getFeaturedWalletOptions(wallets: readonly WalletOptionViewModel[], config: Pick<WalletListConfig, "featuredMode" | "featuredWallets"> | number = {}, environment?: WalletEnvironment): WalletOptionViewModel[] {
+  const normalizedConfig = typeof config === "number" ? {} : config;
+  const mode = normalizedConfig.featuredMode ?? (normalizedConfig.featuredWallets?.length ? "manual" : "installed-first");
   const byId = new Map(wallets.map((wallet) => [wallet.id, wallet]));
-  const featured = orderedIds.flatMap((id) => {
-    const wallet = byId.get(id);
-    return wallet ? [wallet] : [];
-  });
-  const walletConnect = featured.find((wallet) => wallet.id === "walletconnect");
-  const withoutWalletConnect = featured.filter((wallet) => wallet.id !== "walletconnect");
-  return [...withoutWalletConnect.slice(0, Math.max(0, limit - (walletConnect ? 1 : 0))), ...(walletConnect ? [walletConnect] : [])];
+  const ranked = [...wallets].filter((wallet) => getWalletRank(wallet) < Number.POSITIVE_INFINITY).sort(compareWalletRank);
+  const rankedIds = ranked.length > 0 ? ranked.map((wallet) => wallet.id) : featuredOrder;
+  const manualIds = normalizedConfig.featuredWallets?.length ? normalizedConfig.featuredWallets : rankedIds;
+
+  if (mode === "manual") {
+    return uniqueWalletsById(manualIds.flatMap((id) => byId.get(id) ? [byId.get(id) as WalletOptionViewModel] : []));
+  }
+
+  if (environment?.kind === "mobile-browser") {
+    const walletConnect = byId.get("walletconnect");
+    if (mode === "installed-only") return walletConnect ? [walletConnect] : [];
+    const mobileRanked = wallets.filter((wallet) => wallet.id !== "walletconnect" && isMobileCapableWallet(wallet)).sort(compareWalletRank);
+    return walletConnect ? uniqueWalletsById([walletConnect, ...mobileRanked]) : mobileRanked;
+  }
+
+  const installed = wallets.filter(isInstalledWallet).sort(compareWalletRank);
+  if (mode === "installed-only") {
+    return installed.length > 0 ? installed : getWalletConnectFallback(byId);
+  }
+
+  const installedIds = new Set(installed.map((wallet) => wallet.id));
+  const recommended = ranked.filter((wallet) => !installedIds.has(wallet.id));
+  const featured = uniqueWalletsById([...installed, ...recommended]);
+  if (installed.length === 0) {
+    const walletConnect = byId.get("walletconnect");
+    return walletConnect ? uniqueWalletsById([walletConnect, ...featured]) : featured;
+  }
+  return featured;
 }
 
 export function filterWalletOptions(wallets: readonly WalletOptionViewModel[], query = ""): WalletOptionViewModel[] {
@@ -109,13 +112,14 @@ export function filterWalletOptions(wallets: readonly WalletOptionViewModel[], q
   return wallets.filter((wallet) => `${wallet.name} ${wallet.id}`.toLowerCase().includes(normalized));
 }
 
-export function applyWalletListConfig(wallets: readonly WalletOptionViewModel[], config: WalletListConfig = {}): WalletOptionViewModel[] {
+export function applyWalletListConfig(wallets: readonly WalletOptionViewModel[], config: WalletListConfig = {}, environment?: WalletEnvironment): WalletOptionViewModel[] {
   const allowed = config.wallets === "all" || !config.wallets ? undefined : new Set(config.wallets);
   const disabled = new Set(config.disabledWallets ?? []);
   const filtered = wallets.filter((wallet) => {
     if (allowed && !allowed.has(wallet.id)) return false;
     if (disabled.has(wallet.id)) return false;
-    if (config.showUnavailable === false && isUnavailableWallet(wallet)) return false;
+    if (!isWalletVisibleInEnvironment(wallet, environment)) return false;
+    if (config.showUnavailable === false && isUnavailableWallet(wallet) && !shouldKeepUnavailableForEnvironment(wallet, environment)) return false;
     return true;
   });
   if (config.sortAvailableFirst === false) return filtered;
@@ -138,9 +142,31 @@ function isUnavailableWallet(wallet: WalletOptionViewModel): boolean {
   return wallet.readyState === "notFound" || wallet.readyState === "unsupported" || wallet.available === false;
 }
 
-function clampFeaturedLimit(value: number | undefined): number {
-  if (!Number.isFinite(value)) return FEATURED_DEFAULT_LIMIT;
-  return Math.max(1, Math.min(FEATURED_MAX_LIMIT, Math.trunc(value ?? FEATURED_DEFAULT_LIMIT)));
+function isWalletVisibleInEnvironment(wallet: WalletOptionViewModel, environment?: WalletEnvironment): boolean {
+  if (!environment) return true;
+  if (isWalletConnectLike(wallet)) return true;
+  const platforms = wallet.platforms ?? inferWalletPlatforms(wallet);
+  if (environment.kind === "desktop-extension") return platforms.includes("extension") || platforms.includes("hardware");
+  return platforms.includes("mobile");
+}
+
+function shouldKeepUnavailableForEnvironment(wallet: WalletOptionViewModel, environment?: WalletEnvironment): boolean {
+  if (environment?.kind !== "mobile-browser") return false;
+  return isMobileCapableWallet(wallet);
+}
+
+function isMobileCapableWallet(wallet: WalletOptionViewModel): boolean {
+  return isWalletConnectLike(wallet) || (wallet.platforms ?? inferWalletPlatforms(wallet)).includes("mobile") || Boolean(wallet.mobileDeepLink) || wallet.supportsWalletConnect === true;
+}
+
+function isWalletConnectLike(wallet: WalletOptionViewModel): boolean {
+  return wallet.id === "walletconnect" || wallet.transport === "walletconnect" || wallet.transport === "qr" || wallet.capabilities?.includes("qr") === true;
+}
+
+function inferWalletPlatforms(wallet: WalletOptionViewModel): WalletPlatform[] {
+  if (wallet.transport === "hardware") return ["hardware"];
+  if (wallet.transport === "walletconnect" || wallet.transport === "qr" || wallet.transport === "mobile" || wallet.capabilities?.includes("qr")) return ["mobile"];
+  return ["extension"];
 }
 
 function enrichWalletOption(wallet: WalletOptionViewModel, item: TronWalletCatalogItem, adapterIds: ReadonlySet<string>, labels: ConnectModalLabels): WalletOptionViewModel {
@@ -164,7 +190,7 @@ function enrichWalletOption(wallet: WalletOptionViewModel, item: TronWalletCatal
         }
       : {})
   };
-  const icon = wallet.icon ?? item.icon ?? getTronWalletCatalogIcon(item.id);
+  const icon = wallet.icon ?? item.icon;
   const homepage = wallet.homepage ?? item.homepage;
   const downloadUrl = wallet.downloadUrl ?? item.downloadUrl;
   const providerPaths = wallet.providerPaths ?? item.providerPaths;
@@ -182,6 +208,35 @@ function enrichWalletOption(wallet: WalletOptionViewModel, item: TronWalletCatal
   if (supportsWalletConnect !== undefined) option.supportsWalletConnect = supportsWalletConnect;
   if (badge) option.badge = badge;
   return option;
+}
+
+function getWalletConnectFallback(byId: ReadonlyMap<string, WalletOptionViewModel>): WalletOptionViewModel[] {
+  const walletConnect = byId.get("walletconnect");
+  return walletConnect ? [walletConnect] : [];
+}
+
+function uniqueWalletsById(wallets: readonly WalletOptionViewModel[]): WalletOptionViewModel[] {
+  const seen = new Set<string>();
+  return wallets.filter((wallet) => {
+    if (seen.has(wallet.id)) return false;
+    seen.add(wallet.id);
+    return true;
+  });
+}
+
+function compareWalletRank(a: WalletOptionViewModel, b: WalletOptionViewModel): number {
+  return getWalletRank(a) - getWalletRank(b) || a.name.localeCompare(b.name);
+}
+
+function getWalletRank(wallet: WalletOptionViewModel): number {
+  if (typeof wallet.featured === "number") return wallet.featured;
+  const order = featuredOrder.indexOf(wallet.id);
+  return order === -1 ? Number.POSITIVE_INFINITY : order + 1000;
+}
+
+function isInstalledWallet(wallet: WalletOptionViewModel): boolean {
+  if (wallet.id === "walletconnect" || wallet.transport === "walletconnect" || wallet.transport === "qr" || wallet.capabilities?.includes("qr")) return false;
+  return wallet.readyState === "found" || wallet.available === true;
 }
 
 function createCatalogBadge(item: TronWalletCatalogItem, available: boolean, labels: ConnectModalLabels): NonNullable<WalletOptionViewModel["badge"]> {

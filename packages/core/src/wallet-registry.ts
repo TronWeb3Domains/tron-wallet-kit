@@ -176,6 +176,19 @@ export const TRON_WALLET_REGISTRY = [
     upstreamPackage: "@tronweb3/tronwallet-adapter-binance"
   },
   {
+    id: "safepal",
+    name: "SafePal",
+    enabled: true,
+    group: "popular",
+    transport: "extension",
+    platforms: ["extension", "mobile"],
+    homepage: "https://www.safepal.com/",
+    downloadUrl: "https://www.safepal.com/download?product=2",
+    providerPaths: ["SafePalHook"],
+    conflictMarkers: ["SafePalHook", "sfpPlatform"],
+    supportsWalletConnect: true
+  },
+  {
     id: "guarda",
     name: "Guarda",
     enabled: true,
@@ -212,10 +225,10 @@ export const TRON_WALLET_REGISTRY = [
   {
     id: "ledger",
     name: "Ledger",
-    enabled: false,
+    enabled: true,
     group: "hardware",
     transport: "hardware",
-    platforms: ["extension"],
+    platforms: ["hardware"],
     homepage: "https://www.ledger.com/"
   },
   {

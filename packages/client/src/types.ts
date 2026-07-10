@@ -22,6 +22,7 @@ import type {
   WalletSessionBalance
 } from "@tron-wallet-kit/core";
 import type { ThemeConfig, WalletButton, WalletModal, WalletToast, WalletUiConfig } from "@tron-wallet-kit/ui";
+import type { TronWalletCatalogItem } from "@tron-wallet-kit/ui";
 import type { WalletDescriptor } from "./wallets/types";
 
 export type DefaultAdaptersConfig = {
@@ -96,8 +97,13 @@ export type InjectedTronAdapterConfig = {
   downloadUrl?: string;
   platforms?: WalletPlatform[];
   provider?: () => InjectedTronProvider | undefined;
+  availabilityProbe?: () => boolean | Promise<boolean>;
   requestMethods?: readonly string[];
   signMessageMode?: "signMessageV2" | "sign" | "request";
+  availabilityTimeoutMs?: number;
+  addressTimeoutMs?: number;
+  addressSettleMs?: number;
+  preferInjectedAddress?: boolean;
   metadata?: Partial<WalletMetadata>;
 };
 
@@ -147,7 +153,9 @@ export type WalletKit = {
   modal: WalletModal;
   button: WalletButton | null;
   toast: WalletToast | null;
+  catalog: readonly TronWalletCatalogItem[];
   setTheme(theme: ThemeConfig): void;
+  destroy(): void;
   openModal(): void;
   closeModal(): void;
   disconnect(): Promise<void>;

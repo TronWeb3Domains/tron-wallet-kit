@@ -30,10 +30,10 @@
 
 | Gate | Command | Status |
 | --- | --- | --- |
-| Typecheck | `pnpm typecheck` | Passed on 2026-07-06 |
-| Unit tests | `pnpm test` | Passed on 2026-07-06 |
-| Build | `pnpm build` | Passed on 2026-07-06 |
-| Lint | `pnpm lint` | Passed on 2026-07-06 |
+| Typecheck | `pnpm typecheck` | Passed on 2026-07-08 |
+| Unit tests | `pnpm test` | Passed on 2026-07-08 (122 tests passed) |
+| Build | `pnpm build` | Passed on 2026-07-08 |
+| Lint | `pnpm lint` | Passed on 2026-07-08 |
 | Browser smoke | `http://127.0.0.1:5174/react-basic/` browser smoke | Passed on 2026-07-06 for React light/dark/mobile; real-wallet flows still manual |
 | UI visual QA | Screenshots in `Review/screenshots/react-basic-p9-*.png` | Passed on 2026-07-06 for automated visual smoke |
 | TronLink real-wallet QA | TBD | Pending |
@@ -64,6 +64,17 @@
 | Brand-named browser IIFE | `pnpm --filter @tron-wallet-kit/browser build`; VM smoke for `tron-wallet-kit.iife.js` and `tron-wallet-kit.iife.min.js` | Passed on 2026-07-04 |
 | Examples on default port 5174 | `Invoke-WebRequest` against `http://127.0.0.1:5174/`, `/react-basic/`, `/html-cdn/`, `/vendor/tron-wallet-kit.iife.min.js` | Passed on 2026-07-04 |
 | P9 browser/IIFE parity | `pnpm build`; check `packages/browser/dist/tron-wallet-kit.iife.js` and `tron-wallet-kit.iife.min.js` | Passed on 2026-07-06 |
+| Ledger descriptor optional peer | `pnpm --filter @tron-wallet-kit/client test` | Descriptor/catalog tested on 2026-07-08; real-device QA pending |
+
+## Ledger Hardware QA
+
+- [ ] Install `@tronweb3/tronwallet-adapter-ledger` in a test app.
+- [ ] Confirm Ledger appears with hardware metadata and icon.
+- [ ] Confirm missing optional peer does not break kit startup or other wallet connections.
+- [ ] Connect with a real Ledger device and the TRON app open.
+- [ ] Test `signMessage`.
+- [ ] Test `signTransaction`.
+- [ ] Test `submitTransaction` with `tronweb3Bridge.tronWeb` configured.
 
 ## Release Notes
 

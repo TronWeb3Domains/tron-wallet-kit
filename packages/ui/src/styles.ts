@@ -43,6 +43,9 @@ ${selector} .twk-modal, ${selector} .twk-account-panel {
   overflow: hidden;
   width: min(400px, calc(100vw - 32px));
 }
+${selector} .twk-modal:focus, ${selector} .twk-inline:focus {
+  outline: none;
+}
 ${selector} .twk-inline {
   background: var(--twk-surface);
   border: 1px solid var(--twk-border);
@@ -325,19 +328,6 @@ ${selector} .twk-button-panel-overlay .twk-account-panel {
 ${selector} .twk-button-panel-overlay .twk-account-panel[data-has-recent="true"] {
   height: min(650px, calc(100dvh - 48px));
 }
-${selector} .twk-wallet-list { display: grid; flex: 0 0 auto; gap: 8px; margin: 0; padding: 0; }
-${selector} .twk-wallet-list[data-featured-layout="compact"] {
-  gap: 10px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  padding: 8px 2px 0;
-}
-${selector} .twk-wallet-list[data-featured-layout="compact"] .twk-search-trigger {
-  grid-column: 1 / -1;
-}
-${selector} .twk-wallet-list[data-featured-layout="compact"] .twk-wallet-card {
-  height: 116px;
-  min-height: 116px;
-}
 ${selector} .twk-wallet-row, ${selector} .twk-wallet-card {
   border-color: color-mix(in srgb, var(--twk-border) 72%, transparent);
 }
@@ -402,9 +392,11 @@ ${selector} .twk-wallet-status[data-status="error"] svg {
 ${selector} .twk-search-trigger {
   background: color-mix(in srgb, var(--twk-surface-muted) 72%, transparent);
   border-color: transparent;
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--twk-text) 2%, transparent);
+  border-radius: calc(var(--twk-wallet-radius) + 2px);
+  box-shadow: none;
   gap: 12px;
   justify-content: space-between;
+  margin-top: 10px;
   min-height: 64px;
   padding: 0 16px;
   width: 100%;
@@ -438,7 +430,9 @@ ${selector} .twk-search-trigger .twk-wallet-name {
 ${selector} .twk-search-trigger .twk-badge {
   background: color-mix(in srgb, var(--twk-surface-elevated) 64%, transparent);
   color: color-mix(in srgb, var(--twk-text-muted) 70%, transparent);
-  min-width: 56px;
+  flex: 0 0 auto;
+  min-width: 0;
+  padding: 2px 10px;
 }
 ${selector} .twk-wallet-main { align-items: center; display: flex; gap: 10px; min-width: 0; }
 ${selector} .twk-wallet-icon {
@@ -510,27 +504,51 @@ ${selector} .twk-all-wallets {
 }
 ${selector} .twk-search-field {
   align-items: center;
-  display: flex;
-  gap: 10px;
-  padding: 0 0 8px;
-}
-${selector} .twk-wallet-search-input {
   background: var(--twk-surface-elevated);
   border: 1px solid var(--twk-border);
   border-radius: var(--twk-wallet-radius);
+  display: flex;
+  gap: 8px;
+  height: 46px;
+  margin: 0 0 14px;
+  padding: 0 12px 0 14px;
+  width: 100%;
+}
+${selector} .twk-wallet-search-input {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
   color: var(--twk-text);
   flex: 1 1 auto;
   font: inherit;
-  height: 46px;
+  height: 100%;
   min-width: 0;
   outline: none;
-  padding: 0 14px;
+  padding: 0;
 }
 ${selector} .twk-wallet-search-input::placeholder { color: var(--twk-text-muted); }
+${selector} .twk-wallet-search-input:focus,
+${selector} .twk-wallet-search-input:focus-visible {
+  outline: none;
+}
+${selector} .twk-search-field .twk-search-icon {
+  background: transparent;
+  border-radius: 0;
+  flex-basis: 22px;
+  height: 22px;
+  opacity: 0.78;
+  order: 2;
+  width: 22px;
+}
+${selector} .twk-search-field .twk-search-icon svg {
+  height: 18px;
+  width: 18px;
+}
 ${selector} .twk-wallet-grid {
+  align-content: start;
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: max-content;
   height: 360px;
   margin: 0;
   min-height: 0;
@@ -539,6 +557,25 @@ ${selector} .twk-wallet-grid {
   padding: 8px 2px 14px;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+}
+${selector} .twk-wallet-grid[data-layout="list"] {
+  grid-template-columns: 1fr;
+}
+${selector} .twk-wallet-grid[data-layout="card"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+${selector} .twk-wallet-grid[data-scope="featured"] {
+  height: auto;
+  max-height: min(360px, 52vh);
+}
+${selector} .twk-wallet-grid[data-scope="featured"][data-overflow="bottom"] {
+  mask-image: linear-gradient(to bottom, black calc(100% - 28px), transparent);
+}
+${selector} .twk-wallet-grid[data-scope="featured"][data-overflow="top"] {
+  mask-image: linear-gradient(to bottom, transparent, black 28px);
+}
+${selector} .twk-wallet-grid[data-scope="featured"][data-overflow="both"] {
+  mask-image: linear-gradient(to bottom, transparent, black 28px, black calc(100% - 28px), transparent);
 }
 ${selector} .twk-wallet-grid::-webkit-scrollbar { display: none; height: 0; width: 0; }
 ${selector} .twk-wallet-card {
@@ -553,6 +590,19 @@ ${selector} .twk-wallet-card {
 }
 ${selector} .twk-wallet-card[data-loading="true"] {
   opacity: 1;
+}
+${selector} .twk-wallet-card[data-loading="true"] .twk-wallet-icon,
+${selector} .twk-wallet-card[data-loading="true"] .twk-wallet-name {
+  justify-self: center;
+}
+${selector} .twk-wallet-card[data-loading="true"] .twk-wallet-name {
+  min-width: 78px;
+  width: 78px;
+}
+${selector} .twk-wallet-card[data-loading="true"] .twk-wallet-icon {
+  flex-basis: 56px;
+  height: 56px;
+  width: 56px;
 }
 ${selector} .twk-wallet-card:disabled { cursor: not-allowed; opacity: 0.64; }
 ${selector} .twk-wallet-card:disabled[data-loading="true"] { opacity: 1; }
@@ -697,16 +747,33 @@ ${selector} .twk-detail-actions {
 }
 ${selector} .twk-install-row {
   align-items: center;
-  background: var(--twk-surface-elevated);
-  border-radius: var(--twk-wallet-radius);
+  background: color-mix(in srgb, var(--twk-surface-muted) 72%, transparent);
+  border-radius: calc(var(--twk-wallet-radius) - 4px);
   color: var(--twk-text-muted);
   display: flex;
   gap: 12px;
   justify-content: space-between;
-  margin-top: 14px;
-  min-height: 56px;
-  padding: 0 16px;
+  margin-top: 18px;
+  min-height: 48px;
+  padding: 0 8px 0 14px;
   width: 100%;
+}
+${selector} .twk-install-row > span {
+  min-width: 0;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+${selector} .twk-install-action {
+  border-radius: 14px;
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 12px;
+}
+${selector} .twk-install-action svg {
+  height: 14px;
+  width: 14px;
 }
 ${selector} .twk-link {
   color: var(--twk-accent);
@@ -721,7 +788,7 @@ ${selector} .twk-qr-slot.twk-qr-large {
   border-radius: 8px;
   box-shadow: none;
   box-sizing: border-box;
-  height: auto;
+  height: min(76vw, 340px);
   margin: 0 auto;
   max-width: 340px;
   overflow: hidden;
@@ -735,7 +802,7 @@ ${selector} .twk-qr-code {
   background: transparent;
   border-radius: 0;
   display: flex;
-  height: auto;
+  height: 100%;
   justify-content: center;
   margin: 0 auto;
   max-width: 100%;
@@ -751,7 +818,7 @@ ${selector} .twk-qr-code > img {
 }
 ${selector} .twk-qr-code svg, ${selector} .twk-qr-code canvas {
   display: block;
-  height: auto;
+  height: 100%;
   width: 100%;
 }
 ${selector} .twk-qr-code[data-twk-qr-renderer="error"] {
@@ -773,14 +840,14 @@ ${selector} .twk-qr-error {
 }
 ${selector} .twk-qr-skeleton {
   background: color-mix(in srgb, var(--twk-qr-foreground) 8%, var(--twk-qr-background));
-  border-radius: var(--twk-wallet-radius);
+  border-radius: 8px;
   display: block;
-  height: min(76vw, 304px);
-  max-height: 304px;
-  max-width: 304px;
+  height: 100%;
+  max-height: none;
+  max-width: none;
   overflow: hidden;
   position: relative;
-  width: min(100%, 304px);
+  width: 100%;
 }
 ${selector} .twk-qr-skeleton::after {
   animation: twk-skeleton-shimmer 1.2s ease-in-out infinite;

@@ -86,7 +86,7 @@
 - Featured wallet order is now catalog-driven: TronLink first, WalletConnect last. Catalog-only mobile wallets may route through `adapterId: "walletconnect"` when that adapter is registered.
 - Modal routing now supports `featured`, `all-wallets`, `connecting`, and `qr` views in `packages/ui/src/modal.ts`.
 - Modal a11y now includes Escape close, backdrop close, focus trap, and focus restore.
-- `packages/ui/src/wallets/icons.generated.ts` is the build-time icon map. It is intentionally empty until a fetch/generate script imports SVGs from `https://walletadapter.org/wallets/*.svg`; do not hotlink icons at runtime.
+- Wallet icons now live under `packages/client/src/wallets/icons/<id>.svg`; run `pnpm icons:wallets` to regenerate `packages/client/src/wallets/icons.generated.ts`. UI must stay icon-agnostic and receive icons through the runtime catalog injected by client.
 - React `ConnectModal` now consumes the same catalog merge path as the DOM modal.
 
 ## 2026-07-04 WalletButton Baseline Notes
@@ -100,7 +100,7 @@
 ## 2026-07-05 WalletButton Account Panel + Icon Fetch Notes
 
 - Added `scripts/fetch-wallet-icons.mjs` and root script `pnpm icons:wallets`.
-- The icon script downloads SVGs from `https://walletadapter.org/wallets/*.svg`, writes source SVGs to `packages/ui/src/wallets/icons/`, and generates `packages/ui/src/wallets/icons.generated.ts` data URIs.
+- The local icon generator reads checked-in SVGs from `packages/client/src/wallets/icons/` and generates `packages/client/src/wallets/icons.generated.ts` data URIs. Do not add wallet icons to `packages/ui`.
 - Ran `pnpm icons:wallets` successfully; 17 icons were fetched.
 - Current generated wallet icon set: WalletConnect, TronLink, MetaMask, OKX, Bitget, Binance, TokenPocket, Trust, GateWallet, FoxWallet, Bybit, imToken, Tomo, Guarda, Backpack, OneKey, and Ledger.
 - WalletConnect has a local override at `icon/walletconnect.svg`; `pnpm icons:wallets` copies this file instead of fetching `WalletConnect.svg` remotely, then regenerates both UI catalog data URI and adapter metadata icon.

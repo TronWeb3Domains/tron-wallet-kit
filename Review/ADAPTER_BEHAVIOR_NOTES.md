@@ -319,7 +319,7 @@ Implications for TRON Wallet Kit:
 - Modal wallet rows can merge icons from the UI catalog, but connected button/account surfaces read the active adapter metadata directly.
 - Bridge adapters must receive catalog icons in their stable lazy metadata because upstream wallet packages are not loaded at initial render.
 - Injected fallback adapters must also receive catalog icons at config time.
-- `getTronWalletCatalogIcon(walletId)` is the shared UI catalog helper for this.
+- Default adapter icons now resolve from the client wallet registry: `descriptor.icon ?? WALLET_ICONS[id]` in `packages/client/src/wallets/icons.generated.ts`. UI no longer owns wallet icon lookup.
 
 ## 2026-07-06 Phase 2 Bridge Wallets
 
@@ -442,3 +442,160 @@ Implementation implications:
   - QR glyphs render at 12px and use a simplified SVG shape so the badge reads as QR at small size.
   - QR status keeps the neutral badge surface instead of applying `--twk-badge-qr-bg` to the badge container; only the glyph uses `--twk-badge-qr-fg`.
   - QR transport has priority over installed state, so WalletConnect renders the QR icon.
+
+## 2026-07-08 Ledger Optional Peer Notes
+
+- Ledger is represented by a client wallet descriptor with id `ledger`, group `hardware`, platforms `["hardware"]`, and bridge integration.
+- The descriptor uses a lazy importer for `@tronweb3/tronwallet-adapter-ledger`; the package is an optional peer of `@tron-wallet-kit/client`, not a bundled hard dependency.
+- App-side enablement:
+
+```sh
+pnpm add @tronweb3/tronwallet-adapter-ledger
+```
+
+- If the optional package is missing or cannot load, the bridge keeps Ledger gracefully unavailable instead of breaking the wallet kit or other wallets.
+- Ledger real-device QA is still required: device connected, TRON app open, connect, signMessage, signTransaction, and submitTransaction when `tronweb3Bridge.tronWeb` is configured.
+
+## 2026-07-08 P2 Injected Packaging Migration Plan
+
+- Added detailed migration plan in `Review/P2_INJECTED_PACKAGING_MIGRATION_PLAN.md`.
+- Direction:
+  - migrate TokenPocket, OKX, Bitget, and Trust from bridge to injected after real extension QA.
+  - migrate Gate, Bybit, Binance, Guarda, OneKey, and Backpack in later smaller batches.
+  - keep FoxWallet/imToken on hold until mobile/app QA.
+  - keep Ledger as optional-peer bridge and MetaMask TRON as opt-in bridge.
+- Do not remove upstream optional dependencies until the corresponding injected wallet batch passes real-wallet QA.
+- Phase 0 guardrail follow-up:
+  - Added injected method fallback coverage for `tron_requestAccounts` -> `eth_requestAccounts`.
+  - Added strict provider-root coverage to prevent generic `tronWeb` from satisfying wallet-specific injected descriptors.
+  - Extended client icon codegen to support SVG, PNG, and WEBP source icons.
+- TokenPocket canary:
+  - `packages/client/src/wallets/entries/tokenpocket.ts` now uses `integration: "injected"`.
+  - Detection is restricted to TokenPocket-owned roots: `tokenpocket.tron` and `tokenpocket.tronWeb`.
+  - Broad generic `tronWeb` fallback was removed to avoid global collision with other installed wallets.
+  - Real extension QA passed; `@tronweb3/tronwallet-adapter-tokenpocket` was removed from `@tron-wallet-kit/client` optional dependencies.
+- OKX canary:
+  - `packages/client/src/wallets/entries/okx.ts` now uses `integration: "injected"`.
+  - Detection is restricted to `okxwallet.tronLink`.
+  - Real extension QA passed; `@tronweb3/tronwallet-adapter-okxwallet` was removed from `@tron-wallet-kit/client` optional dependencies.
+- Bitget canary:
+  - `packages/client/src/wallets/entries/bitget.ts` now uses `integration: "injected"`.
+  - Detection keeps `getBitgetInjectedProvider()` so parent `bitkeep.tronWeb` and `window.isBitKeep` global-marker cases still work.
+  - Provider paths are restricted to Bitget-owned roots: `bitkeep.tronLink` and `bitkeep.tron`.
+  - Real extension QA passed after request binding fix; `@tronweb3/tronwallet-adapter-bitkeep` was removed from `@tron-wallet-kit/client` optional dependencies.
+
+## 2026-07-08 React StrictMode Modal Lifecycle Fix
+
+- `react-basic` showed duplicated wallet rows in the modal DOM after React StrictMode remounts.
+- Root cause: `TronWalletProvider` recreated/mounted a kit too eagerly and only destroyed `manager`, leaving modal/toast/button DOM controllers behind.
+- Fix:
+  - `WalletKit` now exposes `destroy()`.
+  - `createWalletKit().destroy()` tears down button, toast, modal, manager, and identity cache.
+  - `TronWalletProvider` keeps an internally-created kit stable and destroys the full kit on unmount.
+- Browser QA confirmed modal rows are back to one visible list of 5 featured wallets on `http://127.0.0.1:5174/react-basic/`.
+
+## 2026-07-08 Bitget Injected Getter Safety
+
+- User reported `Uncaught TypeError: e.logger is not a function` from Bitget injected probing.
+- Root cause: a wallet injected object can expose throwing getters/proxy fields; spreading the provider during availability checks executes those getters.
+- Fix:
+  - Bitget detection now uses safe property reads.
+  - Injected provider cloning copies only `request` and `tronWeb` instead of object-spreading extension provider proxies.
+  - Generic injected path lookup also ignores throwing getters.
+  - `createInjectedTronAdapter().isAvailable()` cannot crash the modal when a provider probe throws.
+- Added client regression coverage for a Bitget-like provider with an enumerable throwing `logger` getter.
+- Follow-up connect fix:
+- Bitget can also throw `e.logger is not a function` during connect if `request` is copied off the injected provider and loses its original `this`.
+  - Cloned injected providers now bind `request` to the source provider object.
+  - Added regression coverage for a Bitget-like request method that reads `this.logger`.
+
+## 2026-07-08 Trust Injected Canary
+
+- `packages/client/src/wallets/entries/trust.ts` now uses `integration: "injected"`.
+- Detection is restricted to Trust-owned roots: `trustwallet.tronLink` and `trustwallet.tron`.
+- Existing regression coverage confirms Trust-specific provider wins over shared TronLink globals.
+- Real extension QA passed; `@tronweb3/tronwallet-adapter-trust` was removed from `@tron-wallet-kit/client` optional dependencies.
+
+## 2026-07-08 Gate + Bybit Injected Canary
+
+- Phase 1 cleanup:
+  - Removed the already-QA'd TokenPocket/OKX/Bitget/Trust upstream packages from `packages/client/package.json` optional dependencies.
+  - Ran `pnpm install --ignore-scripts` to update the lockfile.
+- Gate Wallet:
+  - Gate is now `integration: "injected"` after confirming the earlier failure was caused by Gate not injecting on HTTP localhost.
+  - `@tronweb3/tronwallet-adapter-gatewallet` is no longer required for the default client path.
+  - Detection remains restricted to Gate-owned roots: `gatewallet.tronWeb`, `gatewallet.tron`, and `gatewallet.tronLink`.
+  - Official Gate Wallet API Tron docs prefer `window.gatewallet.tronWeb`, then `window.gatewallet.tron`, then `window.gatewallet.tronLink`.
+  - `getGateInjectedProvider()` handles nested `gatewallet.tron` / `gatewallet.tronLink` request providers and can merge parent `gatewallet.tronWeb`.
+  - Balance/identity TronWeb lookup also checks `gatewallet.tronWeb`.
+  - Disabled-state follow-up:
+    - Gate extension does not inject `window.gatewallet` on `http://127.0.0.1`; Gate QA must use an HTTPS origin.
+    - Examples now include `pnpm --filter @tron-wallet-kit/examples dev:https` for Gate desktop extension testing.
+    - Upstream Gate support is based on `window.gatewallet && window.gatewallet.tronLink`.
+    - Gate can inject asynchronously, so the injected descriptor uses a longer availability wait (`availabilityTimeoutMs: 5000`).
+    - Gate extension prefers `eth_requestAccounts` before `tron_requestAccounts`.
+    - Gate connect must call request accounts before trusting a prefilled `gatewallet.tronWeb.defaultAddress`; parent `gatewallet.request` is merged into child/provider surfaces for this reason.
+    - Gate uses an `availabilityProbe` (`hasGateInjectedMarker`) so the UI can show installed from the upstream marker even before the connect provider is fully shaped.
+    - Follow-up probe also checks camelCase aliases, Gate EIP-1193 flags, and EIP-6963 announced provider info because Gate is a multi-chain extension.
+- Bybit Wallet:
+  - `packages/client/src/wallets/entries/bybit.ts` now uses `integration: "injected"`.
+  - Detection is restricted to Bybit-owned roots: `bybitWallet.tronLink` and `bybitWallet.tron`.
+  - Real extension QA passed; `@tronweb3/tronwallet-adapter-bybit` was removed from `@tron-wallet-kit/client` optional dependencies.
+
+## 2026-07-08 Guarda + OneKey Injected Canary
+
+- Guarda:
+  - `packages/client/src/wallets/entries/guarda.ts` now uses `integration: "injected"`.
+  - Detection uses `getGuardaInjectedProvider()` plus Guarda-owned roots: `guarda.tron` and `guarda`.
+  - `getGuardaInjectedProvider()` no longer object-spreads the injected provider; it safe-reads fields and binds `request` to the source provider, matching the Bitget proxy-safety pattern.
+- OneKey:
+  - `packages/client/src/wallets/entries/onekey.ts` now uses `integration: "injected"`.
+  - Detection is restricted to OneKey-owned roots: `$onekey.tron` and `$onekey.tronLink`.
+- Real extension QA passed; `@tronweb3/tronwallet-adapter-guarda` and `@tronweb3/tronwallet-adapter-onekey` were removed from `@tron-wallet-kit/client` optional dependencies.
+
+## 2026-07-08 Binance + Backpack Injected Canary
+
+- Phase 2 cleanup:
+  - Removed the already-QA'd Guarda/OneKey upstream packages from `packages/client/package.json` optional dependencies.
+  - Ran `pnpm install --ignore-scripts` to update the lockfile.
+- Binance Web3 Wallet:
+  - `packages/client/src/wallets/entries/binance.ts` now uses `integration: "injected"`.
+  - Detection uses `getBinanceInjectedProvider()` and is restricted to Binance-owned root `binancew3w.tron`.
+  - Binance's extension provider is not TIP-1193-shaped; the helper maps `getAccount`, `getChainId`, `signMessageV2`, and `signTransaction` into the kit's injected provider shape.
+  - Kept `supportsWalletConnect: true` as metadata for later mobile/UI optimization; the default extension path is injected.
+  - Real extension QA passed; `@tronweb3/tronwallet-adapter-binance` was removed from `@tron-wallet-kit/client` optional dependencies.
+- Backpack:
+  - `packages/client/src/wallets/entries/backpack.ts` now uses `integration: "injected"`.
+  - Detection is restricted to Backpack-owned roots: `backpack.tron` and `backpack.tronLink`.
+  - Real extension QA passed; `@tronweb3/tronwallet-adapter-backpack` was removed from `@tron-wallet-kit/client` optional dependencies.
+
+## 2026-07-08 FoxWallet + SafePal Injected Canary
+
+- FoxWallet:
+  - Upstream `@tronweb3/tronwallet-adapter-foxwallet` is app/mobile-oriented and its current adapter marks non-mobile browser contexts as not found, even though the provider shape is `window.foxwallet.tronLink`.
+  - FoxWallet official TRON docs also state that TRON is currently mobile-app only and Chrome extension support is coming soon.
+  - `packages/client/src/wallets/entries/foxwallet.ts` now uses `integration: "injected"` with roots `foxwallet.tronLink` and `foxwallet.tron`.
+  - Detection uses `getFoxWalletInjectedProvider()` so extension variants that place `request` or `tronWeb` on parent `window.foxwallet` can still become active without falling back to generic `window.tronLink` or `window.tronWeb`.
+  - Platforms are mobile-only for now, so desktop extension UI should not expect FoxWallet to become installed/active until FoxWallet ships TRON extension support.
+  - Keep `@tronweb3/tronwallet-adapter-foxwallet` in optional dependencies until real FoxWallet mobile/app QA is accepted.
+- SafePal:
+  - Added built-in descriptor `packages/client/src/wallets/entries/safepal.ts`.
+  - SafePal has no upstream tronwallet-adapter package in this project; descriptor uses generic injected integration.
+  - SafePal TRON docs expose `window.SafePalHook` for `tron_requestAccounts` and `window.tronWeb` for signing/balance, so client now has `getSafePalInjectedProvider()`.
+  - The client descriptor intentionally does not use raw `providerPaths: ["SafePalHook"]`; SafePal must go through the composer so `isAvailable()` requires both `SafePalHook` and `tronWeb` and cannot mark a hook-only object as installed.
+  - `getSafePalInjectedProvider()` now re-reads `SafePalHook.defaultAddress` after `tron_requestAccounts`, supports SafePal in-app sessions where no request method is exposed, and keeps message signing on `tronWeb.trx.sign(message)`.
+  - SafePal icon already exists in `packages/client/src/wallets/icons/safepal.png` and resolves through generated client icon catalog.
+
+## 2026-07-08 WalletConnect QR Dependency Audit
+
+- `@tron-wallet-kit/adapter-walletconnect` does not render or open a WalletConnect/Reown modal. It only creates a WalletConnect TRON session and forwards the `wc:` URI through `onUri`.
+- The kit modal owns QR rendering through `@tron-wallet-kit/ui`.
+- Dependency audit:
+  - `@walletconnect/modal` is not present.
+  - `@tronweb3/walletconnect-tron` currently pulls `@reown/appkit` and `@reown/appkit-ui` transitively, including a transitive `qrcode@1.5.3`, even though this kit does not use their modal UI.
+  - Keep this as a future optimization candidate: replacing `@tronweb3/walletconnect-tron` with a direct WalletConnect core/universal-provider implementation could reduce UI/modal-related transitive weight, but it is a larger adapter rewrite and should not be mixed into QR layout fixes.
+# 2026-07-10 Gate first-connect note
+
+- Gate extension must be tested on HTTPS (`https://127.0.0.1:5174/react-basic/` in local dev), because the provider may not inject on plain HTTP origins.
+- Gate uses injected integration with `preferInjectedAddress`, `addressTimeoutMs: 15000`, and `addressSettleMs: 4000`.
+- First approval can return from `eth_requestAccounts` before `gatewallet.tronWeb.defaultAddress` is hydrated. The injected adapter now polls the live provider during the settle window and resolves once the address appears, avoiding the close-and-connect-again path.

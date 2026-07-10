@@ -4,6 +4,7 @@ import { WalletEventEmitter } from "./events";
 import type { WalletEventListener, WalletEventName } from "./events";
 import { NetworkRegistry } from "./networks";
 import { MemoryWalletStorage } from "./storage";
+import { WALLET_STORAGE_VERSION } from "./types";
 import type {
   ConnectOptions,
   ConnectResult,
@@ -131,7 +132,12 @@ export class WalletManager {
         userOnDisconnect?.();
       };
       const { timedOut, value: result } = await this.withTimeout(adapter.connect(connectOptions), options.timeoutMs ?? DEFAULT_CONNECT_TIMEOUT_MS);
-      if (timedOut) throw createWalletError.requestTimeout(`${adapter.metadata.name} connect timed out`);
+      if (timedOut) {
+        // Adapter's connect() promise is left dangling on timeout — tell the adapter to clean up
+        // its pending request (deeplink/popup) so it doesn't leak.
+        try { await adapter.cancelPendingConnection?.(); } catch { /* best-effort */ }
+        throw createWalletError.requestTimeout(`${adapter.metadata.name} connect timed out`);
+      }
       if (signal.aborted || this.pendingAdapterId !== adapterId || !result) throw createWalletError.connectionRejected(adapter.metadata.name);
       const session = this.createSession(adapter, result, network);
       await this.setSession(session);
@@ -193,7 +199,10 @@ export class WalletManager {
     this.events.emit("signing", { kind: "message", adapterId: session.adapterId });
     try {
       const { timedOut, value: result } = await this.withTimeout(adapter.signMessage({ ...normalized, account: session.account, session }), DEFAULT_SIGN_TIMEOUT_MS);
-      if (timedOut) throw createWalletError.requestTimeout(`${adapter.metadata.name} sign message timed out`);
+      if (timedOut) {
+        try { await adapter.cancelPendingConnection?.(); } catch { /* best-effort */ }
+        throw createWalletError.requestTimeout(`${adapter.metadata.name} sign message timed out`);
+      }
       if (!result) throw createWalletError.requestTimeout(`${adapter.metadata.name} sign message timed out`);
       if (!result.proof && !result.signature && !result.txBlob) {
         throw new WalletKitError("INVALID_SIGNATURE", "Wallet returned an empty signature proof");
@@ -220,7 +229,10 @@ export class WalletManager {
     this.events.emit("signing", { kind: "transaction", adapterId: session.adapterId });
     try {
       const { timedOut, value: result } = await this.withTimeout(adapter.signTransaction({ ...normalized, account: session.account, session }), DEFAULT_SIGN_TIMEOUT_MS);
-      if (timedOut) throw createWalletError.requestTimeout(`${adapter.metadata.name} sign transaction timed out`);
+      if (timedOut) {
+        try { await adapter.cancelPendingConnection?.(); } catch { /* best-effort */ }
+        throw createWalletError.requestTimeout(`${adapter.metadata.name} sign transaction timed out`);
+      }
       if (!result) throw createWalletError.requestTimeout(`${adapter.metadata.name} sign transaction timed out`);
       if (!result.signed) throw new WalletKitError("INVALID_TRANSACTION_SIGNATURE", "Wallet did not sign transaction");
       this.events.emit("signed", { kind: "transaction", adapterId: session.adapterId, result });
@@ -241,7 +253,10 @@ export class WalletManager {
     this.events.emit("signing", { kind: "transaction", adapterId: session.adapterId });
     try {
       const { timedOut, value: result } = await this.withTimeout(adapter.submitTransaction({ ...request, account: session.account, session }), DEFAULT_SIGN_TIMEOUT_MS);
-      if (timedOut) throw createWalletError.requestTimeout(`${adapter.metadata.name} submit transaction timed out`);
+      if (timedOut) {
+        try { await adapter.cancelPendingConnection?.(); } catch { /* best-effort */ }
+        throw createWalletError.requestTimeout(`${adapter.metadata.name} submit transaction timed out`);
+      }
       if (!result) throw createWalletError.requestTimeout(`${adapter.metadata.name} submit transaction timed out`);
       if (!result.hash) throw new WalletKitError("INVALID_TX_RESULT", "Wallet returned an empty transaction hash");
       const transaction = this.addTransaction({
@@ -312,7 +327,7 @@ export class WalletManager {
   async setSession(session: WalletSession): Promise<void> {
     this.session = session;
     this.activeAdapterId = session.adapterId;
-    const envelope: StoredWalletSessionEnvelope = { version: 1, session: createStoredSession(session), updatedAt: Date.now() };
+    const envelope: StoredWalletSessionEnvelope = { version: WALLET_STORAGE_VERSION, session: createStoredSession(session), updatedAt: Date.now() };
     await this.storage.setItem(this.storageKey, JSON.stringify(envelope));
   }
 
@@ -464,7 +479,7 @@ export class WalletManager {
     try {
       const parsed = JSON.parse(serialized) as Partial<StoredWalletSessionEnvelope> | WalletSession;
       if (parsed && typeof parsed === "object" && "version" in parsed && "session" in parsed) {
-        return parsed.version === 1 && this.isValidStoredSession(parsed.session) ? parsed.session : null;
+        return parsed.version === WALLET_STORAGE_VERSION && this.isValidStoredSession(parsed.session) ? parsed.session : null;
       }
       return this.isValidStoredSession(parsed) ? parsed : null;
     } catch {

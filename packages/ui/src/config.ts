@@ -1,15 +1,14 @@
 import { resolveMode, resolveTheme } from "./themes";
 import { resolveLabelPack } from "./locales";
 import { TRON_WALLET_CATALOG } from "./wallet-catalog";
-import type { ResolvedWalletUiConfig, WalletUiConfig } from "./types";
+import type { ResolvedWalletUiConfig, WalletListLayout, WalletUiConfig } from "./types";
 
 const FEATURED_DEFAULT_LIMIT = 5;
-const FEATURED_MAX_LIMIT = 10;
 
 export function resolveWalletUiConfig(config: WalletUiConfig = {}): ResolvedWalletUiConfig {
   const themeName = config.themeName ?? (resolveMode(config.themeMode ?? config.mode) === "dark" ? "dark" : "light");
-  const featuredLimit = clampInteger(config.walletList?.featuredLimit ?? FEATURED_DEFAULT_LIMIT, 1, FEATURED_MAX_LIMIT);
-  const featuredWallets = config.walletList?.featuredWallets?.slice(0, FEATURED_MAX_LIMIT);
+  const featuredLimit = normalizeDeprecatedFeaturedLimit(config.walletList?.featuredLimit);
+  const featuredWallets = config.walletList?.featuredWallets;
   const labels = resolveLabelPack(config.locale, config.labels);
   return {
     theme: resolveTheme({ themeName, ...(config.customTheme ? { tokens: config.customTheme } : {}) }),
@@ -37,7 +36,8 @@ export function resolveWalletUiConfig(config: WalletUiConfig = {}): ResolvedWall
       errorCorrectionLevel: config.qr?.errorCorrectionLevel ?? "M"
     },
     walletList: {
-      layout: config.walletList?.layout ?? "list",
+      layout: normalizeWalletListLayout(config.walletList?.layout),
+      featuredMode: config.walletList?.featuredMode ?? "installed-first",
       wallets: config.walletList?.wallets ?? "all",
       disabledWallets: config.walletList?.disabledWallets ?? [],
       showUnavailable: config.walletList?.showUnavailable ?? true,
@@ -64,9 +64,14 @@ export function resolveWalletUiConfig(config: WalletUiConfig = {}): ResolvedWall
   };
 }
 
-function clampInteger(value: number, min: number, max: number): number {
-  if (!Number.isFinite(value)) return min;
-  return Math.max(min, Math.min(max, Math.trunc(value)));
+function normalizeWalletListLayout(layout: WalletListLayout | undefined): "list" | "card" {
+  if (layout === "card" || layout === "grid") return "card";
+  return "list";
+}
+
+function normalizeDeprecatedFeaturedLimit(value: number | undefined): number {
+  if (value === undefined || !Number.isFinite(value)) return FEATURED_DEFAULT_LIMIT;
+  return Math.max(1, Math.trunc(value));
 }
 
 export function createDefaultWalletUiConfig(config: WalletUiConfig = {}): ResolvedWalletUiConfig {
