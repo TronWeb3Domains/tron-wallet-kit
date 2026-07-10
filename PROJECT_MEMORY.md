@@ -3283,6 +3283,7 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `installed-first` now shows installed extension wallets first.
   - Remaining featured slots are filled only by actionable fallbacks.
   - Bucket order is installed extension wallets, then WalletConnect, then QR-capable wallet fallbacks, then hardware wallets such as Ledger, then loading entries.
+  - WalletConnect is a required actionable entry in `installed-first` when present; the list capacity expands to keep it after installed wallets instead of slicing it off.
   - Recommended order is only a sort hint inside each bucket; it must not make a non-actionable recommended wallet appear in featured.
   - Pure unavailable extension wallets such as `okx`/`bitget` in a not-installed state stay available in All Wallets but no longer occupy featured installed-first slots.
   - Manual `featuredWallets` remains unchanged and still respects the integrator's explicit ordering/list.

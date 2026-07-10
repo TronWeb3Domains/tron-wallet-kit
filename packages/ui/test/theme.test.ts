@@ -417,6 +417,19 @@ describe("wallet kit surfaces", () => {
     expect(installedOnlyWithoutInstalled.map((wallet) => wallet.id)).toEqual(["walletconnect"]);
     expect(installedFirstWithoutInstalled[0]?.id).toBe("walletconnect");
 
+    const manyInstalled = getFeaturedWalletOptions(
+      mergeWalletOptionsWithCatalog([
+        { id: "tronlink", name: "TronLink", readyState: "found" },
+        { id: "tokenpocket", name: "TokenPocket", readyState: "found" },
+        { id: "okx", name: "OKX Wallet", readyState: "found" },
+        { id: "bitget", name: "Bitget Wallet", readyState: "found" },
+        { id: "trust", name: "Trust Wallet", readyState: "found" },
+        { id: "walletconnect", name: "WalletConnect", readyState: "found", transport: "walletconnect", capabilities: ["qr"] },
+      ]),
+      { featuredMode: "installed-first" }
+    );
+    expect(manyInstalled.map((wallet) => wallet.id)).toEqual(["tronlink", "tokenpocket", "okx", "bitget", "trust", "walletconnect"]);
+
     const html = createConnectModalHtml({
       wallets,
       walletList: {

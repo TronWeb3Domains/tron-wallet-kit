@@ -97,8 +97,8 @@ export function getFeaturedWalletOptions(wallets: readonly WalletOptionViewModel
   }
 
   const installedIds = new Set(installed.map((wallet) => wallet.id));
-  const targetCount = Math.max(installed.length, rankedIds.length);
   const walletConnect = byId.get("walletconnect");
+  const targetCount = Math.max(installed.length + (walletConnect ? 1 : 0), rankedIds.length);
   const qrFallbacks = wallets
     .filter((wallet) => !installedIds.has(wallet.id) && isQrFeaturedFallbackWallet(wallet))
     .sort(compareWalletRank);
