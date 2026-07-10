@@ -1088,6 +1088,7 @@ function createConnectingRingHtml(): string {
 
 function createFallbackBadge(wallet: WalletOptionViewModel, labels: ConnectModalLabels): NonNullable<WalletOptionViewModel["badge"]> {
   if (isQrWallet(wallet)) return { label: labels.qrCode.toUpperCase(), tone: "qr" };
+  if (wallet.transport === "hardware" || wallet.platforms?.includes("hardware")) return { label: "HARDWARE", tone: "tron" };
   if (wallet.readyState === "found") return { label: labels.installed.toUpperCase(), tone: "installed" };
   if (wallet.readyState === "notFound") return { label: labels.notInstalled.toUpperCase(), tone: "muted" };
   return { label: labels.tron.toUpperCase(), tone: "tron" };
@@ -1138,6 +1139,7 @@ function createNetworkBadgeHtml(viewModel: ConnectModalViewModel): string {
 
 function isWalletDisabled(wallet: WalletOptionViewModel): boolean {
   const supportsQr = wallet.capabilities?.includes("qr") || wallet.id === "walletconnect" || wallet.transport === "walletconnect";
+  if (wallet.transport === "hardware" || wallet.platforms?.includes("hardware")) return false;
   return wallet.readyState === "unsupported" || (wallet.readyState === "notFound" && !supportsQr);
 }
 

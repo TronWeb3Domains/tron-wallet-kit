@@ -463,7 +463,7 @@ describe("wallet kit surfaces", () => {
     ];
 
     const desktopWallets = applyWalletListConfig(wallets, {}, { kind: "desktop-extension", isMobile: false, hasInjected: true });
-    expect(desktopWallets.map((wallet) => wallet.id)).toEqual(["tronlink", "walletconnect", "gate", "ledger"]);
+    expect(desktopWallets.map((wallet) => wallet.id)).toEqual(["tronlink", "walletconnect", "ledger", "gate"]);
 
     const mobileWallets = applyWalletListConfig(
       wallets,
@@ -484,6 +484,27 @@ describe("wallet kit surfaces", () => {
     expect(mobileHtml).toContain('data-twk-wallet-id="foxwallet"');
     expect(mobileHtml).not.toContain('data-twk-wallet-id="gate"');
     expect(mobileHtml).not.toContain('data-twk-wallet-id="ledger"');
+  });
+
+  it("keeps Ledger hardware selectable without an extension installed badge", () => {
+    const html = createConnectModalHtml({
+      view: "all-wallets",
+      wallets: [
+        {
+          id: "ledger",
+          name: "Ledger",
+          readyState: "notFound",
+          available: false,
+          platforms: ["hardware"],
+          transport: "hardware",
+        },
+      ],
+    });
+
+    expect(html).toContain('data-twk-wallet-id="ledger"');
+    expect(html).not.toContain('data-twk-wallet-id="ledger" data-twk-adapter-id="ledger" data-twk-platforms="hardware" aria-label="Ledger: Not installed" disabled');
+    expect(html).toContain("HARDWARE");
+    expect(html).not.toContain("NOT INSTALLED");
   });
 
   it("detects desktop, mobile browser, and mobile in-app wallet environments", () => {

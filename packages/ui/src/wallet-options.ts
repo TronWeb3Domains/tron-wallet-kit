@@ -30,6 +30,7 @@ export function mapAdapterToWalletOption(adapter: WalletAdapter, availability?: 
 }
 
 function resolveReadyState(adapter: WalletAdapter, availability: WalletAvailability): WalletReadyState {
+  if (adapter.metadata.type === "hardware" || adapter.metadata.platforms?.includes("hardware")) return "found";
   if (availability === "loading") return "loading";
   if (availability === false) return "notFound";
   if (availability === true) return "found";
@@ -40,6 +41,7 @@ function createWalletBadge(adapter: WalletAdapter, readyState: WalletReadyState,
   if (capabilities.includes("qr") || adapter.metadata.type === "walletconnect" || adapter.metadata.id === "walletconnect") {
     return { label: labels.qrCode.toUpperCase(), tone: "qr" };
   }
+  if (adapter.metadata.type === "hardware" || adapter.metadata.platforms?.includes("hardware")) return { label: "HARDWARE", tone: "tron" };
   if (readyState === "found") return { label: labels.installed.toUpperCase(), tone: "installed" };
   if (readyState === "loading") return { label: labels.checking.toUpperCase(), tone: "muted" };
   if (readyState === "notFound") return { label: labels.notInstalled.toUpperCase(), tone: "muted" };

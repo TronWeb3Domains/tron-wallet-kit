@@ -684,3 +684,12 @@ pnpm add @tronweb3/tronwallet-adapter-ledger
   - The kit should expose a working Ledger path out of the box.
   - Lazy import keeps runtime behavior scoped to Ledger usage while avoiding an extra install step for integrators.
 - Real-device QA remains required with a physical Ledger and the TRON app open.
+
+# 2026-07-10 Ledger UI state is hardware, not installed
+
+- Ledger must not display `NOT INSTALLED`; hardware wallets do not follow extension installation semantics.
+- Current UI behavior:
+  - Ledger remains selectable on desktop even when no device/app is currently available.
+  - Badge label is `HARDWARE`.
+  - Ledger is not counted as an installed extension for installed-first featured ordering.
+  - Mobile browser lists hide Ledger because hardware transport is desktop/manual.

@@ -3258,3 +3258,20 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Verification:
   - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 46 tests.
   - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+
+## 2026-07-10 Ledger Hardware UI State
+
+- User reported Ledger still showed `NOT INSTALLED`.
+- Root cause:
+  - UI readiness mapping reused extension semantics: `isAvailable() === false` became `readyState: "notFound"` and badge `NOT INSTALLED`.
+  - For a hardware wallet, missing device/app state is not an extension install state.
+- Fix:
+  - Hardware wallets now remain selectable even when readiness is `notFound`.
+  - Hardware badge is `HARDWARE`.
+  - Hardware wallets are not counted as installed-first extension wallets, so Ledger does not unexpectedly jump into featured installed slots.
+  - Desktop filtering keeps Ledger; mobile browser filtering still hides hardware wallets.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 40 tests.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 46 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.

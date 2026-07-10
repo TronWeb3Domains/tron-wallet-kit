@@ -133,12 +133,14 @@ export function sortWalletsByAvailability(wallets: readonly WalletOptionViewMode
 function walletAvailabilityRank(wallet: WalletOptionViewModel): number {
   if (wallet.readyState === "found" || wallet.available === true) return 0;
   if (wallet.capabilities?.includes("qr") || wallet.transport === "qr" || wallet.transport === "walletconnect" || wallet.id === "walletconnect") return 1;
+  if (wallet.transport === "hardware" || wallet.platforms?.includes("hardware")) return 1;
   if (wallet.readyState === "loading") return 2;
   if (wallet.readyState === "notFound" || wallet.readyState === "unsupported" || wallet.available === false) return 3;
   return 2;
 }
 
 function isUnavailableWallet(wallet: WalletOptionViewModel): boolean {
+  if (wallet.transport === "hardware" || wallet.platforms?.includes("hardware")) return false;
   return wallet.readyState === "notFound" || wallet.readyState === "unsupported" || wallet.available === false;
 }
 
@@ -236,12 +238,14 @@ function getWalletRank(wallet: WalletOptionViewModel): number {
 
 function isInstalledWallet(wallet: WalletOptionViewModel): boolean {
   if (wallet.id === "walletconnect" || wallet.transport === "walletconnect" || wallet.transport === "qr" || wallet.capabilities?.includes("qr")) return false;
+  if (wallet.transport === "hardware" || wallet.platforms?.includes("hardware")) return false;
   return wallet.readyState === "found" || wallet.available === true;
 }
 
 function createCatalogBadge(item: TronWalletCatalogItem, available: boolean, labels: ConnectModalLabels): NonNullable<WalletOptionViewModel["badge"]> {
   const tone = item.badge?.tone;
   if (tone === "qr" || item.transport === "qr" || item.transport === "walletconnect") return { label: labels.qrCode.toUpperCase(), tone: "qr" };
+  if (item.transport === "hardware" || item.platforms.includes("hardware")) return { label: "HARDWARE", tone: "tron" };
   if (tone === "installed" || available) return { label: labels.installed.toUpperCase(), tone: "installed" };
   return { label: labels.tron.toUpperCase(), tone: "tron" };
 }
