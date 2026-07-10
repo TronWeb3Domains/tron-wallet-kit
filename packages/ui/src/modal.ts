@@ -420,14 +420,14 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
     root.addEventListener("focusin", (event) => {
       const targetElement = event.target instanceof HTMLElement ? event.target : null;
       if (!targetElement || !root) return;
-      const grid = targetElement.closest<HTMLElement>(".twk-wallet-grid[data-scope='featured']");
+      const grid = targetElement.closest<HTMLElement>(".twk-wallet-grid[data-scope]");
       if (!grid) return;
       targetElement.scrollIntoView({ block: "nearest", inline: "nearest" });
       updateWalletGridOverflow(root);
     });
     root.addEventListener("scroll", (event) => {
       if (!(event.target instanceof HTMLElement) || !root) return;
-      if (!event.target.matches(".twk-wallet-grid[data-scope='featured']")) return;
+      if (!event.target.matches(".twk-wallet-grid[data-scope]")) return;
       updateWalletGridOverflow(root);
     }, true);
     removeQrListener = options.manager.on("qr", ({ adapterId, uri }) => {
@@ -784,14 +784,14 @@ export function createWalletInline(options: { manager: WalletManager; ui?: Walle
     root.addEventListener("focusin", (event) => {
       const targetElement = event.target instanceof HTMLElement ? event.target : null;
       if (!targetElement || !root) return;
-      const grid = targetElement.closest<HTMLElement>(".twk-wallet-grid[data-scope='featured']");
+      const grid = targetElement.closest<HTMLElement>(".twk-wallet-grid[data-scope]");
       if (!grid) return;
       targetElement.scrollIntoView({ block: "nearest", inline: "nearest" });
       updateWalletGridOverflow(root);
     });
     root.addEventListener("scroll", (event) => {
       if (!(event.target instanceof HTMLElement) || !root) return;
-      if (!event.target.matches(".twk-wallet-grid[data-scope='featured']")) return;
+      if (!event.target.matches(".twk-wallet-grid[data-scope]")) return;
       updateWalletGridOverflow(root);
     }, true);
     removeQrListener = options.manager.on("qr", ({ adapterId, uri }) => {
@@ -902,7 +902,7 @@ function createAllWalletsHtml(viewModel: ConnectModalViewModel & { labels: Conne
   const wallets = filterWalletOptions(viewModel.wallets, viewModel.searchQuery);
   const layout = resolveWalletListLayout(viewModel.walletList);
   const gridBody = viewModel.walletsLoading
-    ? createWalletSkeletonGridHtml(Math.max(6, Math.min(wallets.length || 8, 9)), layout)
+    ? createWalletSkeletonGridHtml(Math.max(6, Math.min(wallets.length || 8, 9)), layout, "all")
     : wallets.length > 0
       ? createWalletCollectionHtml(wallets, labels, viewModel.selectedWalletId, layout, "all")
       : `<div class="twk-no-wallets">${escapeHtml(labels.noWalletsFound)}</div>`;
@@ -918,11 +918,11 @@ function createAllWalletsHtml(viewModel: ConnectModalViewModel & { labels: Conne
   </div>`;
 }
 
-function createWalletSkeletonGridHtml(count: number, layout: "list" | "card"): string {
+function createWalletSkeletonGridHtml(count: number, layout: "list" | "card", scope?: "featured" | "all"): string {
   const card = layout === "card"
     ? `<span class="twk-wallet-card" data-loading="true" aria-hidden="true"><span class="twk-wallet-icon" data-loading="true"><span class="twk-skeleton"></span></span><span class="twk-wallet-name" data-loading="true"><span class="twk-skeleton"></span></span></span>`
     : `<span class="twk-wallet-row" data-loading="true" aria-hidden="true"><span class="twk-wallet-main"><span class="twk-wallet-icon" data-loading="true"><span class="twk-skeleton"></span></span><span class="twk-wallet-name" data-loading="true"><span class="twk-skeleton"></span></span></span><span class="twk-badge" data-loading="true" data-tone="muted"><span class="twk-skeleton"></span></span></span>`;
-  return `<div class="twk-wallet-grid" data-layout="${escapeAttribute(layout)}" data-loading="true">${card.repeat(count)}</div>`;
+  return `<div class="twk-wallet-grid" data-layout="${escapeAttribute(layout)}" ${scope ? `data-scope="${escapeAttribute(scope)}"` : ""} data-loading="true">${card.repeat(count)}</div>`;
 }
 
 function getWalletPlatforms(wallet: WalletOptionViewModel): Array<"extension" | "mobile" | "hardware"> {
@@ -1176,7 +1176,7 @@ function focusModalPanel(root: HTMLElement): void {
 }
 
 function updateWalletGridOverflow(root: HTMLElement): void {
-  for (const grid of root.querySelectorAll<HTMLElement>(".twk-wallet-grid[data-scope='featured']")) {
+  for (const grid of root.querySelectorAll<HTMLElement>(".twk-wallet-grid[data-scope]")) {
     const overflow = grid.scrollHeight - grid.clientHeight > 1;
     if (!overflow) {
       delete grid.dataset.overflow;

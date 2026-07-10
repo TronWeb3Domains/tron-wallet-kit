@@ -60,9 +60,10 @@ ${selector} .twk-body {
   min-height: 0;
   overflow: auto;
   padding: 8px 20px 12px;
+  will-change: opacity, transform;
 }
 ${selector} .twk-body[data-twk-entering="true"] { animation: twk-view-in .24s cubic-bezier(.25, 1, .5, 1); }
-@keyframes twk-view-in { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
+@keyframes twk-view-in { from { opacity: 0; transform: translateY(6px) scale(.992); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { ${selector} .twk-body[data-twk-entering="true"] { animation: none; } }
 ${selector} .twk-header, ${selector} .twk-section { padding: 16px; }
 ${selector} .twk-header {
@@ -494,7 +495,7 @@ ${selector} .twk-footer {
   color: var(--twk-text-muted);
   font-size: 11px;
   min-height: 0;
-  padding: 8px 16px 10px;
+  padding: 4px 16px 8px;
   text-align: center;
 }
 ${selector} .twk-all-wallets {
@@ -549,8 +550,9 @@ ${selector} .twk-wallet-grid {
   display: grid;
   gap: 10px;
   grid-auto-rows: max-content;
-  height: 360px;
+  height: auto;
   margin: 0;
+  max-height: min(360px, 52vh);
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -568,13 +570,13 @@ ${selector} .twk-wallet-grid[data-scope="featured"] {
   height: auto;
   max-height: min(360px, 52vh);
 }
-${selector} .twk-wallet-grid[data-scope="featured"][data-overflow="bottom"] {
+${selector} .twk-wallet-grid[data-overflow="bottom"] {
   mask-image: linear-gradient(to bottom, black calc(100% - 28px), transparent);
 }
-${selector} .twk-wallet-grid[data-scope="featured"][data-overflow="top"] {
+${selector} .twk-wallet-grid[data-overflow="top"] {
   mask-image: linear-gradient(to bottom, transparent, black 28px);
 }
-${selector} .twk-wallet-grid[data-scope="featured"][data-overflow="both"] {
+${selector} .twk-wallet-grid[data-overflow="both"] {
   mask-image: linear-gradient(to bottom, transparent, black 28px, black calc(100% - 28px), transparent);
 }
 ${selector} .twk-wallet-grid::-webkit-scrollbar { display: none; height: 0; width: 0; }
@@ -935,12 +937,14 @@ ${selector} .twk-status {
   display: flex;
   font-size: 13px;
   line-height: 1.35;
-  min-height: 32px;
+  min-height: 12px;
   overflow-wrap: anywhere;
-  padding: 8px 0 0;
+  padding: 4px 0 0;
 }
 ${selector} .twk-status[data-tone="danger"] {
   color: var(--twk-danger);
+  min-height: 32px;
+  padding-top: 8px;
 }
 ${selector} .twk-error {
   border-top: 1px solid var(--twk-border);
@@ -1495,7 +1499,7 @@ ${selector} .twk-toast-link:hover, ${selector} .twk-toast-dismiss:hover { backgr
     max-height: calc(100dvh - 56px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   }
   ${selector} .twk-wallet-grid, ${selector} .twk-no-wallets {
-    height: min(360px, calc(100dvh - 150px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+    max-height: min(360px, calc(100dvh - 150px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
   }
   ${selector} .twk-button-panel {
     bottom: 0;

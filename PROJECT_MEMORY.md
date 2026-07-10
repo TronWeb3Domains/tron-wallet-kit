@@ -3290,3 +3290,16 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Verification:
   - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 40 tests.
   - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+
+## 2026-07-10 Featured And All Wallets Panel Polish
+
+- User reported the featured footer/status area felt too tall and All Wallets felt like a larger jump from Featured.
+- Fix:
+  - Reduced idle `.twk-status` spacer from 32px to a compact 12px while keeping danger/error status at 32px.
+  - Reduced footer vertical padding so "Powered by TRON Wallet Kit" sits closer to the All wallets trigger.
+  - Changed wallet grids to content-sized height with shared max-height, making Featured and All Wallets feel closer in vertical rhythm.
+  - All Wallets now participates in the same top/bottom overflow fade system as Featured via `data-scope="all"`.
+  - View transition now uses a subtle opacity + vertical/scale motion and respects reduced motion.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 40 tests.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.

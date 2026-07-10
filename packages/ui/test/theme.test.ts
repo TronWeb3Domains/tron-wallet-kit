@@ -165,6 +165,8 @@ describe("wallet kit surfaces", () => {
     expect(styles).toContain("outline: 2px solid var(--twk-focus-ring)");
     expect(styles).toContain(".twk-modal:focus");
     expect(styles).toContain("outline: none");
+    expect(styles).toContain("will-change: opacity, transform");
+    expect(styles).toContain("translateY(6px) scale(.992)");
     expect(styles).not.toContain("#");
     expect(styles).not.toContain("rgba(");
   });
@@ -455,7 +457,10 @@ describe("wallet kit surfaces", () => {
     expect(styles).toContain('[data-overflow="bottom"]');
     expect(styles).toContain('[data-overflow="top"]');
     expect(styles).toContain('[data-overflow="both"]');
+    expect(styles).not.toContain('.twk-wallet-grid[data-scope="featured"][data-overflow');
     expect(styles).not.toContain('.twk-wallet-grid[data-scope="featured"] {\n  height: min(360px, 52vh)');
+    expect(styles).toContain("padding: 4px 16px 8px");
+    expect(styles).toContain("min-height: 12px");
     expect(styles).toContain("height: 56px");
     expect(styles).toContain("height: 18px");
     expect(styles).toContain("height: 12px");
@@ -575,11 +580,20 @@ describe("wallet kit surfaces", () => {
       ],
     });
     expect(flatAllWalletsHtml).toContain("twk-wallet-grid");
+    expect(flatAllWalletsHtml).toContain('data-scope="all"');
     expect(flatAllWalletsHtml).not.toContain("twk-wallet-sections");
     expect(flatAllWalletsHtml).not.toContain('data-platform="extension"');
     expect(flatAllWalletsHtml).toContain('class="twk-wallet-card"');
     expect(flatAllWalletsHtml).toContain('data-loading="true"');
     expect(flatAllWalletsHtml).toContain("twk-skeleton");
+
+    const loadingAllWalletsHtml = createConnectModalHtml({
+      view: "all-wallets",
+      walletsLoading: true,
+      wallets: [],
+    });
+    expect(loadingAllWalletsHtml).toContain('data-scope="all"');
+    expect(loadingAllWalletsHtml).toContain('data-loading="true"');
 
     const connectingHtml = createConnectModalHtml({
       view: "connecting",

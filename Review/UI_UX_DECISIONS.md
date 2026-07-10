@@ -205,3 +205,11 @@
 - Recommended order only sorts wallets inside a bucket; it must not decide visibility ahead of actionable state.
 - Not-installed extension wallets remain discoverable in All Wallets, where directory/search behavior is expected.
 - Manual featured configuration still follows the integrator's explicit list, even if that list includes unavailable wallets.
+
+## 2026-07-10 Featured And All Wallets Rhythm
+
+- Empty/idle status space should be compact; reserve larger vertical space only for visible danger/error copy.
+- Featured footer should sit visually close to the All wallets trigger, not create a second large empty block.
+- Featured and All Wallets should share the same wallet-grid max-height rhythm to reduce perceived panel jumping.
+- All Wallets uses the same token-driven top/bottom fade overflow affordance as Featured.
+- View changes should use a subtle opacity/translate/scale transition and must respect `prefers-reduced-motion`.
