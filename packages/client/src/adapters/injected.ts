@@ -8,6 +8,8 @@ import {
 } from "@tron-wallet-kit/core";
 import {
   getInjectedTronProvider,
+  readInjectedAddress,
+  readInjectedAddressFromPaths,
   requestInjectedAddress,
   requestOptionalString,
   resolveInjectedNetwork
@@ -64,7 +66,7 @@ export function createInjectedTronAdapter(config: InjectedTronAdapterConfig): Wa
       if (!nextProvider) throw new WalletKitError("WALLET_NOT_FOUND", `${metadata.name} provider was not found.`);
       // Gate & similar (reconnect): request() hangs / re-prompts (code 4000) when the wallet
       // already exposes an account → use the injected address directly, skip request().
-      let address = config.preferInjectedAddress ? nextProvider.tronWeb?.defaultAddress?.base58 : undefined;
+      let address = config.preferInjectedAddress ? readInjectedAddress(nextProvider) ?? readInjectedAddressFromPaths(config.providerPaths) : undefined;
       // First-time connect: fire request() to trigger the wallet popup, but DON'T hard-await it
       // (Gate never resolves the promise even after approval). Resolve as soon as EITHER request
       // returns an address OR the wallet populates tronWeb.defaultAddress (polled live). This also
@@ -132,8 +134,11 @@ async function acquireInjectedAddress(
   config: InjectedTronAdapterConfig
 ): Promise<string | undefined> {
   const readLive = () => {
-    const base58 = resolveProvider()?.tronWeb?.defaultAddress?.base58 ?? nextProvider.tronWeb?.defaultAddress?.base58;
-    return typeof base58 === "string" && base58.length > 0 ? base58 : undefined;
+    const address =
+      readInjectedAddress(resolveProvider()) ??
+      readInjectedAddressFromPaths(config.providerPaths) ??
+      readInjectedAddress(nextProvider);
+    return typeof address === "string" && address.length > 0 ? address : undefined;
   };
   let userRejected: unknown;
   let requestedAddress: string | undefined;

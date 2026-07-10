@@ -3053,3 +3053,18 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/core typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/core test -- --run` passed with 18 tests.
+
+## 2026-07-10 Gate First-Connect Address Shape Follow-Up
+
+- User reported Gate first connect still failed with `Gate Wallet did not return an address`.
+- Root cause refinement:
+  - The previous poll only read cloned provider `tronWeb.defaultAddress.base58`.
+  - Gate can hydrate address on refreshed global paths after approval, and the address shape may be `defaultAddress` as a string/object or wallet/provider fields such as `address`/`selectedAddress`.
+- Fixes:
+  - Added `readInjectedAddress()` and `readInjectedAddressFromPaths()` in injected detection.
+  - Injected adapter now polls fresh provider paths every loop instead of relying only on the cloned provider reference.
+  - Address extraction now accepts arrays, strings, `{ address }`, `{ base58 }`, `{ selectedAddress }`, and nested `{ defaultAddress }`.
+  - Added regression coverage for Gate first approval where `gatewallet.tronWeb.defaultAddress` appears after an empty request response.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 48 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.

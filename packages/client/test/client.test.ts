@@ -978,6 +978,34 @@ describe("client entrypoints", () => {
     expect(request).toHaveBeenCalledWith({ method: "eth_requestAccounts" });
   });
 
+  it("reads Gate first approval address from refreshed global paths", async () => {
+    const gatewallet: Record<string, unknown> = {
+      tron: {
+        request: async ({ method }: { method: string }) => {
+          if (method === "eth_requestAccounts") {
+            setTimeout(() => {
+              gatewallet.tronWeb = {
+                defaultAddress: "TGateRootString",
+                trx: {
+                  signMessageV2: async (message: string) => `gate-root:${message}`
+                }
+              };
+            }, 10);
+            return { code: 200 };
+          }
+          return undefined;
+        }
+      }
+    };
+    (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = gatewallet;
+
+    const manager = createWalletClient({ wallets: ["gate"] });
+
+    await expect(manager.connect("gate")).resolves.toMatchObject({
+      account: { address: "TGateRootString" }
+    });
+  });
+
   it("marks Gate available from camelCase and EIP-6963 Gate markers", async () => {
     (globalThis as typeof globalThis & { gateWallet?: unknown }).gateWallet = {
       tron: {}

@@ -193,6 +193,21 @@ export function getInjectedTronProvider(paths: readonly string[]): InjectedTronP
   return undefined;
 }
 
+export function readInjectedAddress(provider?: InjectedTronProvider): string | undefined {
+  return extractInjectedAddress(provider?.tronWeb?.defaultAddress) ??
+    extractInjectedAddress(provider) ??
+    extractInjectedAddress(provider?.tronWeb);
+}
+
+export function readInjectedAddressFromPaths(paths: readonly string[]): string | undefined {
+  for (const path of paths) {
+    const value = getPathValue(globalThis as unknown as Record<string, unknown>, path);
+    const address = extractInjectedAddress(value) ?? readInjectedAddress(isInjectedTronProvider(value) ? value : undefined);
+    if (address) return address;
+  }
+  return undefined;
+}
+
 export async function requestInjectedAddress(
   provider: InjectedTronProvider,
   methods: readonly string[] = ["tron_requestAccounts", "eth_requestAccounts"]
@@ -206,7 +221,7 @@ export async function requestInjectedAddress(
       if (isUserRejected(error)) throw new WalletKitError("USER_REJECTED", "User rejected the wallet request.", error);
     }
   }
-  return provider.tronWeb?.defaultAddress?.base58;
+  return readInjectedAddress(provider);
 }
 
 export async function requestOptionalString(provider: InjectedTronProvider, method: string, params: unknown): Promise<string | undefined> {
@@ -373,7 +388,11 @@ function extractInjectedAddress(result: unknown): string | undefined {
   if (Array.isArray(result) && typeof result[0] === "string") return result[0];
   if (typeof result === "string") return result;
   if (typeof result !== "object" || result === null) return undefined;
-  const response = result as { address?: unknown; code?: unknown };
+  const response = result as { address?: unknown; base58?: unknown; selectedAddress?: unknown; defaultAddress?: unknown; code?: unknown };
   if (typeof response.address === "string") return response.address;
+  if (typeof response.base58 === "string") return response.base58;
+  if (typeof response.selectedAddress === "string") return response.selectedAddress;
+  const nested = extractInjectedAddress(response.defaultAddress);
+  if (nested) return nested;
   return undefined;
 }

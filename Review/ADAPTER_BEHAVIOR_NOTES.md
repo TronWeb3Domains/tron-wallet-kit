@@ -599,3 +599,4 @@ pnpm add @tronweb3/tronwallet-adapter-ledger
 - Gate extension must be tested on HTTPS (`https://127.0.0.1:5174/react-basic/` in local dev), because the provider may not inject on plain HTTP origins.
 - Gate uses injected integration with `preferInjectedAddress`, `addressTimeoutMs: 15000`, and `addressSettleMs: 4000`.
 - First approval can return from `eth_requestAccounts` before `gatewallet.tronWeb.defaultAddress` is hydrated. The injected adapter now polls the live provider during the settle window and resolves once the address appears, avoiding the close-and-connect-again path.
+- Follow-up: Gate may hydrate the address on refreshed global paths rather than the cloned provider object, and may expose the value as `defaultAddress` string/object, `address`, `base58`, or `selectedAddress`. The injected adapter now normalizes those shapes and rereads configured provider paths while settling.
