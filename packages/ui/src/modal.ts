@@ -105,7 +105,29 @@ export function createWalletInlineHtml(viewModel: ConnectModalViewModel): string
 </section>`;
 }
 
+type WalletControllerMode = "modal" | "inline";
+type WalletController = {
+  mount(target?: HTMLElement | string): void;
+  open(): void;
+  close(): void;
+  setTheme(config: ThemeConfig): void;
+  destroy(): void;
+};
+
 export function createWalletModal(options: { manager: WalletManager; ui?: WalletUiConfig; document?: Document } & ThemeConfig): WalletModal {
+  const controller = createWalletController(options, "modal");
+  return {
+    open: controller.open,
+    close: controller.close,
+    mount(target?: HTMLElement) {
+      controller.mount(target);
+    },
+    setTheme: controller.setTheme,
+    destroy: controller.destroy
+  };
+}
+
+function createWalletController(options: { manager: WalletManager; ui?: WalletUiConfig; document?: Document } & ThemeConfig, mode: WalletControllerMode): WalletController {
   const documentRef = options.document ?? globalThis.document;
   const config = resolveWalletUiConfig(options.ui);
   let root: HTMLElement | null = null;
@@ -155,11 +177,12 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
     const entering = root.dataset.twkRenderedView !== view;
     const searchFocus = getSearchFocusSnapshot(root);
     root.dataset.twkRenderedView = view;
-    root.innerHTML = createConnectModalHtml({
+    const network = options.manager.getNetwork();
+    const viewModel: ConnectModalViewModel = {
       wallets: getWalletOptions(),
       view,
-      networkName: options.manager.getNetwork().name,
-      networkType: options.manager.getNetwork().networkType,
+      networkName: network.name,
+      networkType: network.networkType,
       ...(selectedWalletId ? { selectedWalletId } : {}),
       ...(activeWalletId ? { activeWalletId } : {}),
       ...(searchQuery ? { searchQuery } : {}),
@@ -177,7 +200,8 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
       poweredByText: config.modal.branding.poweredByText ?? config.labels.connectModal.poweredBy,
       walletList: config.walletList,
       walletEnvironment: resolveWalletEnvironment(documentRef.defaultView)
-    });
+    };
+    root.innerHTML = mode === "modal" ? createConnectModalHtml(viewModel) : createWalletInlineHtml(viewModel);
     if (entering && !config.modal.disableAnimations) root.querySelector(".twk-body")?.setAttribute("data-twk-entering", "true");
     renderQrIntoRoot();
     updateWalletGridOverflow(root);
@@ -301,7 +325,7 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
         render();
         return;
       }
-      if (config.modal.closeOnSelect) closeModal({ force: false });
+      if (mode === "modal" && config.modal.closeOnSelect) closeModal({ force: false });
     }).catch((error: unknown) => {
       if (flowId !== connectFlowId || activeConnectAdapterId !== adapterId) return;
       if (shouldAutoRetryConnect(error, wallet, { isQrFlow, attempt: connectOptions?.autoRetryAttempt ?? 0 })) {
@@ -325,14 +349,14 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
     });
   };
 
-  const mount = (target?: HTMLElement) => {
+  const mount = (target?: HTMLElement | string) => {
     ensureWalletKitStyles(documentRef);
     root = createWalletKitRoot(config.theme, documentRef);
-    root.hidden = true;
+    root.hidden = mode === "modal";
     root.addEventListener("click", (event) => {
       const targetElement = event.target instanceof Element ? event.target : null;
       if (!targetElement) return;
-      if (targetElement.closest("[data-twk-action='close']")) {
+      if (mode === "modal" && targetElement.closest("[data-twk-action='close']")) {
         closeModal({ force: true });
         return;
       }
@@ -340,7 +364,7 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
         goBack();
         return;
       }
-      if (targetElement === root?.querySelector(".twk-overlay") && config.modal.closeOnBackdropClick) {
+      if (mode === "modal" && targetElement === root?.querySelector(".twk-overlay") && config.modal.closeOnBackdropClick) {
         closeModal({ force: true });
         return;
       }
@@ -398,6 +422,7 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
       });
     });
     root.addEventListener("keydown", (event) => {
+      if (mode !== "modal") return;
       if (event.key === "Escape") {
         closeModal({ force: true });
         return;
@@ -448,7 +473,8 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
         }
       });
     });
-    (target ?? documentRef.body).append(root);
+    const targetElement = resolveMountTarget(target, mode, documentRef);
+    targetElement.append(root);
     render();
     refreshAvailability();
   };
@@ -466,8 +492,9 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
     lastFocusedElement?.focus?.();
   };
 
-  const api: WalletModal = {
+  const api: WalletController = {
     open() {
+      if (mode !== "modal") return;
       if (!root) mount();
       if (root) {
         lastFocusedElement = documentRef.activeElement instanceof HTMLElement ? documentRef.activeElement : null;
@@ -476,6 +503,7 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
       }
     },
     close() {
+      if (mode !== "modal") return;
       closeModal({ force: true });
     },
     mount,
@@ -483,6 +511,7 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
       if (root) applyThemeToElement(root, theme);
     },
     destroy() {
+      cancelConnectionFlow();
       removeQrListener?.();
       if (qrCopyResetTimer !== undefined) documentRef.defaultView?.clearTimeout(qrCopyResetTimer);
       if (retryTimer !== undefined) documentRef.defaultView?.clearTimeout(retryTimer);
@@ -516,346 +545,14 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
 }
 
 export function createWalletInline(options: { manager: WalletManager; ui?: WalletUiConfig; document?: Document } & ThemeConfig): WalletInline {
-  const documentRef = options.document ?? globalThis.document;
-  const config = resolveWalletUiConfig(options.ui);
-  let root: HTMLElement | null = null;
-  let view: ConnectModalView = "featured";
-  let viewStack: ConnectModalView[] = ["featured"];
-  let selectedWalletId: string | undefined;
-  let activeWalletId: string | undefined;
-  let searchQuery = "";
-  let qrUri: string | undefined;
-  let qrImageSrc: string | undefined;
-  let qrRenderFailed = false;
-  let qrCopyState: "idle" | "copied" = "idle";
-  let qrCopyResetTimer: number | undefined;
-  let retryTimer: number | undefined;
-  let retryBusy = false;
-  let errorMessage: string | undefined;
-  let connectFlowId = 0;
-  let activeConnectAdapterId: string | undefined;
-  let activeConnectIsQrFlow = false;
-  const availability = new Map<string, WalletAvailability>();
-  let removeQrListener: (() => void) | undefined;
-  let allWalletsPrimed = false;
-  let allWalletsLoading = false;
-  let allWalletsTimer: number | undefined;
-
-  const getWalletOptions = () =>
-    mergeWalletOptionsWithCatalog(
-      options.manager.getWallets().map((adapter) => mapAdapterToWalletOption(adapter, availability.get(adapter.metadata.id), config.labels.connectModal)),
-      config.labels.connectModal,
-      config.catalog
-    );
-
-  const primeAllWalletsSkeleton = () => {
-    if (allWalletsPrimed) return;
-    allWalletsPrimed = true;
-    allWalletsLoading = true;
-    allWalletsTimer = documentRef.defaultView?.setTimeout(() => {
-      allWalletsTimer = undefined;
-      allWalletsLoading = false;
-      render();
-    }, 600);
-  };
-
-  const render = (renderOptions?: { preserveSearchFocus?: boolean; searchSelectionStart?: number | null; searchSelectionEnd?: number | null }) => {
-    if (!root) return;
-    const entering = root.dataset.twkRenderedView !== view;
-    const searchFocus = getSearchFocusSnapshot(root);
-    root.dataset.twkRenderedView = view;
-    const network = options.manager.getNetwork();
-    root.innerHTML = createWalletInlineHtml({
-      wallets: getWalletOptions(),
-      view,
-      networkName: network.name,
-      networkType: network.networkType,
-      ...(selectedWalletId ? { selectedWalletId } : {}),
-      ...(activeWalletId ? { activeWalletId } : {}),
-      ...(searchQuery ? { searchQuery } : {}),
-      ...(qrUri ? { qrUri } : {}),
-      ...(qrImageSrc ? { qrImageSrc } : {}),
-      ...(qrRenderFailed ? { qrRenderState: "error" as const } : {}),
-      ...(qrCopyState === "copied" ? { qrCopyState } : {}),
-      ...(retryBusy ? { retryState: "busy" as const } : {}),
-      ...(errorMessage ? { errorMessage } : {}),
-      ...(allWalletsLoading && view === "all-wallets" ? { walletsLoading: true } : {}),
-      catalog: config.catalog,
-      labels: { ...config.labels.connectModal, title: config.modal.title, subtitle: config.modal.subtitle },
-      showCloseButton: config.modal.showCloseButton,
-      showPoweredBy: config.modal.branding.showPoweredBy ?? true,
-      poweredByText: config.modal.branding.poweredByText ?? config.labels.connectModal.poweredBy,
-      walletList: config.walletList,
-      walletEnvironment: resolveWalletEnvironment(documentRef.defaultView)
-    });
-    renderQrIntoRoot();
-    updateWalletGridOverflow(root);
-    if (renderOptions?.preserveSearchFocus || searchFocus) {
-      restoreSearchFocus(root, renderOptions?.searchSelectionStart ?? searchFocus?.selectionStart, renderOptions?.searchSelectionEnd ?? searchFocus?.selectionEnd);
-      return;
-    }
-    if (entering) focusPrimaryControl(root);
-  };
-
-  const refreshAvailability = () => {
-    for (const adapter of options.manager.getWallets()) {
-      if (adapter.metadata.availabilityMode === "on-demand") {
-        if (availability.get(adapter.metadata.id) === undefined) availability.set(adapter.metadata.id, true);
-        continue;
-      }
-      if (!adapter.isAvailable) {
-        availability.set(adapter.metadata.id, true);
-        continue;
-      }
-      const id = adapter.metadata.id;
-      const first = availability.get(id) === undefined;
-      if (first) availability.set(id, "loading");
-      const check = Promise.resolve(adapter.isAvailable()).catch(() => false);
-      const settle = first
-        ? Promise.all([check, new Promise<void>((resolve) => documentRef.defaultView?.setTimeout(resolve, 600))]).then(([available]) => available)
-        : check;
-      void settle.then((available) => {
-        availability.set(id, available);
-        render();
-      });
-    }
-    render();
-  };
-
-  const pushView = (nextView: ConnectModalView) => {
-    if (view !== nextView) viewStack.push(nextView);
-    view = nextView;
-  };
-
-  const goBack = () => {
-    if (view === "qr" || view === "connecting") cancelConnectionFlow();
-    if (viewStack.length > 1) viewStack.pop();
-    view = viewStack.at(-1) ?? "featured";
-    errorMessage = undefined;
-    render();
-  };
-
-  const cancelConnectionFlow = (options: { clearWallet?: boolean } = {}) => {
-    connectFlowId += 1;
-    if (retryTimer !== undefined) {
-      documentRef.defaultView?.clearTimeout(retryTimer);
-      retryTimer = undefined;
-    }
-    activeConnectAdapterId = undefined;
-    activeConnectIsQrFlow = false;
-    qrUri = undefined;
-    qrImageSrc = undefined;
-    qrRenderFailed = false;
-    qrCopyState = "idle";
-    retryBusy = false;
-    errorMessage = undefined;
-    if (options.clearWallet !== false) {
-      selectedWalletId = undefined;
-      activeWalletId = undefined;
-    }
-  };
-
-  const connectWallet = (wallet: WalletOptionViewModel, connectOptions?: ConnectWalletOptions) => {
-    const adapterId = wallet.adapterId ?? wallet.id;
-    const isQrFlow = wallet.capabilities?.includes("qr") || wallet.transport === "walletconnect" || wallet.transport === "qr" || wallet.id === "walletconnect" || adapterId === "walletconnect";
-    const flowId = connectFlowId + 1;
-    connectFlowId = flowId;
-    activeConnectAdapterId = adapterId;
-    activeConnectIsQrFlow = isQrFlow;
-    selectedWalletId = wallet.id;
-    activeWalletId = wallet.id;
-    pushView(isQrFlow ? "qr" : "connecting");
-    qrUri = undefined;
-    qrImageSrc = undefined;
-    qrRenderFailed = false;
-    qrCopyState = "idle";
-    if (!connectOptions?.retry) retryBusy = false;
-    errorMessage = undefined;
-    render();
-    void options.manager.connect(adapterId, {
-      onUri: (uri) => {
-        if (flowId === connectFlowId && activeConnectAdapterId === adapterId) options.manager.emitQr(adapterId, uri);
-      }
-    }).then(() => {
-      if (flowId !== connectFlowId || activeConnectAdapterId !== adapterId) return;
-      if (isQrFlow || activeConnectIsQrFlow) {
-        view = "qr";
-        render();
-      }
-    }).catch((error: unknown) => {
-      if (flowId !== connectFlowId || activeConnectAdapterId !== adapterId) return;
-      if (shouldAutoRetryConnect(error, wallet, { isQrFlow, attempt: connectOptions?.autoRetryAttempt ?? 0 })) {
-        retryBusy = true;
-        errorMessage = undefined;
-        view = "connecting";
-        render();
-        if (retryTimer !== undefined) documentRef.defaultView?.clearTimeout(retryTimer);
-        const retryFlowId = connectFlowId;
-        retryTimer = documentRef.defaultView?.setTimeout(() => {
-          retryTimer = undefined;
-          if (retryFlowId !== connectFlowId || activeConnectAdapterId !== adapterId) return;
-          connectWallet(wallet, { retry: true, autoRetryAttempt: (connectOptions?.autoRetryAttempt ?? 0) + 1 });
-        }, AUTO_CONNECT_RETRY_DELAY_MS);
-        return;
-      }
-      retryBusy = false;
-      errorMessage = normalizeConnectErrorMessage(error, wallet);
-      view = qrUri ? "qr" : "connecting";
-      render();
-    });
-  };
-
-  const mount = (target: HTMLElement | string) => {
-    ensureWalletKitStyles(documentRef);
-    root = createWalletKitRoot(config.theme, documentRef);
-    root.addEventListener("click", (event) => {
-      const targetElement = event.target instanceof Element ? event.target : null;
-      if (!targetElement) return;
-      if (targetElement.closest("[data-twk-action='back']")) {
-        goBack();
-        return;
-      }
-      if (targetElement.closest("[data-twk-action='show-all-wallets']")) {
-        cancelConnectionFlow();
-        pushView("all-wallets");
-        searchQuery = "";
-        errorMessage = undefined;
-        primeAllWalletsSkeleton();
-        render();
-        return;
-      }
-      if (targetElement.closest("[data-twk-action='retry']")) {
-        const wallet = getWalletOptions().find((item) => item.id === activeWalletId);
-        if (wallet) {
-          retryBusy = true;
-          render();
-          if (retryTimer !== undefined) documentRef.defaultView?.clearTimeout(retryTimer);
-          const retryFlowId = connectFlowId;
-          retryTimer = documentRef.defaultView?.setTimeout(() => {
-            retryTimer = undefined;
-            if (retryFlowId !== connectFlowId) return;
-            connectWallet(wallet, { retry: true });
-          }, 180);
-        }
-        return;
-      }
-      if (targetElement.closest("[data-twk-action='copy-uri']") && qrUri) {
-        void copyToClipboard(qrUri, documentRef).then((copied) => {
-          if (!copied || !root) return;
-          qrCopyState = "copied";
-          render();
-          if (qrCopyResetTimer !== undefined) documentRef.defaultView?.clearTimeout(qrCopyResetTimer);
-          qrCopyResetTimer = documentRef.defaultView?.setTimeout(() => {
-            qrCopyState = "idle";
-            render();
-          }, 1400);
-        });
-        return;
-      }
-      const walletButton = targetElement.closest("[data-twk-wallet-id]");
-      const walletId = walletButton?.getAttribute("data-twk-wallet-id");
-      if (!walletId || walletButton?.hasAttribute("disabled")) return;
-      const wallet = getWalletOptions().find((item) => item.id === walletId);
-      if (wallet) connectWallet(wallet);
-    });
-    root.addEventListener("input", (event) => {
-      const targetElement = event.target;
-      if (!(targetElement instanceof HTMLInputElement) || targetElement.getAttribute("data-twk-search") !== "wallets") return;
-      searchQuery = targetElement.value;
-      render({
-        preserveSearchFocus: true,
-        searchSelectionStart: targetElement.selectionStart,
-        searchSelectionEnd: targetElement.selectionEnd
-      });
-    });
-    root.addEventListener("focusin", (event) => {
-      const targetElement = event.target instanceof HTMLElement ? event.target : null;
-      if (!targetElement || !root) return;
-      const grid = targetElement.closest<HTMLElement>(".twk-wallet-grid[data-scope]");
-      if (!grid) return;
-      targetElement.scrollIntoView({ block: "nearest", inline: "nearest" });
-      updateWalletGridOverflow(root);
-    });
-    root.addEventListener("scroll", (event) => {
-      if (!(event.target instanceof HTMLElement) || !root) return;
-      if (!event.target.matches(".twk-wallet-grid[data-scope]")) return;
-      updateWalletGridOverflow(root);
-    }, true);
-    removeQrListener = options.manager.on("qr", ({ adapterId, uri }) => {
-      if (!activeConnectAdapterId || adapterId !== activeConnectAdapterId) return;
-      const flowId = connectFlowId;
-      const wallet = resolveQrEventWallet(getWalletOptions(), adapterId, activeWalletId ?? selectedWalletId);
-      activeConnectIsQrFlow = true;
-      activeWalletId = wallet?.id ?? adapterId;
-      selectedWalletId = wallet?.id ?? adapterId;
-      if (viewStack.at(-1) !== "qr") viewStack.push("qr");
-      view = "qr";
-      qrUri = uri;
-      qrImageSrc = undefined;
-      qrRenderFailed = false;
-      qrCopyState = "idle";
-      retryBusy = false;
-      render();
-      void createStyledQrDataUrl(uri, {
-        width: config.qr.size,
-        margin: config.qr.margin,
-        errorCorrectionLevel: config.qr.errorCorrectionLevel
-      }).then((src) => {
-        if (flowId === connectFlowId && activeConnectAdapterId === adapterId && qrUri === uri && view === "qr") {
-          qrImageSrc = src;
-          render();
-        }
-      }).catch(() => {
-        if (flowId === connectFlowId && activeConnectAdapterId === adapterId && qrUri === uri && view === "qr") {
-          qrRenderFailed = true;
-          errorMessage = config.labels.connectModal.qrRenderFailed;
-          render();
-        }
-      });
-    });
-    const targetElement = typeof target === "string" ? documentRef.querySelector(target) : target;
-    if (!targetElement) throw new Error(`Wallet inline target was not found: ${String(target)}`);
-    targetElement.append(root);
-    render();
-    refreshAvailability();
-  };
-
+  const controller = createWalletController(options, "inline");
   return {
-    mount,
-    setTheme(theme) {
-      if (root) applyThemeToElement(root, theme);
+    mount(target: HTMLElement | string) {
+      controller.mount(target);
     },
-    destroy() {
-      cancelConnectionFlow();
-      removeQrListener?.();
-      if (qrCopyResetTimer !== undefined) documentRef.defaultView?.clearTimeout(qrCopyResetTimer);
-      if (retryTimer !== undefined) documentRef.defaultView?.clearTimeout(retryTimer);
-      if (allWalletsTimer !== undefined) documentRef.defaultView?.clearTimeout(allWalletsTimer);
-      root?.remove();
-      root = null;
-    }
+    setTheme: controller.setTheme,
+    destroy: controller.destroy
   };
-
-  function renderQrIntoRoot(): void {
-    if (!root || !qrUri || qrImageSrc || view !== "qr") return;
-    const target = root.querySelector<HTMLElement>("[data-twk-qr-code='true']");
-    if (!target) return;
-    const wallet = resolveActiveWallet(getWalletOptions(), activeWalletId ?? selectedWalletId);
-    const flowId = connectFlowId;
-    const uri = qrUri;
-    void renderWalletQr(target, qrUri, {
-      width: config.qr.size,
-      margin: config.qr.margin,
-      errorCorrectionLevel: config.qr.errorCorrectionLevel,
-      ...(config.qr.includeWalletLogo && wallet?.icon ? { logo: wallet.icon } : {})
-    }).catch(() => {
-      if (flowId === connectFlowId && qrUri === uri && view === "qr") {
-        qrRenderFailed = true;
-        errorMessage = config.labels.connectModal.qrRenderFailed;
-        render();
-      }
-    });
-  }
 }
 
 export function resolveWalletEnvironment(windowRef: (Window & typeof globalThis) | Window | null | undefined = (globalThis as unknown as { window?: Window & typeof globalThis }).window): WalletEnvironment {
@@ -878,6 +575,20 @@ function hasInjectedTronProvider(windowRef: (Window & typeof globalThis) | Windo
     if (value?.tron || value?.tronLink || value?.tronWeb) return true;
   }
   return false;
+}
+
+function resolveMountTarget(target: HTMLElement | string | undefined, mode: WalletControllerMode, documentRef: Document): HTMLElement {
+  if (mode === "modal") {
+    if (typeof target === "string") {
+      const targetElement = documentRef.querySelector<HTMLElement>(target);
+      if (!targetElement) throw new Error(`Wallet modal target was not found: ${target}`);
+      return targetElement;
+    }
+    return target ?? documentRef.body;
+  }
+  const targetElement = typeof target === "string" ? documentRef.querySelector<HTMLElement>(target) : target;
+  if (!targetElement) throw new Error(`Wallet inline target was not found: ${String(target)}`);
+  return targetElement;
 }
 
 function focusPrimaryControl(root: HTMLElement): void {

@@ -3333,3 +3333,20 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 40 tests.
   - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 46 tests.
+
+## 2026-07-10 Shared Wallet Modal Controller
+
+- Continued the UI controller debt item.
+- Fix:
+  - Replaced the duplicated `createWalletModal` and `createWalletInline` controller bodies with a shared internal `createWalletController()`.
+  - Public APIs remain unchanged:
+    - `createWalletModal()` exposes `open`, `close`, `mount`, `setTheme`, `destroy`.
+    - `createWalletInline()` exposes `mount`, `setTheme`, `destroy`.
+  - Mode-specific behavior remains explicit:
+    - Portal modal owns backdrop close, Escape, focus trap, hidden/open state, focus restore, and `closeOnSelect`.
+    - Inline controller mounts into a required target and keeps connect flows visible without portal close behavior.
+  - Shared lifecycle now owns availability refresh, all-wallets skeleton timer, search focus preservation, QR URI/copy/render flow, retry handling, wallet selection, and overflow fade updates.
+  - `packages/ui/src/modal.ts` line count dropped from about 947 after the view split to about 658.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 40 tests.

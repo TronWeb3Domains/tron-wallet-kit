@@ -220,3 +220,4 @@
 - Modal HTML view builders live in `packages/ui/src/modal-views.ts`.
 - `packages/ui/src/modal.ts` should stay focused on controller lifecycle, wallet manager events, timers, focus, QR side effects, and modal/inline mounting.
 - Future UI text/markup changes should usually touch `modal-views.ts` once, not duplicate fixes between portal modal and inline controller.
+- `createWalletModal()` and `createWalletInline()` now share the same internal controller. Keep future QR/copy/retry/search/availability fixes in that shared controller instead of branching duplicate logic.
