@@ -559,6 +559,14 @@ describe("wallet kit surfaces", () => {
     expect(allWalletsHtml).toContain('data-twk-wallet-id="tokenpocket"');
     expect(allWalletsHtml).toContain('data-twk-platforms="extension mobile"');
     expect(allWalletsHtml).not.toContain('data-twk-wallet-id="tronlink"');
+    expect(allWalletsHtml).toContain("Powered by TRON Wallet Kit");
+
+    const allWalletsWithoutFooter = createConnectModalHtml({
+      view: "all-wallets",
+      showPoweredBy: false,
+      wallets: [],
+    });
+    expect(allWalletsWithoutFooter).not.toContain("Powered by TRON Wallet Kit");
 
     const flatAllWalletsHtml = createConnectModalHtml({
       view: "all-wallets",

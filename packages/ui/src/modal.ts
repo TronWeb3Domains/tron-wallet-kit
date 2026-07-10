@@ -885,7 +885,6 @@ function createFeaturedHtml(viewModel: ConnectModalViewModel & { labels: Connect
   const walletRows = createWalletCollectionHtml(featuredWallets, labels, viewModel.selectedWalletId, layout, "featured");
   const total = viewModel.wallets.length;
   const status = createStatusHtml(viewModel.errorMessage, viewModel.errorMessage ? "danger" : "idle");
-  const footer = viewModel.showPoweredBy === false ? "" : `<div class="twk-footer">${escapeHtml(viewModel.poweredByText ?? labels.poweredBy)}</div>`;
   const allWalletsLabel = createAllWalletsTriggerLabel(labels.allWallets);
   return `${createNetworkBadgeHtml(viewModel)}
   ${walletRows}
@@ -894,7 +893,7 @@ function createFeaturedHtml(viewModel: ConnectModalViewModel & { labels: Connect
     <span class="twk-badge" data-tone="muted">${escapeHtml(`${total}+`)}</span>
   </button>
   ${status}
-  ${footer}`;
+  ${createPoweredByFooterHtml(viewModel)}`;
 }
 
 function createAllWalletsHtml(viewModel: ConnectModalViewModel & { labels: ConnectModalLabels }): string {
@@ -915,7 +914,12 @@ function createAllWalletsHtml(viewModel: ConnectModalViewModel & { labels: Conne
     </label>
     ${gridBody}
     ${createStatusHtml(viewModel.errorMessage, viewModel.errorMessage ? "danger" : "idle")}
+    ${createPoweredByFooterHtml(viewModel)}
   </div>`;
+}
+
+function createPoweredByFooterHtml(viewModel: Pick<ConnectModalViewModel, "showPoweredBy" | "poweredByText"> & { labels: ConnectModalLabels }): string {
+  return viewModel.showPoweredBy === false ? "" : `<div class="twk-footer">${escapeHtml(viewModel.poweredByText ?? viewModel.labels.poweredBy)}</div>`;
 }
 
 function createWalletSkeletonGridHtml(count: number, layout: "list" | "card", scope?: "featured" | "all"): string {

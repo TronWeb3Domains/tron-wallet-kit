@@ -210,6 +210,7 @@
 
 - Empty/idle status space should be compact; reserve larger vertical space only for visible danger/error copy.
 - Featured footer should sit visually close to the All wallets trigger, not create a second large empty block.
+- All Wallets should render the same powered-by footer as Featured unless `showPoweredBy:false`; the repeated footer stabilizes perceived panel height during view transitions.
 - Featured and All Wallets should share the same wallet-grid max-height rhythm to reduce perceived panel jumping.
 - All Wallets uses the same token-driven top/bottom fade overflow affordance as Featured.
 - View changes should use a subtle opacity/translate/scale transition and must respect `prefers-reduced-motion`.

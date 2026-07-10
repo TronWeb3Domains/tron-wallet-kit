@@ -3299,6 +3299,7 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - Reduced footer vertical padding so "Powered by TRON Wallet Kit" sits closer to the All wallets trigger.
   - Changed wallet grids to content-sized height with shared max-height, making Featured and All Wallets feel closer in vertical rhythm.
   - All Wallets now participates in the same top/bottom overflow fade system as Featured via `data-scope="all"`.
+  - All Wallets renders the same powered-by footer as Featured, still honoring `showPoweredBy: false`, to keep panel height rhythm stable between views.
   - View transition now uses a subtle opacity + vertical/scale motion and respects reduced motion.
 - Verification:
   - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 40 tests.
