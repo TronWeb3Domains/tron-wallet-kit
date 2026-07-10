@@ -1,8 +1,7 @@
 import { TRON_WALLET_REGISTRY, type TronWalletGroup, type TronWalletTransport } from "@tron-wallet-kit/core";
 import { en } from "./locales/en";
+import { inferWalletPlatforms, isHardwareWallet, isMobileCapableWallet, isQrFallbackWallet, isQrWallet, isWalletConnectWallet } from "./wallet-kinds";
 import type { ConnectModalLabels, TronWalletCatalogItem, WalletEnvironment, WalletListConfig, WalletOptionViewModel } from "./types";
-
-type WalletPlatform = "extension" | "mobile" | "hardware";
 
 const catalogBadgeTones: Record<string, NonNullable<WalletOptionViewModel["badge"]>["tone"]> = {
   tronlink: "installed",
@@ -147,21 +146,20 @@ export function sortWalletsByAvailability(wallets: readonly WalletOptionViewMode
 
 function walletAvailabilityRank(wallet: WalletOptionViewModel): number {
   if (wallet.readyState === "found" || wallet.available === true) return 0;
-  if (wallet.capabilities?.includes("qr") || wallet.transport === "qr" || wallet.transport === "walletconnect" || wallet.id === "walletconnect") return 1;
-  if (wallet.transport === "hardware" || wallet.platforms?.includes("hardware")) return 1;
+  if (isQrWallet(wallet) || isHardwareWallet(wallet)) return 1;
   if (wallet.readyState === "loading") return 2;
   if (wallet.readyState === "notFound" || wallet.readyState === "unsupported" || wallet.available === false) return 3;
   return 2;
 }
 
 function isUnavailableWallet(wallet: WalletOptionViewModel): boolean {
-  if (wallet.transport === "hardware" || wallet.platforms?.includes("hardware")) return false;
+  if (isHardwareWallet(wallet)) return false;
   return wallet.readyState === "notFound" || wallet.readyState === "unsupported" || wallet.available === false;
 }
 
 function isWalletVisibleInEnvironment(wallet: WalletOptionViewModel, environment?: WalletEnvironment): boolean {
   if (!environment) return true;
-  if (isWalletConnectLike(wallet)) return true;
+  if (isQrWallet(wallet)) return true;
   const platforms = wallet.platforms ?? inferWalletPlatforms(wallet);
   if (environment.kind === "desktop-extension") return platforms.includes("extension") || platforms.includes("hardware");
   return platforms.includes("mobile");
@@ -170,20 +168,6 @@ function isWalletVisibleInEnvironment(wallet: WalletOptionViewModel, environment
 function shouldKeepUnavailableForEnvironment(wallet: WalletOptionViewModel, environment?: WalletEnvironment): boolean {
   if (environment?.kind !== "mobile-browser") return false;
   return isMobileCapableWallet(wallet);
-}
-
-function isMobileCapableWallet(wallet: WalletOptionViewModel): boolean {
-  return isWalletConnectLike(wallet) || (wallet.platforms ?? inferWalletPlatforms(wallet)).includes("mobile") || Boolean(wallet.mobileDeepLink) || wallet.supportsWalletConnect === true;
-}
-
-function isWalletConnectLike(wallet: WalletOptionViewModel): boolean {
-  return wallet.id === "walletconnect" || wallet.transport === "walletconnect" || wallet.transport === "qr" || wallet.capabilities?.includes("qr") === true;
-}
-
-function inferWalletPlatforms(wallet: WalletOptionViewModel): WalletPlatform[] {
-  if (wallet.transport === "hardware") return ["hardware"];
-  if (wallet.transport === "walletconnect" || wallet.transport === "qr" || wallet.transport === "mobile" || wallet.capabilities?.includes("qr")) return ["mobile"];
-  return ["extension"];
 }
 
 function enrichWalletOption(wallet: WalletOptionViewModel, item: TronWalletCatalogItem, adapterIds: ReadonlySet<string>, labels: ConnectModalLabels): WalletOptionViewModel {
@@ -252,22 +236,13 @@ function getWalletRank(wallet: WalletOptionViewModel): number {
 }
 
 function isInstalledWallet(wallet: WalletOptionViewModel): boolean {
-  if (isWalletConnectWallet(wallet) || wallet.transport === "qr" || wallet.capabilities?.includes("qr")) return false;
+  if (isWalletConnectWallet(wallet) || isQrFallbackWallet(wallet)) return false;
   if (isHardwareWallet(wallet)) return false;
   return wallet.readyState === "found" || wallet.available === true;
 }
 
 function isQrFeaturedFallbackWallet(wallet: WalletOptionViewModel): boolean {
-  if (isWalletConnectWallet(wallet)) return false;
-  return wallet.transport === "qr" || wallet.capabilities?.includes("qr") === true;
-}
-
-function isWalletConnectWallet(wallet: WalletOptionViewModel): boolean {
-  return wallet.id === "walletconnect" || wallet.transport === "walletconnect";
-}
-
-function isHardwareWallet(wallet: WalletOptionViewModel): boolean {
-  return wallet.transport === "hardware" || wallet.platforms?.includes("hardware") === true;
+  return isQrFallbackWallet(wallet);
 }
 
 function createCatalogBadge(item: TronWalletCatalogItem, available: boolean, labels: ConnectModalLabels): NonNullable<WalletOptionViewModel["badge"]> {

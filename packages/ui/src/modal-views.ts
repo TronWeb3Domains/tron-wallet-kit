@@ -2,6 +2,7 @@ import { createActionContentHtml } from "./actions";
 import { actionSpinnerIcon, checkIcon, externalIcon, linkIcon, qrIcon, refreshIcon, searchIcon, statusErrorIcon } from "./icons";
 import { escapeAttribute, escapeHtml } from "./utils";
 import { filterWalletOptions, getFeaturedWalletOptions } from "./wallet-catalog";
+import { inferWalletPlatforms, isHardwareWallet, isQrWallet } from "./wallet-kinds";
 import type { ConnectModalLabels, ConnectModalView, ConnectModalViewModel, WalletOptionViewModel } from "./types";
 
 export function normalizeConnectErrorMessage(error: unknown, wallet?: WalletOptionViewModel): string {
@@ -76,11 +77,7 @@ function createWalletSkeletonGridHtml(count: number, layout: "list" | "card", sc
 }
 
 function getWalletPlatforms(wallet: WalletOptionViewModel): Array<"extension" | "mobile" | "hardware"> {
-  if (wallet.platforms?.length) return wallet.platforms.filter((platform) => platform === "extension" || platform === "mobile" || platform === "hardware");
-  if (wallet.transport === "mobile" || wallet.transport === "qr" || wallet.transport === "walletconnect" || wallet.capabilities?.includes("qr")) return ["mobile"];
-  if (wallet.transport === "hardware") return ["hardware"];
-  if (wallet.transport === "extension") return ["extension"];
-  return ["extension"];
+  return (wallet.platforms?.length ? wallet.platforms : inferWalletPlatforms(wallet)).filter((platform) => platform === "extension" || platform === "mobile" || platform === "hardware");
 }
 
 function createInstallRowHtml(name: string, installUrl: string | undefined, labels: ConnectModalLabels): string {
@@ -185,10 +182,6 @@ function createWalletStatusIndicatorHtml(wallet: WalletOptionViewModel, labels: 
   return "";
 }
 
-function isQrWallet(wallet: WalletOptionViewModel): boolean {
-  return wallet.capabilities?.includes("qr") || wallet.transport === "qr" || wallet.transport === "walletconnect" || wallet.id === "walletconnect";
-}
-
 function createWalletNameHtml(wallet: WalletOptionViewModel): string {
   if (wallet.readyState === "loading") {
     return `<span class="twk-wallet-name" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">${escapeHtml(wallet.name)}</span></span>`;
@@ -238,7 +231,7 @@ function createConnectingRingHtml(): string {
 
 function createFallbackBadge(wallet: WalletOptionViewModel, labels: ConnectModalLabels): NonNullable<WalletOptionViewModel["badge"]> {
   if (isQrWallet(wallet)) return { label: labels.qrCode.toUpperCase(), tone: "qr" };
-  if (wallet.transport === "hardware" || wallet.platforms?.includes("hardware")) return { label: "HARDWARE", tone: "tron" };
+  if (isHardwareWallet(wallet)) return { label: "HARDWARE", tone: "tron" };
   if (wallet.readyState === "found") return { label: labels.installed.toUpperCase(), tone: "installed" };
   if (wallet.readyState === "notFound") return { label: labels.notInstalled.toUpperCase(), tone: "muted" };
   return { label: labels.tron.toUpperCase(), tone: "tron" };
@@ -266,9 +259,8 @@ function createNetworkBadgeHtml(viewModel: ConnectModalViewModel): string {
 }
 
 function isWalletDisabled(wallet: WalletOptionViewModel): boolean {
-  const supportsQr = wallet.capabilities?.includes("qr") || wallet.id === "walletconnect" || wallet.transport === "walletconnect";
-  if (wallet.transport === "hardware" || wallet.platforms?.includes("hardware")) return false;
-  return wallet.readyState === "unsupported" || (wallet.readyState === "notFound" && !supportsQr);
+  if (isHardwareWallet(wallet)) return false;
+  return wallet.readyState === "unsupported" || (wallet.readyState === "notFound" && !isQrWallet(wallet));
 }
 
 export function resolveActiveWallet(wallets: readonly WalletOptionViewModel[], walletId?: string): WalletOptionViewModel | undefined {

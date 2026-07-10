@@ -1,5 +1,6 @@
 import type { WalletAdapter } from "@tron-wallet-kit/core";
 import { en } from "./locales/en";
+import { isHardwareWallet, isQrWallet } from "./wallet-kinds";
 import type { ConnectModalLabels, WalletOptionViewModel } from "./types";
 
 export type WalletAvailability = boolean | "loading" | undefined;
@@ -30,7 +31,7 @@ export function mapAdapterToWalletOption(adapter: WalletAdapter, availability?: 
 }
 
 function resolveReadyState(adapter: WalletAdapter, availability: WalletAvailability): WalletReadyState {
-  if (adapter.metadata.type === "hardware" || adapter.metadata.platforms?.includes("hardware")) return "found";
+  if (isHardwareWallet({ id: adapter.metadata.id, transport: adapter.metadata.type, platforms: adapter.metadata.platforms })) return "found";
   if (availability === "loading") return "loading";
   if (availability === false) return "notFound";
   if (availability === true) return "found";
@@ -38,10 +39,11 @@ function resolveReadyState(adapter: WalletAdapter, availability: WalletAvailabil
 }
 
 function createWalletBadge(adapter: WalletAdapter, readyState: WalletReadyState, capabilities: readonly string[], labels: ConnectModalLabels): WalletOptionViewModel["badge"] {
-  if (capabilities.includes("qr") || adapter.metadata.type === "walletconnect" || adapter.metadata.id === "walletconnect") {
+  const walletKind = { id: adapter.metadata.id, transport: adapter.metadata.type, capabilities, platforms: adapter.metadata.platforms };
+  if (isQrWallet(walletKind)) {
     return { label: labels.qrCode.toUpperCase(), tone: "qr" };
   }
-  if (adapter.metadata.type === "hardware" || adapter.metadata.platforms?.includes("hardware")) return { label: "HARDWARE", tone: "tron" };
+  if (isHardwareWallet(walletKind)) return { label: "HARDWARE", tone: "tron" };
   if (readyState === "found") return { label: labels.installed.toUpperCase(), tone: "installed" };
   if (readyState === "loading") return { label: labels.checking.toUpperCase(), tone: "muted" };
   if (readyState === "notFound") return { label: labels.notInstalled.toUpperCase(), tone: "muted" };

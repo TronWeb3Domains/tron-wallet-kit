@@ -3350,3 +3350,14 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Verification:
   - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 40 tests.
+
+## 2026-07-10 Shared UI Wallet Kind Helpers
+
+- Continued the helper-duplication debt item.
+- Fix:
+  - Added `packages/ui/src/wallet-kinds.ts` as the shared UI helper for WalletConnect, QR-capable wallets, QR fallback wallets, hardware wallets, mobile-capable wallets, and inferred platforms.
+  - Updated `wallet-catalog.ts`, `wallet-options.ts`, and `modal-views.ts` to use the shared helpers instead of local QR/hardware/platform checks.
+  - Remaining badge text builders still exist in multiple modules, but their underlying wallet classification now comes from one place.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 40 tests.
