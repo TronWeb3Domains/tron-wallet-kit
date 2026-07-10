@@ -7,6 +7,7 @@ export * from "./icons";
 export * from "./locales";
 export * from "./modal";
 export * from "./qr";
+export * from "./session-wallet";
 export * from "./styles";
 export * from "./themes";
 export * from "./toast";

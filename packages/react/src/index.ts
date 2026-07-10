@@ -1,7 +1,7 @@
 import { createContext, createElement, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 import { createWalletKit, type TronIdentity, type WalletClientConfig, type WalletKit } from "@tron-wallet-kit/client";
 import type { WalletAccount, WalletCapabilities, WalletSession } from "@tron-wallet-kit/core";
-import { copyToClipboard, createAccountPanelHtml, createAddressQrPanelHtml, createConnectModalHtml, createStyledQrDataUrl, createThemeStyleProperties, createTransactionHistoryPanelHtml, createWalletButtonHtml, ensureWalletKitStyles, mapAdapterToWalletOption, mergeWalletOptionsWithCatalog, QR_FALLBACK_DARK, shortenAddress, type AccountPanelViewModel, type ConnectModalViewModel, type ThemeConfig, type WalletButtonViewModel } from "@tron-wallet-kit/ui";
+import { copyToClipboard, createAccountPanelHtml, createAddressQrPanelHtml, createConnectModalHtml, createStyledQrDataUrl, createThemeStyleProperties, createTransactionHistoryPanelHtml, createWalletButtonHtml, ensureWalletKitStyles, mapAdapterToWalletOption, mergeWalletOptionsWithCatalog, QR_FALLBACK_DARK, resolveSessionWalletMetadata, shortenAddress, type AccountPanelViewModel, type ConnectModalViewModel, type ThemeConfig, type WalletButtonViewModel } from "@tron-wallet-kit/ui";
 import type { WalletAvailability } from "@tron-wallet-kit/ui";
 
 export type WalletStatus = "disconnected" | "connecting" | "connected";
@@ -112,6 +112,7 @@ export function WalletButton(props: WalletButtonProps) {
   const [addressQrSrc, setAddressQrSrc] = useState<string | undefined>();
   const pendingTransactions = useManagerSnapshot(kit, () => kit.manager.getTransactions().some((transaction) => transaction.status === "submitted"));
   const adapter = session ? kit.manager.getAdapter(session.adapterId) : null;
+  const walletMetadata = resolveSessionWalletMetadata(session, adapter);
   const identityName = props.connectedLabel ?? identity?.displayName ?? identity?.domain ?? session?.account.displayName ?? session?.account.domain;
   const displayName = identityName ?? (session ? shortenAddress(session.account.address) : undefined);
   const resolvedBalance = balanceTrx ?? session?.balance?.formatted;
@@ -126,8 +127,8 @@ export function WalletButton(props: WalletButtonProps) {
   if (resolvedBalance) viewModel.balanceTrx = resolvedBalance;
   if (identityLoading) viewModel.identityLoading = true;
   if (balanceLoading) viewModel.balanceLoading = true;
-  if (adapter?.metadata.icon) viewModel.adapterIcon = adapter.metadata.icon;
-  if (adapter?.metadata.name) viewModel.adapterName = adapter.metadata.name;
+  if (walletMetadata.icon) viewModel.adapterIcon = walletMetadata.icon;
+  if (walletMetadata.name) viewModel.adapterName = walletMetadata.name;
   if (props.showAdapterIcon !== undefined) viewModel.showAdapterIcon = props.showAdapterIcon;
   if (props.showChevron !== undefined) viewModel.showChevron = props.showChevron;
   if (props.showBalance !== undefined) viewModel.showBalance = props.showBalance;

@@ -110,6 +110,7 @@
 - Ran `pnpm icons:wallets` successfully; 17 icons were fetched.
 - Current generated wallet icon set has 18 descriptor-backed icons. Klever is enabled as a WalletConnect-routed catalog wallet. Do not add an injected provider path until QA confirms a TRON-specific provider global.
 - Non-singleton `integration: "walletconnect"` descriptors are catalog-only; `packages/client/src/wallets/build-adapters.ts` should instantiate the WalletConnect adapter only for id `walletconnect`, then UI catalog merge can route supported wallets such as Klever through `adapterId: "walletconnect"`.
+- WalletConnect-routed catalog wallets must pass selected wallet metadata into `manager.connect(..., { metadata })`. Connected UI should use `resolveSessionWalletMetadata()` so the selected wallet icon/name wins over the singleton WalletConnect transport icon/name.
 - WalletConnect has a local override at `icon/walletconnect.svg`; `pnpm icons:wallets` copies this file instead of fetching `WalletConnect.svg` remotely, then regenerates both UI catalog data URI and adapter metadata icon.
 - React `WalletButton` now toggles a real account panel when connected. The panel uses shared `createAccountPanelHtml`, supports copy/disconnect actions, outside click close, Escape close, address QR, recent transaction rows, and dropdown/modal mode.
 - Client lifecycle now supports opt-in identity cache and opt-in balance resolver. `refreshIdentity()` writes `domain/displayName/avatar` into the active session; `refreshBalance()` writes normalized TRX balance into the active session.

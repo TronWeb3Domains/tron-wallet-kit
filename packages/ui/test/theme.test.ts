@@ -23,6 +23,7 @@ import {
   resolveWalletUiConfig,
   resolveTheme,
   resolveWalletEnvironment,
+  resolveSessionWalletMetadata,
 } from "../src/index";
 import type { TronWalletCatalogItem } from "../src/index";
 
@@ -475,6 +476,38 @@ describe("wallet kit surfaces", () => {
     );
 
     expect(wallets.find((wallet) => wallet.id === "tronlink")?.icon).toBe("data:image/svg+xml;base64,PHN2Zy8+");
+  });
+
+  it("prefers selected catalog wallet metadata over transport adapter metadata", () => {
+    const session = {
+      id: "walletconnect:TAddress",
+      adapterId: "walletconnect",
+      walletName: "WalletConnect",
+      account: { address: "TAddress" },
+      network: { id: "mainnet", name: "TRON mainnet", rpcUrl: "https://api.trongrid.io", networkType: "MAINNET" as const },
+      connectedAt: 1,
+      updatedAt: 1,
+      metadata: {
+        walletId: "klever",
+        walletName: "Klever Wallet",
+        walletIcon: "data:image/jpeg;base64,a2xldmVy"
+      }
+    };
+    const adapter = {
+      metadata: {
+        id: "walletconnect",
+        name: "WalletConnect",
+        icon: "data:image/svg+xml;base64,d2M="
+      },
+      capabilities: { connect: true },
+      connect: async () => ({ account: { address: "TAddress" } })
+    };
+
+    expect(resolveSessionWalletMetadata(session, adapter)).toEqual({
+      id: "klever",
+      name: "Klever Wallet",
+      icon: "data:image/jpeg;base64,a2xldmVy"
+    });
   });
 
   it("carries runtime catalog metadata for future platform-specific wallet UX", () => {

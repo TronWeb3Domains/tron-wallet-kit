@@ -3425,3 +3425,24 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 47 tests.
   - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 40 tests.
+
+## 2026-07-10 WalletConnect QR Session Wallet Metadata
+
+- Fixed WalletConnect-routed wallet UX after QR approval.
+- Issues:
+  - QR connect could resolve successfully while the modal stayed open on the QR panel.
+  - Connected button/account surfaces used the transport adapter metadata, so every WalletConnect-routed wallet displayed the WalletConnect icon instead of the selected wallet icon.
+- Fix:
+  - `WalletManager.connect()` now carries `ConnectOptions.metadata` into the active session before persistence sanitization.
+  - `createWalletModal()` passes selected catalog wallet metadata (`walletId`, `walletName`, `walletIcon`) when connecting through any adapter, including the WalletConnect singleton.
+  - QR success now closes the modal with a completed-flow close instead of returning to the QR view.
+  - Added `resolveSessionWalletMetadata()` in UI and used it from DOM `createWalletButton()` and React `WalletButton()` so selected wallet icon/name win over transport adapter metadata.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/core typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/core test -- --run` passed with 19 tests.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 41 tests.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 47 tests.
+  - `pnpm wallets:validate` passed with 18 descriptors and 18 icons.

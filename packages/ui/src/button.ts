@@ -2,6 +2,7 @@ import type { WalletManager } from "@tron-wallet-kit/core";
 import { applyThemeToElement, createWalletKitRoot, ensureWalletKitStyles } from "./dom";
 import { walletIcon } from "./icons";
 import { en } from "./locales/en";
+import { resolveSessionWalletMetadata } from "./session-wallet";
 import { escapeAttribute, escapeHtml, shortenAddress } from "./utils";
 import type { ThemeConfig, WalletButton, WalletButtonLabels, WalletButtonViewModel, WalletModal } from "./types";
 
@@ -59,6 +60,7 @@ export function createWalletButton(options: { manager: WalletManager; modal: Wal
     if (!root) return;
     const session = options.manager.getSession();
     const adapter = session ? options.manager.getAdapter(session.adapterId) : null;
+    const walletMetadata = resolveSessionWalletMetadata(session, adapter);
     const pending = options.manager.getTransactions().some((transaction) => transaction.status === "submitted");
     const viewModel: WalletButtonViewModel = {
       status: session ? "connected" : "disconnected",
@@ -69,8 +71,8 @@ export function createWalletButton(options: { manager: WalletManager; modal: Wal
     else if (session) viewModel.connectedLabel = shortenAddress(session.account.address);
     if (session?.account.address) viewModel.address = session.account.address;
     if (session?.balance?.formatted) viewModel.balanceTrx = session.balance.formatted;
-    if (adapter?.metadata.icon) viewModel.adapterIcon = adapter.metadata.icon;
-    if (adapter?.metadata.name) viewModel.adapterName = adapter.metadata.name;
+    if (walletMetadata.icon) viewModel.adapterIcon = walletMetadata.icon;
+    if (walletMetadata.name) viewModel.adapterName = walletMetadata.name;
     root.innerHTML = createWalletButtonHtml(viewModel);
   };
   const unsubscribe = [

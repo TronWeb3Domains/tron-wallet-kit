@@ -315,17 +315,17 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
     errorMessage = undefined;
     render();
     void options.manager.connect(adapterId, {
+      metadata: {
+        walletId: wallet.id,
+        walletName: wallet.name,
+        ...(wallet.icon ? { walletIcon: wallet.icon } : {})
+      },
       onUri: (uri) => {
         if (flowId === connectFlowId && activeConnectAdapterId === adapterId) options.manager.emitQr(adapterId, uri);
       }
     }).then(() => {
       if (flowId !== connectFlowId || activeConnectAdapterId !== adapterId) return;
-      if (isQrFlow || activeConnectIsQrFlow) {
-        view = "qr";
-        render();
-        return;
-      }
-      if (mode === "modal" && config.modal.closeOnSelect) closeModal({ force: false });
+      if (mode === "modal" && config.modal.closeOnSelect) closeModal({ force: true });
     }).catch((error: unknown) => {
       if (flowId !== connectFlowId || activeConnectAdapterId !== adapterId) return;
       if (shouldAutoRetryConnect(error, wallet, { isQrFlow, attempt: connectOptions?.autoRetryAttempt ?? 0 })) {

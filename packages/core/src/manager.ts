@@ -139,7 +139,7 @@ export class WalletManager {
         throw createWalletError.requestTimeout(`${adapter.metadata.name} connect timed out`);
       }
       if (signal.aborted || this.pendingAdapterId !== adapterId || !result) throw createWalletError.connectionRejected(adapter.metadata.name);
-      const session = this.createSession(adapter, result, network);
+      const session = this.createSession(adapter, result, network, undefined, options.metadata);
       await this.setSession(session);
       this.events.emit("connected", { session });
       return session;
@@ -443,7 +443,7 @@ export class WalletManager {
     return null;
   }
 
-  private createSession(adapter: WalletAdapter, result: ConnectResult, fallbackNetwork: WalletNetwork, previous?: WalletSession): WalletSession {
+  private createSession(adapter: WalletAdapter, result: ConnectResult, fallbackNetwork: WalletNetwork, previous?: WalletSession, metadata?: Record<string, unknown>): WalletSession {
     const network = result.network ?? result.account.network ?? fallbackNetwork;
     const now = Date.now();
     const account: WalletAccount = {
@@ -463,7 +463,7 @@ export class WalletManager {
       updatedAt: now,
       ...(expiresAt ? { expiresAt } : {}),
       ...(balance ? { balance } : {}),
-      metadata: { ...(previous?.metadata ?? {}), ...(result.session?.metadata ?? {}) }
+      metadata: { ...(previous?.metadata ?? {}), ...(metadata ?? {}), ...(result.session?.metadata ?? {}) }
     };
   }
 

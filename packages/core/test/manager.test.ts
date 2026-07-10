@@ -63,6 +63,24 @@ describe("WalletManager", () => {
     expect(manager.getSession()?.walletName).toBe("Mock Wallet");
   });
 
+  it("carries connect metadata into the active session", async () => {
+    const manager = new WalletManager({ adapters: [createAdapter()] });
+    const session = await manager.connect("mock", {
+      network: TRON_MAINNET,
+      metadata: {
+        walletId: "klever",
+        walletName: "Klever Wallet",
+        walletIcon: "data:image/jpeg;base64,a2xldmVy"
+      }
+    });
+
+    expect(session.metadata).toMatchObject({
+      walletId: "klever",
+      walletName: "Klever Wallet",
+      walletIcon: "data:image/jpeg;base64,a2xldmVy"
+    });
+  });
+
   it("does not persist circular raw provider objects after connect", async () => {
     const storage = new MemoryWalletStorage();
     const circularProvider: Record<string, unknown> = { name: "provider" };
