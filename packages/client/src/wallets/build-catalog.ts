@@ -35,7 +35,7 @@ export function buildCatalog(wallets: readonly WalletDescriptor[]): TronWalletCa
 }
 
 function resolveTransport(wallet: WalletDescriptor): NonNullable<TronWalletCatalogItem["transport"]> {
-  if (wallet.integration === "walletconnect") return "walletconnect";
+  if (wallet.integration === "walletconnect" && wallet.id === "walletconnect") return "walletconnect";
   if (wallet.platforms.includes("hardware")) return "hardware";
   if (wallet.platforms.includes("extension")) return "extension";
   return "mobile";

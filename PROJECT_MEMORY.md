@@ -3406,3 +3406,22 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 46 tests.
   - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 40 tests.
+
+## 2026-07-10 Klever WalletConnect Catalog Enablement
+
+- Tried the new Klever wallet entry from the descriptor registry.
+- Decision:
+  - Enabled `klever` as a catalog wallet routed through the singleton WalletConnect adapter.
+  - Did not add a guessed injected provider path because public Klever docs found so far confirm TRON wallet support, extension/mobile availability, and Klever Connect SDK docs, but not a TRON injected provider global.
+- Fix:
+  - Removed `enabled: false` from `packages/client/src/wallets/entries/klever.ts`.
+  - Kept `integration: "walletconnect"` and `supportsWalletConnect: true`.
+  - Updated `build-adapters.ts` so only the real `walletconnect` descriptor creates a WalletConnect adapter. Wallet-specific WalletConnect entries such as Klever remain catalog-only and route through the existing singleton adapter.
+  - Updated `build-catalog.ts` so non-singleton WalletConnect-routed wallets keep their platform transport in the raw catalog, then become QR-routed only when the WalletConnect adapter is present during UI catalog merge.
+  - Added client coverage proving Klever does not create a duplicate adapter and resolves to `adapterId: "walletconnect"` with `QR CODE` when WalletConnect is configured.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm wallets:validate` passed with 18 descriptors and 18 icons.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 47 tests.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 40 tests.

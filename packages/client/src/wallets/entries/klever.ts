@@ -8,7 +8,6 @@ export const klever: WalletDescriptor = {
   downloadUrl: "https://klever.io/download/",
   platforms: ["extension", "mobile"],
   group: "popular",
-  enabled: false,
   supportsWalletConnect: true,
-  description: "Staged until provider paths or WalletConnect QA are confirmed."
+  description: "Enabled as a WalletConnect-routed catalog wallet until TRON injected provider paths are confirmed."
 };

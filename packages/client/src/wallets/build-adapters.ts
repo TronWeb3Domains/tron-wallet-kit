@@ -26,6 +26,7 @@ function buildAdapter(wallet: WalletDescriptor, config: DefaultAdaptersConfig): 
     case "injected":
       return createInjectedTronAdapter(toInjectedConfig(wallet));
     case "walletconnect":
+      if (wallet.id !== "walletconnect") return undefined;
       if (!config.walletConnectProjectId) return undefined;
       return createWalletConnectAdapter({
         projectId: config.walletConnectProjectId,

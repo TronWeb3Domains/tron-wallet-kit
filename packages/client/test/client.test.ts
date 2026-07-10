@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TRON_MAINNET, TRON_NILE, type WalletAdapter } from "@tron-wallet-kit/core";
+import { mergeWalletOptionsWithCatalog, type WalletOptionViewModel } from "@tron-wallet-kit/ui";
 import {
   BUILTIN_WALLET_DESCRIPTORS,
   buildCatalog,
@@ -300,7 +301,43 @@ describe("client entrypoints", () => {
       "walletconnect"
     ]);
     expect(BUILTIN_WALLET_DESCRIPTORS.every((wallet) => wallet.homepage && wallet.platforms.length > 0)).toBe(true);
-    expect(BUILTIN_WALLET_DESCRIPTORS.find((wallet) => wallet.id === "klever")).toMatchObject({ enabled: false });
+    expect(BUILTIN_WALLET_DESCRIPTORS.find((wallet) => wallet.id === "klever")).toMatchObject({ integration: "walletconnect", supportsWalletConnect: true });
+  });
+
+  it("enables Klever as a WalletConnect-routed catalog wallet without a duplicate adapter", () => {
+    const manager = createWalletClient({ walletConnectProjectId: "project" });
+    const adapterIds = manager.getWallets().map((wallet) => wallet.metadata.id);
+    const catalog = buildCatalog(BUILTIN_WALLET_DESCRIPTORS);
+    const wallets = mergeWalletOptionsWithCatalog(
+      manager.getWallets().map((wallet): WalletOptionViewModel => ({
+        id: wallet.metadata.id,
+        adapterId: wallet.metadata.id,
+        name: wallet.metadata.name,
+        readyState: "found",
+        ...(wallet.metadata.type ? { transport: wallet.metadata.type } : {}),
+        capabilities: wallet.capabilities.connect && wallet.metadata.id === "walletconnect" ? ["qr"] : []
+      })),
+      undefined,
+      catalog
+    );
+    const klever = wallets.find((wallet) => wallet.id === "klever");
+
+    expect(adapterIds).not.toContain("klever");
+    expect(adapterIds).toContain("walletconnect");
+    expect(catalog.find((wallet) => wallet.id === "klever")).toMatchObject({
+      id: "klever",
+      transport: "extension",
+      supportsWalletConnect: true,
+      icon: WALLET_ICONS.klever
+    });
+    expect(klever).toMatchObject({
+      id: "klever",
+      adapterId: "walletconnect",
+      readyState: "found",
+      transport: "qr",
+      available: true,
+      badge: { label: "QR CODE", tone: "qr" }
+    });
   });
 
   it("ships Ledger as a default hardware bridge descriptor", async () => {
