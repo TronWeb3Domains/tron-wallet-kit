@@ -1,5 +1,6 @@
 import { TRON_WALLET_REGISTRY, type TronWalletGroup, type TronWalletTransport } from "@tron-wallet-kit/core";
 import { en } from "./locales/en";
+import { createQrWalletBadge, resolveCatalogBadge } from "./wallet-badges";
 import { inferWalletPlatforms, isHardwareWallet, isMobileCapableWallet, isQrFallbackWallet, isQrWallet, isWalletConnectWallet } from "./wallet-kinds";
 import type { ConnectModalLabels, TronWalletCatalogItem, WalletEnvironment, WalletListConfig, WalletOptionViewModel } from "./types";
 
@@ -60,7 +61,7 @@ export function mergeWalletOptionsWithCatalog(
       available: hasNativeAdapter || canUseWalletConnect,
       readyState: hasNativeAdapter || canUseWalletConnect ? "found" : "notFound",
       capabilities: transport === "qr" || transport === "walletconnect" ? ["qr"] : [],
-      badge: createCatalogBadge({ ...item, group, transport }, hasNativeAdapter || canUseWalletConnect, labels)
+      badge: resolveCatalogBadge({ ...item, group, transport }, hasNativeAdapter || canUseWalletConnect, labels)
     };
     if (item.icon) option.icon = item.icon;
     if (item.homepage) option.homepage = item.homepage;
@@ -199,7 +200,7 @@ function enrichWalletOption(wallet: WalletOptionViewModel, item: TronWalletCatal
   const mobileDeepLink = wallet.mobileDeepLink ?? item.mobileDeepLink;
   const supportsWalletConnect = wallet.supportsWalletConnect ?? item.supportsWalletConnect;
   const badgeTransport = useQrFallback ? "qr" : itemTransport;
-  const badge = useQrFallback ? { label: labels.qrCode.toUpperCase(), tone: "qr" as const } : wallet.badge ?? createCatalogBadge({ ...item, group, transport: badgeTransport }, wallet.available === true || wallet.readyState === "found", labels);
+  const badge = useQrFallback ? createQrWalletBadge(labels) : wallet.badge ?? resolveCatalogBadge({ ...item, group, transport: badgeTransport }, wallet.available === true || wallet.readyState === "found", labels);
   if (icon) option.icon = icon;
   if (homepage) option.homepage = homepage;
   if (downloadUrl) option.downloadUrl = downloadUrl;
@@ -243,12 +244,4 @@ function isInstalledWallet(wallet: WalletOptionViewModel): boolean {
 
 function isQrFeaturedFallbackWallet(wallet: WalletOptionViewModel): boolean {
   return isQrFallbackWallet(wallet);
-}
-
-function createCatalogBadge(item: TronWalletCatalogItem, available: boolean, labels: ConnectModalLabels): NonNullable<WalletOptionViewModel["badge"]> {
-  const tone = item.badge?.tone;
-  if (tone === "qr" || item.transport === "qr" || item.transport === "walletconnect") return { label: labels.qrCode.toUpperCase(), tone: "qr" };
-  if (item.transport === "hardware" || item.platforms.includes("hardware")) return { label: "HARDWARE", tone: "tron" };
-  if (tone === "installed" || available) return { label: labels.installed.toUpperCase(), tone: "installed" };
-  return { label: labels.tron.toUpperCase(), tone: "tron" };
 }

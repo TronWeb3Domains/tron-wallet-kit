@@ -1,6 +1,7 @@
 import { createActionContentHtml } from "./actions";
 import { actionSpinnerIcon, checkIcon, externalIcon, linkIcon, qrIcon, refreshIcon, searchIcon, statusErrorIcon } from "./icons";
 import { escapeAttribute, escapeHtml } from "./utils";
+import { resolveWalletBadge } from "./wallet-badges";
 import { filterWalletOptions, getFeaturedWalletOptions } from "./wallet-catalog";
 import { inferWalletPlatforms, isHardwareWallet, isQrWallet } from "./wallet-kinds";
 import type { ConnectModalLabels, ConnectModalView, ConnectModalViewModel, WalletOptionViewModel } from "./types";
@@ -137,7 +138,7 @@ function createQrHtml(viewModel: ConnectModalViewModel & { labels: ConnectModalL
 function createWalletRowHtml(wallet: WalletOptionViewModel, labels: ConnectModalLabels, selectedWalletId?: string): string {
   const disabled = isWalletDisabled(wallet);
   const isConnecting = selectedWalletId === wallet.id || wallet.status === "connecting";
-  const badge = wallet.badge ?? createFallbackBadge(wallet, labels);
+  const badge = wallet.badge ?? resolveWalletBadge(wallet, labels);
   const statusLabel = wallet.disabledReason ?? (disabled ? labels.unavailable : isConnecting ? labels.connecting : badge.label);
   return `<button class="twk-wallet-row" type="button" data-twk-wallet-id="${escapeAttribute(wallet.id)}" data-twk-adapter-id="${escapeAttribute(wallet.adapterId ?? wallet.id)}" data-twk-platforms="${escapeAttribute(getWalletPlatforms(wallet).join(" "))}" aria-label="${escapeAttribute(`${wallet.name}: ${statusLabel}`)}" ${disabled ? "disabled" : ""}>
   <span class="twk-wallet-main">
@@ -151,7 +152,7 @@ function createWalletRowHtml(wallet: WalletOptionViewModel, labels: ConnectModal
 function createWalletCardHtml(wallet: WalletOptionViewModel, labels: ConnectModalLabels, selectedWalletId?: string): string {
   const disabled = isWalletDisabled(wallet);
   const isConnecting = selectedWalletId === wallet.id || wallet.status === "connecting";
-  const badge = wallet.badge ?? createFallbackBadge(wallet, labels);
+  const badge = wallet.badge ?? resolveWalletBadge(wallet, labels);
   const statusLabel = wallet.disabledReason ?? (disabled ? labels.unavailable : isConnecting ? labels.connecting : badge.label);
   const indicator = createWalletStatusIndicatorHtml(wallet, labels, isConnecting);
   return `<button class="twk-wallet-card" type="button" data-twk-wallet-id="${escapeAttribute(wallet.id)}" data-twk-adapter-id="${escapeAttribute(wallet.adapterId ?? wallet.id)}" data-twk-platforms="${escapeAttribute(getWalletPlatforms(wallet).join(" "))}" aria-label="${escapeAttribute(`${wallet.name}: ${statusLabel}`)}" ${disabled ? "disabled" : ""} ${wallet.readyState === "loading" ? 'data-loading="true"' : ""}>
@@ -227,14 +228,6 @@ function createConnectingRingHtml(): string {
       <rect class="twk-connecting-ring-accent" x="8" y="8" width="94" height="94" rx="36" pathLength="240"></rect>
     </svg>
   </span>`;
-}
-
-function createFallbackBadge(wallet: WalletOptionViewModel, labels: ConnectModalLabels): NonNullable<WalletOptionViewModel["badge"]> {
-  if (isQrWallet(wallet)) return { label: labels.qrCode.toUpperCase(), tone: "qr" };
-  if (isHardwareWallet(wallet)) return { label: "HARDWARE", tone: "tron" };
-  if (wallet.readyState === "found") return { label: labels.installed.toUpperCase(), tone: "installed" };
-  if (wallet.readyState === "notFound") return { label: labels.notInstalled.toUpperCase(), tone: "muted" };
-  return { label: labels.tron.toUpperCase(), tone: "tron" };
 }
 
 function createAllWalletsTriggerLabel(label: string): string {

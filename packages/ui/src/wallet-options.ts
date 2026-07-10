@@ -1,6 +1,7 @@
 import type { WalletAdapter } from "@tron-wallet-kit/core";
 import { en } from "./locales/en";
-import { isHardwareWallet, isQrWallet } from "./wallet-kinds";
+import { resolveWalletBadge } from "./wallet-badges";
+import { isHardwareWallet } from "./wallet-kinds";
 import type { ConnectModalLabels, WalletOptionViewModel } from "./types";
 
 export type WalletAvailability = boolean | "loading" | undefined;
@@ -25,7 +26,15 @@ export function mapAdapterToWalletOption(adapter: WalletAdapter, availability?: 
   if (adapter.metadata.type) option.transport = adapter.metadata.type;
   if (adapter.metadata.platforms) option.platforms = adapter.metadata.platforms;
   if (capabilities.length > 0) option.capabilities = capabilities;
-  const badge = createWalletBadge(adapter, readyState, capabilities, labels);
+  const badgeWallet = { id: adapter.metadata.id, capabilities, readyState };
+  const badge = resolveWalletBadge(
+    {
+      ...badgeWallet,
+      ...(adapter.metadata.type !== undefined ? { transport: adapter.metadata.type } : {}),
+      ...(adapter.metadata.platforms !== undefined ? { platforms: adapter.metadata.platforms } : {})
+    },
+    labels
+  );
   if (badge) option.badge = badge;
   return option;
 }
@@ -36,17 +45,4 @@ function resolveReadyState(adapter: WalletAdapter, availability: WalletAvailabil
   if (availability === false) return "notFound";
   if (availability === true) return "found";
   return adapter.isAvailable ? "loading" : "found";
-}
-
-function createWalletBadge(adapter: WalletAdapter, readyState: WalletReadyState, capabilities: readonly string[], labels: ConnectModalLabels): WalletOptionViewModel["badge"] {
-  const walletKind = { id: adapter.metadata.id, transport: adapter.metadata.type, capabilities, platforms: adapter.metadata.platforms };
-  if (isQrWallet(walletKind)) {
-    return { label: labels.qrCode.toUpperCase(), tone: "qr" };
-  }
-  if (isHardwareWallet(walletKind)) return { label: "HARDWARE", tone: "tron" };
-  if (readyState === "found") return { label: labels.installed.toUpperCase(), tone: "installed" };
-  if (readyState === "loading") return { label: labels.checking.toUpperCase(), tone: "muted" };
-  if (readyState === "notFound") return { label: labels.notInstalled.toUpperCase(), tone: "muted" };
-  if (readyState === "unsupported") return { label: labels.unavailable.toUpperCase(), tone: "muted" };
-  return { label: labels.tron.toUpperCase(), tone: "tron" };
 }

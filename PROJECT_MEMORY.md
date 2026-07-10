@@ -3361,3 +3361,14 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Verification:
   - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 40 tests.
+
+## 2026-07-10 Shared UI Wallet Badge Builder
+
+- Continued the UI helper cleanup after the shared controller and wallet-kind pass.
+- Fix:
+  - Added `packages/ui/src/wallet-badges.ts` as the single helper for wallet badge labels and tones.
+  - Replaced the duplicated adapter badge, catalog badge, QR fallback badge, and modal fallback badge logic in `wallet-options.ts`, `wallet-catalog.ts`, and `modal-views.ts`.
+  - Preserved existing visible labels and tones: QR CODE, INSTALLED, CHECKING, NOT INSTALLED, UNAVAILABLE, TRON, and HARDWARE.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 40 tests.
