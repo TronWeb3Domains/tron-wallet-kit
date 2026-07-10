@@ -3243,3 +3243,18 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Verification:
   - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 46 tests.
   - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+
+## 2026-07-10 Ledger Default Hardware Support
+
+- User clarified Ledger is a hardware wallet and must be supported by default.
+- Previous state:
+  - Ledger descriptor/catalog existed by default.
+  - The concrete upstream Ledger adapter package was only an optional peer, so integrators had to install it separately.
+- Fix:
+  - Moved `@tronweb3/tronwallet-adapter-ledger` into `@tron-wallet-kit/client` dependencies.
+  - Removed Ledger from client peer dependencies / peer dependency meta.
+  - Kept the descriptor as a lazy `tronweb3-bridge` importer so Ledger code only loads when the Ledger adapter is actually used.
+  - Updated client regression test to assert Ledger is a default hardware bridge descriptor backed by a dependency, not an optional peer.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 46 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.

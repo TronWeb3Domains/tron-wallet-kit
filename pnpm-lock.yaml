@@ -153,7 +153,7 @@ importers:
         specifier: '*'
         version: 1.1.0
       '@tronweb3/tronwallet-adapter-ledger':
-        specifier: '*'
+        specifier: ^1.1.0
         version: 1.1.13
       '@tronweb3/tronwallet-adapter-metamask-tron':
         specifier: '*'
@@ -4869,7 +4869,7 @@ snapshots:
     dependencies:
       '@ledgerhq/devices': 6.27.1
       '@ledgerhq/errors': 6.37.0
-      '@ledgerhq/hw-transport': 6.27.1
+      '@ledgerhq/hw-transport': 6.35.5
       '@ledgerhq/logs': 6.17.0
 
   '@ledgerhq/hw-transport@6.27.1':

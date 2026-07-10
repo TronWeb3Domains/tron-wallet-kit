@@ -675,3 +675,12 @@ pnpm add @tronweb3/tronwallet-adapter-ledger
   - `addressTimeoutMs: 15000`
   - `addressSettleMs: 8000`
 - This keeps Gate from double-prompting while giving the extension enough time to expose `defaultAddress` on fresh global paths.
+
+# 2026-07-10 Ledger default hardware support
+
+- User clarified Ledger must be supported by default because it is the hardware-wallet route.
+- Ledger remains a hardware bridge descriptor with lazy loading, but the concrete `@tronweb3/tronwallet-adapter-ledger` package is now a normal `@tron-wallet-kit/client` dependency instead of an optional peer.
+- Rationale:
+  - The kit should expose a working Ledger path out of the box.
+  - Lazy import keeps runtime behavior scoped to Ledger usage while avoiding an extra install step for integrators.
+- Real-device QA remains required with a physical Ledger and the TRON app open.

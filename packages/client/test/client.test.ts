@@ -301,10 +301,11 @@ describe("client entrypoints", () => {
     expect(BUILTIN_WALLET_DESCRIPTORS.every((wallet) => wallet.homepage && wallet.platforms.length > 0)).toBe(true);
   });
 
-  it("ships Ledger as an optional hardware bridge descriptor", () => {
+  it("ships Ledger as a default hardware bridge descriptor", async () => {
     const manager = createWalletClient({ wallets: ["ledger"] });
     const [ledger] = manager.getWallets();
     const catalog = buildCatalog(BUILTIN_WALLET_DESCRIPTORS);
+    const packageJson = await import("../package.json", { with: { type: "json" } });
 
     expect(ledger?.metadata).toMatchObject({
       id: "ledger",
@@ -320,6 +321,8 @@ describe("client entrypoints", () => {
       platforms: ["hardware"],
       icon: WALLET_ICONS.ledger
     });
+    expect(packageJson.default.dependencies).toHaveProperty("@tronweb3/tronwallet-adapter-ledger");
+    expect(packageJson.default.peerDependencies ?? {}).not.toHaveProperty("@tronweb3/tronwallet-adapter-ledger");
   });
 
   it("keeps OneKey availability probing on-demand to avoid cross-wallet provider conflicts", () => {

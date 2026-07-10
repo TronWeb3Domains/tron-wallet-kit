@@ -31,18 +31,15 @@
     "@tron-wallet-kit/adapter-walletconnect": "workspace:*",
     "@tron-wallet-kit/core": "workspace:*",
     "@tron-wallet-kit/ui": "workspace:*",
+    "@tronweb3/tronwallet-adapter-ledger": "^1.1.0",
     "tronweb": "^6.4.0"
   },
   "peerDependencies": {
     "@tronweb3/tronwallet-adapter-imtoken": "*",
-    "@tronweb3/tronwallet-adapter-ledger": "*",
     "@tronweb3/tronwallet-adapter-metamask-tron": "*"
   },
   "peerDependenciesMeta": {
     "@tronweb3/tronwallet-adapter-imtoken": {
-      "optional": true
-    },
-    "@tronweb3/tronwallet-adapter-ledger": {
       "optional": true
     },
     "@tronweb3/tronwallet-adapter-metamask-tron": {
