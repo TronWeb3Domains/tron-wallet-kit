@@ -1,24 +1,13 @@
-import { TRON_WALLET_REGISTRY, type TronWalletGroup, type TronWalletTransport } from "@tron-wallet-kit/core";
 import { en } from "./locales/en";
 import { createQrWalletBadge, resolveCatalogBadge } from "./wallet-badges";
 import { inferWalletPlatforms, isHardwareWallet, isMobileCapableWallet, isQrFallbackWallet, isQrWallet, isWalletConnectWallet } from "./wallet-kinds";
 import type { ConnectModalLabels, TronWalletCatalogItem, WalletEnvironment, WalletListConfig, WalletOptionViewModel } from "./types";
 
-const catalogBadgeTones: Record<string, NonNullable<WalletOptionViewModel["badge"]>["tone"]> = {
-  tronlink: "installed",
-  tokenpocket: "qr",
-  trust: "qr",
-  binance: "qr",
-  walletconnect: "qr"
-};
-
-export const TRON_WALLET_CATALOG: readonly TronWalletCatalogItem[] = TRON_WALLET_REGISTRY.filter((wallet) => wallet.enabled).map((wallet) => {
-  const tone = catalogBadgeTones[wallet.id];
-  return {
-    ...wallet,
-    ...(tone ? { badge: { label: "", tone } } : {})
-  };
-});
+/**
+ * @deprecated UI is catalog-agnostic. `@tron-wallet-kit/client` builds and
+ * injects the runtime catalog from wallet descriptors.
+ */
+export const TRON_WALLET_CATALOG: readonly TronWalletCatalogItem[] = [];
 
 const featuredOrder = ["tronlink", "tokenpocket", "okx", "bitget", "walletconnect"];
 

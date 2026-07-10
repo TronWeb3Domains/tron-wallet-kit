@@ -1,5 +1,14 @@
 import type { WalletPlatform } from "./types";
 
+/**
+ * Legacy static wallet metadata retained for pre-1.0 compatibility.
+ *
+ * New runtime surfaces should use `@tron-wallet-kit/client` wallet descriptors
+ * (`packages/client/src/wallets/entries`) plus `buildCatalog()` instead of
+ * reading this core registry. Core should stay lifecycle-focused and should not
+ * become the source of UI wallet catalog data again.
+ */
+
 export type TronWalletTransport = "extension" | "walletconnect" | "qr" | "hardware" | "mobile";
 export type TronWalletGroup = "featured" | "popular" | "hardware" | "extension" | "mobile";
 
@@ -22,6 +31,7 @@ export type TronWalletRegistryItem = {
   upstreamPackage?: string;
 };
 
+/** @deprecated Use client wallet descriptors and `buildCatalog()` for runtime catalog data. */
 export const TRON_WALLET_REGISTRY = [
   {
     id: "tronlink",
@@ -243,12 +253,15 @@ export const TRON_WALLET_REGISTRY = [
   }
 ] as const satisfies readonly TronWalletRegistryItem[];
 
+/** @deprecated Use string wallet ids or `WalletDescriptor["id"]` from `@tron-wallet-kit/client`. */
 export type TronWalletRegistryId = (typeof TRON_WALLET_REGISTRY)[number]["id"];
 
+/** @deprecated Use client wallet descriptors and `buildCatalog()` for runtime catalog data. */
 export function getTronWalletRegistryItem(walletId: string): TronWalletRegistryItem | undefined {
   return TRON_WALLET_REGISTRY.find((wallet) => wallet.id === walletId);
 }
 
+/** @deprecated Use client wallet descriptors and `buildCatalog()` for runtime catalog data. */
 export function getEnabledTronWalletRegistryItems(): readonly TronWalletRegistryItem[] {
   return TRON_WALLET_REGISTRY.filter((wallet) => wallet.enabled);
 }

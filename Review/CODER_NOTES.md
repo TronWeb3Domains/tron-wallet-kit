@@ -85,7 +85,9 @@
 
 ## 2026-07-04 UI Phase 2 Implementation Notes
 
-- `packages/ui/src/wallet-catalog.ts` is the TRON-only wallet display catalog. Keep it scoped to wallets from the TronWallet Adapter adapter set and TRON WalletConnect routing; do not introduce generic multichain directory concepts.
+- `packages/ui/src/wallet-catalog.ts` is catalog-agnostic and should not import wallet metadata from core. Runtime catalog data must be built by `@tron-wallet-kit/client` from `packages/client/src/wallets/entries/*` via `buildCatalog()` and passed into UI config.
+- `packages/core/src/wallet-registry.ts` is legacy compatibility data only. Do not use it as a source for new UI/client wallet metadata.
+- Keep wallet metadata scoped to wallets from the TronWallet Adapter adapter set and TRON WalletConnect routing; do not introduce generic multichain directory concepts.
 - Featured wallet order is now catalog-driven: TronLink first, WalletConnect last. Catalog-only mobile wallets may route through `adapterId: "walletconnect"` when that adapter is registered.
 - Modal routing now supports `featured`, `all-wallets`, `connecting`, and `qr` views in `packages/ui/src/modal.ts`.
 - Modal a11y now includes Escape close, backdrop close, focus trap, and focus restore.

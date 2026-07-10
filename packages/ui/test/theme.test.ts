@@ -24,6 +24,107 @@ import {
   resolveTheme,
   resolveWalletEnvironment,
 } from "../src/index";
+import type { TronWalletCatalogItem } from "../src/index";
+
+const runtimeWalletCatalog: readonly TronWalletCatalogItem[] = [
+  {
+    id: "tronlink",
+    name: "TronLink",
+    enabled: true,
+    group: "featured",
+    transport: "extension",
+    platforms: ["extension", "mobile"],
+    homepage: "https://www.tronlink.org/",
+    providerPaths: ["tronLink", "tron", "tronWeb"],
+    mobileDeepLink: { scheme: "tronlinkoutside" },
+    featured: 1
+  },
+  {
+    id: "tokenpocket",
+    name: "TokenPocket",
+    enabled: true,
+    group: "popular",
+    transport: "extension",
+    platforms: ["extension", "mobile"],
+    homepage: "https://www.tokenpocket.pro/",
+    providerPaths: ["tokenpocket.tron", "tokenpocket.tronWeb", "tronWeb"],
+    mobileDeepLink: { scheme: "tpdapp" },
+    supportsWalletConnect: true,
+    featured: 2
+  },
+  {
+    id: "okx",
+    name: "OKX Wallet",
+    enabled: true,
+    group: "popular",
+    transport: "extension",
+    platforms: ["extension", "mobile"],
+    homepage: "https://www.okx.com/web3",
+    providerPaths: ["okxwallet.tronLink"],
+    mobileDeepLink: { scheme: "okx" },
+    featured: 3
+  },
+  {
+    id: "bitget",
+    name: "Bitget Wallet",
+    enabled: true,
+    group: "popular",
+    transport: "extension",
+    platforms: ["extension", "mobile"],
+    homepage: "https://web3.bitget.com/",
+    providerPaths: ["bitkeep.tronLink", "bitkeep.tron"],
+    mobileDeepLink: { scheme: "https" },
+    featured: 4
+  },
+  {
+    id: "walletconnect",
+    name: "WalletConnect",
+    enabled: true,
+    group: "featured",
+    transport: "walletconnect",
+    platforms: ["mobile"],
+    homepage: "https://walletconnect.com/",
+    supportsWalletConnect: true,
+    badge: { label: "", tone: "qr" },
+    featured: 5
+  },
+  {
+    id: "trust",
+    name: "Trust Wallet",
+    enabled: true,
+    group: "popular",
+    transport: "extension",
+    platforms: ["extension", "mobile"],
+    homepage: "https://trustwallet.com/",
+    providerPaths: ["trustwallet.tronLink", "trustwallet.tron"],
+    mobileDeepLink: { scheme: "https" },
+    supportsWalletConnect: true
+  },
+  {
+    id: "binance",
+    name: "Binance Web3 Wallet",
+    enabled: true,
+    group: "popular",
+    transport: "extension",
+    platforms: ["extension", "mobile"],
+    homepage: "https://www.binance.com/en/web3wallet",
+    providerPaths: ["binancew3w.tron", "binancew3w.tronLink"],
+    conflictMarkers: ["isBinance"],
+    mobileDeepLink: { scheme: "bnc" },
+    supportsWalletConnect: true
+  },
+  {
+    id: "safepal",
+    name: "SafePal",
+    enabled: true,
+    group: "popular",
+    transport: "extension",
+    platforms: ["extension", "mobile"],
+    homepage: "https://www.safepal.com/",
+    providerPaths: ["SafePalHook"],
+    supportsWalletConnect: true
+  }
+];
 
 describe("themeName presets", () => {
   it("ships multiple theme names for product customization", () => {
@@ -276,21 +377,25 @@ describe("wallet kit surfaces", () => {
   });
 
   it("merges the TRON wallet catalog without treating it as multichain", () => {
-    const wallets = mergeWalletOptionsWithCatalog([
-      {
-        id: "tronlink",
-        adapterId: "tronlink",
-        name: "TronLink",
-        readyState: "found",
-      },
-      {
-        id: "walletconnect",
-        adapterId: "walletconnect",
-        name: "WalletConnect",
-        readyState: "found",
-        capabilities: ["qr"],
-      },
-    ]);
+    const wallets = mergeWalletOptionsWithCatalog(
+      [
+        {
+          id: "tronlink",
+          adapterId: "tronlink",
+          name: "TronLink",
+          readyState: "found",
+        },
+        {
+          id: "walletconnect",
+          adapterId: "walletconnect",
+          name: "WalletConnect",
+          readyState: "found",
+          capabilities: ["qr"],
+        },
+      ],
+      undefined,
+      runtimeWalletCatalog
+    );
 
     expect(wallets.some((wallet) => wallet.id === "tokenpocket" && wallet.adapterId === "walletconnect")).toBe(true);
     expect(wallets.find((wallet) => wallet.id === "tronlink")?.platforms).toEqual(["extension", "mobile"]);
@@ -307,22 +412,26 @@ describe("wallet kit surfaces", () => {
   });
 
   it("falls back dual-mode wallets to WalletConnect QR when the extension is unavailable", () => {
-    const wallets = mergeWalletOptionsWithCatalog([
-      {
-        id: "tokenpocket",
-        adapterId: "tokenpocket",
-        name: "TokenPocket",
-        readyState: "notFound",
-        transport: "extension",
-      },
-      {
-        id: "walletconnect",
-        name: "WalletConnect",
-        readyState: "found",
-        capabilities: ["qr"],
-        transport: "walletconnect",
-      },
-    ]);
+    const wallets = mergeWalletOptionsWithCatalog(
+      [
+        {
+          id: "tokenpocket",
+          adapterId: "tokenpocket",
+          name: "TokenPocket",
+          readyState: "notFound",
+          transport: "extension",
+        },
+        {
+          id: "walletconnect",
+          name: "WalletConnect",
+          readyState: "found",
+          capabilities: ["qr"],
+          transport: "walletconnect",
+        },
+      ],
+      undefined,
+      runtimeWalletCatalog
+    );
     const tokenPocket = wallets.find((wallet) => wallet.id === "tokenpocket");
 
     expect(tokenPocket).toMatchObject({
@@ -368,8 +477,8 @@ describe("wallet kit surfaces", () => {
     expect(wallets.find((wallet) => wallet.id === "tronlink")?.icon).toBe("data:image/svg+xml;base64,PHN2Zy8+");
   });
 
-  it("carries registry metadata for future platform-specific wallet UX", () => {
-    const wallets = mergeWalletOptionsWithCatalog([]);
+  it("carries runtime catalog metadata for future platform-specific wallet UX", () => {
+    const wallets = mergeWalletOptionsWithCatalog([], undefined, runtimeWalletCatalog);
     const trust = wallets.find((wallet) => wallet.id === "trust");
     const binance = wallets.find((wallet) => wallet.id === "binance");
 
@@ -382,19 +491,23 @@ describe("wallet kit surfaces", () => {
   });
 
   it("supports advanced wallet list controls with explicit featured modes and layouts", () => {
-    const wallets = mergeWalletOptionsWithCatalog([
-      { id: "tronlink", name: "TronLink", readyState: "found" },
-      { id: "tokenpocket", name: "TokenPocket", readyState: "notFound", transport: "extension" },
-      { id: "walletconnect", name: "WalletConnect", readyState: "found", transport: "walletconnect", capabilities: ["qr"] },
-      { id: "okx", name: "OKX Wallet", readyState: "notFound" },
-      { id: "bitget", name: "Bitget Wallet", readyState: "notFound" },
-      { id: "trust", name: "Trust Wallet", readyState: "notFound" },
-      { id: "binance", name: "Binance Web3 Wallet", readyState: "notFound" },
-      { id: "metamask", name: "MetaMask", readyState: "notFound" },
-      { id: "gate", name: "Gate Wallet", readyState: "notFound" },
-      { id: "bybit", name: "Bybit Wallet", readyState: "notFound" },
-      { id: "guarda", name: "Guarda", readyState: "notFound" },
-    ]);
+    const wallets = mergeWalletOptionsWithCatalog(
+      [
+        { id: "tronlink", name: "TronLink", readyState: "found" },
+        { id: "tokenpocket", name: "TokenPocket", readyState: "notFound", transport: "extension" },
+        { id: "walletconnect", name: "WalletConnect", readyState: "found", transport: "walletconnect", capabilities: ["qr"] },
+        { id: "okx", name: "OKX Wallet", readyState: "notFound" },
+        { id: "bitget", name: "Bitget Wallet", readyState: "notFound" },
+        { id: "trust", name: "Trust Wallet", readyState: "notFound" },
+        { id: "binance", name: "Binance Web3 Wallet", readyState: "notFound" },
+        { id: "metamask", name: "MetaMask", readyState: "notFound" },
+        { id: "gate", name: "Gate Wallet", readyState: "notFound" },
+        { id: "bybit", name: "Bybit Wallet", readyState: "notFound" },
+        { id: "guarda", name: "Guarda", readyState: "notFound" },
+      ],
+      undefined,
+      runtimeWalletCatalog
+    );
     const featuredWallets = getFeaturedWalletOptions(wallets, {
       featuredMode: "manual",
       featuredWallets: ["tronlink", "tokenpocket", "okx", "bitget", "trust", "binance", "walletconnect", "metamask", "gate", "bybit", "guarda"],
@@ -420,14 +533,18 @@ describe("wallet kit surfaces", () => {
     expect(installedFirstWithoutInstalled[0]?.id).toBe("walletconnect");
 
     const manyInstalled = getFeaturedWalletOptions(
-      mergeWalletOptionsWithCatalog([
-        { id: "tronlink", name: "TronLink", readyState: "found" },
-        { id: "tokenpocket", name: "TokenPocket", readyState: "found" },
-        { id: "okx", name: "OKX Wallet", readyState: "found" },
-        { id: "bitget", name: "Bitget Wallet", readyState: "found" },
-        { id: "trust", name: "Trust Wallet", readyState: "found" },
-        { id: "walletconnect", name: "WalletConnect", readyState: "found", transport: "walletconnect", capabilities: ["qr"] },
-      ]),
+      mergeWalletOptionsWithCatalog(
+        [
+          { id: "tronlink", name: "TronLink", readyState: "found" },
+          { id: "tokenpocket", name: "TokenPocket", readyState: "found" },
+          { id: "okx", name: "OKX Wallet", readyState: "found" },
+          { id: "bitget", name: "Bitget Wallet", readyState: "found" },
+          { id: "trust", name: "Trust Wallet", readyState: "found" },
+          { id: "walletconnect", name: "WalletConnect", readyState: "found", transport: "walletconnect", capabilities: ["qr"] },
+        ],
+        undefined,
+        runtimeWalletCatalog
+      ),
       { featuredMode: "installed-first" }
     );
     expect(manyInstalled.map((wallet) => wallet.id)).toEqual(["tronlink", "tokenpocket", "okx", "bitget", "trust", "walletconnect"]);
@@ -541,6 +658,7 @@ describe("wallet kit surfaces", () => {
     const allWalletsHtml = createConnectModalHtml({
       view: "all-wallets",
       searchQuery: "token",
+      catalog: runtimeWalletCatalog,
       wallets: [
         {
           id: "tronlink",

@@ -18,7 +18,6 @@ import type {
   WalletNetwork,
   WalletNetworkId,
   WalletPlatform,
-  TronWalletRegistryId,
   WalletSessionBalance
 } from "@tron-wallet-kit/core";
 import type { ThemeConfig, WalletButton, WalletModal, WalletToast, WalletUiConfig } from "@tron-wallet-kit/ui";
@@ -26,7 +25,7 @@ import type { TronWalletCatalogItem } from "@tron-wallet-kit/ui";
 import type { WalletDescriptor } from "./wallets/types";
 
 export type DefaultAdaptersConfig = {
-  wallets?: "all" | Array<TronWalletRegistryId | string | WalletDescriptor>;
+  wallets?: "all" | Array<string | WalletDescriptor>;
   disabledWallets?: readonly string[];
   walletConnectProjectId?: string;
   walletConnectNetwork?: WalletConnectNetworkName | string;

@@ -3372,3 +3372,19 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Verification:
   - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 40 tests.
+
+## 2026-07-10 Runtime Wallet Catalog Boundary
+
+- Continued the single-source wallet metadata cleanup.
+- Fix:
+  - Made `packages/ui/src/wallet-catalog.ts` catalog-agnostic by removing its import of `core/TRON_WALLET_REGISTRY`.
+  - Kept `TRON_WALLET_CATALOG` as an empty deprecated fallback for compatibility; real catalog data now comes from `@tron-wallet-kit/client` descriptors through `buildCatalog()`.
+  - Removed `TronWalletRegistryId` from `DefaultAdaptersConfig.wallets`; config now accepts string ids or `WalletDescriptor` objects without depending on the legacy core registry type.
+  - Marked `packages/core/src/wallet-registry.ts` exports as legacy/deprecated compatibility data so future UI/client work does not rebuild against it.
+  - Updated UI tests to pass a runtime catalog fixture for catalog-specific behavior.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/core typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 40 tests.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 46 tests.
