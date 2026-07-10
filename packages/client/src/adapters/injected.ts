@@ -72,7 +72,10 @@ export function createInjectedTronAdapter(config: InjectedTronAdapterConfig): Wa
       // returns an address OR the wallet populates tronWeb.defaultAddress (polled live). This also
       // covers SafePal, which populates the address slightly after request() resolves.
       if (!address) address = await acquireInjectedAddress(nextProvider, resolveProvider, config);
-      if (!address) throw new WalletKitError("CONNECTION_FAILED", `${metadata.name} did not return an address.`);
+      if (!address) {
+        debugGateAddressFailure(config);
+        throw new WalletKitError("CONNECTION_FAILED", `${metadata.name} did not return an address.`);
+      }
       const activeProvider = resolveProvider() ?? nextProvider;
       const network = typeof options.network === "object" && options.network ? options.network : await resolveInjectedNetwork(activeProvider, connectedNetwork);
       provider = activeProvider;
@@ -195,4 +198,27 @@ function normalizeSignature(signature: unknown): string | undefined {
 
 function normalizeSignedTransaction(transaction: unknown): TransactionPayload | undefined {
   return typeof transaction === "object" && transaction !== null ? (transaction as TransactionPayload) : undefined;
+}
+
+function debugGateAddressFailure(config: InjectedTronAdapterConfig): void {
+  if (config.id !== "gate") return;
+  try {
+    if (globalThis.localStorage?.getItem("TWK_DEBUG_GATE") !== "1") return;
+    const gatewallet = (globalThis as unknown as { gatewallet?: unknown }).gatewallet;
+    console.warn("[TRON Wallet Kit] Gate did not return an address", sanitizeDebugValue(gatewallet));
+  } catch {
+    // debug-only path
+  }
+}
+
+function sanitizeDebugValue(value: unknown, depth = 0): unknown {
+  if (depth > 3) return "[depth]";
+  if (typeof value === "function") return "[function]";
+  if (!value || typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.slice(0, 5).map((entry) => sanitizeDebugValue(entry, depth + 1));
+  const output: Record<string, unknown> = {};
+  for (const key of Object.keys(value as Record<string, unknown>).slice(0, 40)) {
+    output[key] = sanitizeDebugValue((value as Record<string, unknown>)[key], depth + 1);
+  }
+  return output;
 }

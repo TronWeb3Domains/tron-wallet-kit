@@ -388,10 +388,21 @@ function extractInjectedAddress(result: unknown): string | undefined {
   if (Array.isArray(result) && typeof result[0] === "string") return result[0];
   if (typeof result === "string") return result;
   if (typeof result !== "object" || result === null) return undefined;
-  const response = result as { address?: unknown; base58?: unknown; selectedAddress?: unknown; defaultAddress?: unknown; code?: unknown };
+  const response = result as {
+    accountAddress?: unknown;
+    accounts?: unknown;
+    address?: unknown;
+    base58?: unknown;
+    selectedAddress?: unknown;
+    defaultAddress?: unknown;
+    code?: unknown;
+  };
+  if (typeof response.accountAddress === "string") return response.accountAddress;
   if (typeof response.address === "string") return response.address;
   if (typeof response.base58 === "string") return response.base58;
   if (typeof response.selectedAddress === "string") return response.selectedAddress;
+  const accounts = extractInjectedAddress(response.accounts);
+  if (accounts) return accounts;
   const nested = extractInjectedAddress(response.defaultAddress);
   if (nested) return nested;
   return undefined;

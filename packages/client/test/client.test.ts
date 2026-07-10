@@ -1006,6 +1006,30 @@ describe("client entrypoints", () => {
     });
   });
 
+  it("reads Gate accountAddress responses from the extension request", async () => {
+    (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = {
+      tronLink: {},
+      tron: {
+        request: async ({ method }: { method: string }) => (
+          method === "eth_requestAccounts"
+            ? { code: 200, accountAddress: "TGateAccountAddress", hex: "41gateaccount" }
+            : undefined
+        ),
+        tronWeb: {
+          trx: {
+            signMessageV2: async (message: string) => `gate-account:${message}`
+          }
+        }
+      }
+    };
+
+    const manager = createWalletClient({ wallets: ["gate"] });
+
+    await expect(manager.connect("gate")).resolves.toMatchObject({
+      account: { address: "TGateAccountAddress" }
+    });
+  });
+
   it("marks Gate available from camelCase and EIP-6963 Gate markers", async () => {
     (globalThis as typeof globalThis & { gateWallet?: unknown }).gateWallet = {
       tron: {}

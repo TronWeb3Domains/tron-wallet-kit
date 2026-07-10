@@ -3068,3 +3068,18 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Verification:
   - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 48 tests.
   - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+
+## 2026-07-10 Gate Request accountAddress Follow-Up
+
+- User reported Gate first connect still failed with `Gate Wallet did not return an address`.
+- Read upstream `@tronweb3/tronwallet-adapter-gatewallet@1.1.0`:
+  - Extension uses `window.gatewallet.tron`.
+  - Connect method calls `eth_requestAccounts`.
+  - The response type can include `accountAddress` and `hex`, not only an array.
+- Fixes:
+  - Address extraction now accepts `accountAddress` and nested `accounts`.
+  - Added regression coverage for Gate returning `{ code: 200, accountAddress, hex }`.
+  - Added gated debug logging for Gate failures when `localStorage.TWK_DEBUG_GATE = "1"` so runtime provider shape can be inspected without noisy production logs.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 49 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
