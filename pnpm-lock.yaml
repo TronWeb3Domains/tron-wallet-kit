@@ -149,9 +149,6 @@ importers:
       '@tron-wallet-kit/ui':
         specifier: workspace:*
         version: link:../ui
-      '@tronweb3/tronwallet-adapter-gatewallet':
-        specifier: '*'
-        version: 1.1.0
       '@tronweb3/tronwallet-adapter-imtoken':
         specifier: '*'
         version: 1.1.0
@@ -1868,10 +1865,6 @@ packages:
   '@tronweb3/tronwallet-abstract-adapter@1.2.0':
     resolution: {integrity: sha512-Xy3ftKnxhEEWOWG6OXoN877t4oTr4W/kuQb7LWVYdn5PNeQ90LXj7eaTu9e6624iozDRuxMix5FThtqEt5F7dA==}
     engines: {node: '>=16', pnpm: '>=7'}
-
-  '@tronweb3/tronwallet-adapter-gatewallet@1.1.0':
-    resolution: {integrity: sha512-OtIZdZWaTnTfJ3seGMqO2ojtxBAovFuHdQnsAonlddUqamSXu4UwJaQhUsEAK4y5orYgGvElnSBhhpGW7rmYhA==}
-    engines: {node: '>=18', pnpm: '>=9'}
 
   '@tronweb3/tronwallet-adapter-imtoken@1.1.0':
     resolution: {integrity: sha512-Ssxt/C9dRlbaJn1WxoOmvP6szR3ZdjnGM8KbOyIqqYEfVfadvl2NSYPzWz3eoe1y+dA+K4DmSJFu7vNo5rP3Bg==}
@@ -5919,15 +5912,6 @@ snapshots:
     dependencies:
       eventemitter3: 4.0.7
       tronweb: 6.2.2
-    transitivePeerDependencies:
-      - bufferutil
-      - debug
-      - utf-8-validate
-
-  '@tronweb3/tronwallet-adapter-gatewallet@1.1.0':
-    dependencies:
-      '@tronweb3/tronwallet-abstract-adapter': 1.2.0
-      '@tronweb3/tronwallet-adapter-tronlink': 1.2.0
     transitivePeerDependencies:
       - bufferutil
       - debug

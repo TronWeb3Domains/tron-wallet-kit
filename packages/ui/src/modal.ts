@@ -22,6 +22,12 @@ import type {
 } from "./types";
 
 const defaultConnectModalLabels: ConnectModalLabels = en.connectModal;
+const AUTO_CONNECT_RETRY_DELAY_MS = 650;
+
+type ConnectWalletOptions = {
+  retry?: boolean;
+  autoRetryAttempt?: number;
+};
 
 function normalizeConnectErrorMessage(error: unknown, wallet?: WalletOptionViewModel): string {
   const raw = error instanceof Error ? error.message : String(error);
@@ -34,6 +40,17 @@ function normalizeConnectErrorMessage(error: unknown, wallet?: WalletOptionViewM
   const compact = raw.replace(/\s+/g, " ").trim();
   if (compact.length <= 140) return compact;
   return `${compact.slice(0, 137)}...`;
+}
+
+function shouldAutoRetryConnect(error: unknown, wallet: WalletOptionViewModel, options: { isQrFlow: boolean; attempt?: number }): boolean {
+  if (options.isQrFlow) return false;
+  if ((options.attempt ?? 0) >= 1) return false;
+  const code = typeof error === "object" && error !== null && "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
+  const message = error instanceof Error ? error.message : String(error);
+  if (/user_rejected|reject|denied|cancel/i.test(`${code} ${message}`)) return false;
+  if (/wallet_unavailable|wallet_not_found|not available|not installed|not found/i.test(`${code} ${message}`)) return false;
+  if (code === "CONNECTION_FAILED" || code === "REQUEST_TIMEOUT") return true;
+  return /did not return an address|request connect error|failed to connect|connect timed out|timeout/i.test(message) && wallet.id !== "walletconnect";
 }
 
 function resolveModalBodyModel(viewModel: ConnectModalViewModel): {
@@ -268,7 +285,7 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
     render();
   };
 
-  const connectWallet = (wallet: WalletOptionViewModel, connectOptions?: { retry?: boolean }) => {
+  const connectWallet = (wallet: WalletOptionViewModel, connectOptions?: ConnectWalletOptions) => {
     const adapterId = wallet.adapterId ?? wallet.id;
     const isQrFlow = wallet.capabilities?.includes("qr") || wallet.transport === "walletconnect" || wallet.transport === "qr" || wallet.id === "walletconnect" || adapterId === "walletconnect";
     const flowId = connectFlowId + 1;
@@ -299,6 +316,20 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
       if (config.modal.closeOnSelect) closeModal({ force: false });
     }).catch((error: unknown) => {
       if (flowId !== connectFlowId || activeConnectAdapterId !== adapterId) return;
+      if (shouldAutoRetryConnect(error, wallet, { isQrFlow, attempt: connectOptions?.autoRetryAttempt ?? 0 })) {
+        retryBusy = true;
+        errorMessage = undefined;
+        view = "connecting";
+        render();
+        if (retryTimer !== undefined) documentRef.defaultView?.clearTimeout(retryTimer);
+        const retryFlowId = connectFlowId;
+        retryTimer = documentRef.defaultView?.setTimeout(() => {
+          retryTimer = undefined;
+          if (retryFlowId !== connectFlowId || activeConnectAdapterId !== adapterId) return;
+          connectWallet(wallet, { retry: true, autoRetryAttempt: (connectOptions?.autoRetryAttempt ?? 0) + 1 });
+        }, AUTO_CONNECT_RETRY_DELAY_MS);
+        return;
+      }
       retryBusy = false;
       errorMessage = normalizeConnectErrorMessage(error, wallet);
       view = qrUri ? "qr" : "connecting";
@@ -636,7 +667,7 @@ export function createWalletInline(options: { manager: WalletManager; ui?: Walle
     }
   };
 
-  const connectWallet = (wallet: WalletOptionViewModel, connectOptions?: { retry?: boolean }) => {
+  const connectWallet = (wallet: WalletOptionViewModel, connectOptions?: ConnectWalletOptions) => {
     const adapterId = wallet.adapterId ?? wallet.id;
     const isQrFlow = wallet.capabilities?.includes("qr") || wallet.transport === "walletconnect" || wallet.transport === "qr" || wallet.id === "walletconnect" || adapterId === "walletconnect";
     const flowId = connectFlowId + 1;
@@ -665,6 +696,20 @@ export function createWalletInline(options: { manager: WalletManager; ui?: Walle
       }
     }).catch((error: unknown) => {
       if (flowId !== connectFlowId || activeConnectAdapterId !== adapterId) return;
+      if (shouldAutoRetryConnect(error, wallet, { isQrFlow, attempt: connectOptions?.autoRetryAttempt ?? 0 })) {
+        retryBusy = true;
+        errorMessage = undefined;
+        view = "connecting";
+        render();
+        if (retryTimer !== undefined) documentRef.defaultView?.clearTimeout(retryTimer);
+        const retryFlowId = connectFlowId;
+        retryTimer = documentRef.defaultView?.setTimeout(() => {
+          retryTimer = undefined;
+          if (retryFlowId !== connectFlowId || activeConnectAdapterId !== adapterId) return;
+          connectWallet(wallet, { retry: true, autoRetryAttempt: (connectOptions?.autoRetryAttempt ?? 0) + 1 });
+        }, AUTO_CONNECT_RETRY_DELAY_MS);
+        return;
+      }
       retryBusy = false;
       errorMessage = normalizeConnectErrorMessage(error, wallet);
       view = qrUri ? "qr" : "connecting";

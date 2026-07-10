@@ -3188,3 +3188,27 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 39 tests.
+
+## 2026-07-10 Gate Back to Injected + Modal Auto Retry
+
+- User confirmed the Gate issue is not solved by `tronweb3-bridge` or injected alone; disabling OneKey still makes Gate connect immediately.
+- Decision:
+  - Reverted Gate Wallet to the lightweight injected descriptor.
+  - Removed `@tronweb3/tronwallet-adapter-gatewallet` from client optional peer dependencies and lockfile.
+  - Keep Gate strict availability marker: `window.gatewallet.tronLink`.
+- Gate injected behavior:
+  - Provider composer: `getGateInjectedProvider()`.
+  - Provider paths: `gatewallet.tron`, `gatewallet.tronLink`, `gatewallet.tronWeb`.
+  - Request method: `eth_requestAccounts`.
+  - Address timeout: 5000ms.
+  - Settle window: 900ms.
+  - Event watch: `accountsChanged` for up to 5000ms.
+- UI mitigation:
+  - Connect modal now auto-retries one time after a short delay for extension connect failures that look transient (`CONNECTION_FAILED`, `REQUEST_TIMEOUT`, "did not return an address", "request connect error", timeout).
+  - Auto retry does not run for QR/WalletConnect, not-installed/unavailable errors, or user rejection/cancel.
+  - This mimics the manual "Try again" second click path without asking the user to close/reopen the panel.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 46 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 39 tests.

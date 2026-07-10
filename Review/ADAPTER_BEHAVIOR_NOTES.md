@@ -639,3 +639,19 @@ pnpm add @tronweb3/tronwallet-adapter-ledger
 - Rationale:
   - Some multi-chain extensions have provider side effects during detection, not only during connect.
   - Auto-probing every wallet can harm unrelated wallets. Use on-demand mode for conflict-prone wallets rather than removing them from the registry.
+
+# 2026-07-10 Gate reverted to injected with shared auto-retry
+
+- User confirmed the Gate issue is not specifically caused by `tronweb3-bridge`; Gate should return to injected to keep the kit lighter.
+- Gate now uses injected integration again:
+  - `getGateInjectedProvider()`
+  - paths: `gatewallet.tron`, `gatewallet.tronLink`, `gatewallet.tronWeb`
+  - method: `eth_requestAccounts`
+  - strict marker: `window.gatewallet.tronLink`
+- `@tronweb3/tronwallet-adapter-gatewallet` was removed from `@tron-wallet-kit/client` optional peer dependencies.
+- UI-level retry was added as a general mitigation:
+  - one automatic retry after a short delay for transient extension connection failures where the first approval returns no address or times out.
+  - skip retry for WalletConnect/QR flows, user rejection, and wallet unavailable/not installed.
+- Rationale:
+  - The user's real QA shows manual second connect succeeds.
+  - Handling this at modal flow level can also help other injected extensions with first-connect hydration timing issues without adding wallet-specific bridge packages.
