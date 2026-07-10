@@ -3137,3 +3137,22 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Verification:
   - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 51 tests.
   - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+
+## 2026-07-10 Gate Upstream Adapter Bridge Pivot
+
+- User confirmed Gate still logs `Uncaught TypeError: R.updateStatus is not a function` from Gate's injected `gt-window-provider.js` even after reducing custom event/retry behavior.
+- Decision:
+  - Stop using the custom injected connect path for Gate Wallet.
+  - Gate descriptor now uses `integration: "tronweb3-bridge"` and imports the official `@tronweb3/tronwallet-adapter-gatewallet`.
+  - Keep `hasGateInjectedMarker` as a lightweight availability probe so the UI can still show installed from Gate-owned markers before the upstream adapter is constructed.
+- Upstream behavior captured in tests:
+  - Desktop extension shape is `window.gatewallet.tronLink` for support detection and `window.gatewallet.tron` for connect.
+  - Desktop extension connect uses `eth_requestAccounts` and expects an address array.
+  - Already-connected sessions reuse `gatewallet.tron.tronWeb.defaultAddress.base58`.
+  - Gate in-app uses `tron_requestAccounts` and then reads `tronLink.tronWeb.defaultAddress.base58`.
+- Cleanup:
+  - Removed obsolete Gate custom injected regression tests and replaced them with upstream bridge tests.
+  - Added `@tronweb3/tronwallet-adapter-gatewallet` as an optional peer dependency of `@tron-wallet-kit/client`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 45 tests and no skipped tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.

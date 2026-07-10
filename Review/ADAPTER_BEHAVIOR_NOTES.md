@@ -604,3 +604,16 @@ pnpm add @tronweb3/tronwallet-adapter-ledger
 - Follow-up 3: Real Gate first approval can still resolve with no address while a second manual connect succeeds. Gate descriptor now enables one controlled empty-address retry: wait briefly, reread live provider paths, then call `eth_requestAccounts` one more time with a 3s timeout.
 - Follow-up 4: Gate can authorize via event flow while request responses stay addressless. The injected adapter now preserves provider `on/off/removeListener` and Gate listens to `accountsChanged`, `accountChanged`, and `connect` during connect, resolving from event payloads and cleaning listeners afterward.
 - Follow-up 5: Gate provider can throw internal `R.updateStatus is not a function`. To avoid triggering provider internals, Gate now mirrors upstream more closely: listen only to `accountsChanged`, do not retry `eth_requestAccounts`, and instead wait up to 5s for `tronWeb.defaultAddress` hydration after the single request.
+
+# 2026-07-10 Gate upstream bridge decision
+
+- Real QA still showed Gate's internal `R.updateStatus is not a function` after the injected workaround was reduced.
+- Gate is now handled through the official `@tronweb3/tronwallet-adapter-gatewallet` via `integration: "tronweb3-bridge"`.
+- Keep these upstream assumptions when debugging Gate:
+  - Extension support marker: `window.gatewallet && window.gatewallet.tronLink`.
+  - Extension request provider: `window.gatewallet.tron`.
+  - Extension request method: `eth_requestAccounts`.
+  - In-app request provider: `window.gatewallet.tronLink`.
+  - In-app request method: `tron_requestAccounts`, then read `tronLink.tronWeb.defaultAddress.base58`.
+- The previous custom injected Gate hydrate/retry/event tests were removed because they no longer represent the runtime path. Current coverage follows the upstream adapter contract.
+- Gate desktop QA still requires HTTPS origin for provider injection; use `https://127.0.0.1:5174/react-basic/` or a deployed HTTPS URL.

@@ -117,6 +117,7 @@ describe("client entrypoints", () => {
     delete (globalThis as Record<string, unknown>).tronLink;
     delete (globalThis as Record<string, unknown>).isBitKeep;
     delete (globalThis as Record<string, unknown>).__tronWalletKitTronWebForTest;
+    delete (globalThis as Record<string, unknown>).window;
   });
 
   it("creates a WalletManager with registered adapters", async () => {
@@ -814,7 +815,14 @@ describe("client entrypoints", () => {
       },
       request: async () => ({ code: 200 })
     });
-    const gateProvider = makeProvider("TGate");
+    const gateProvider = {
+      ...makeProvider("TGate"),
+      request: vi.fn(async ({ method }: { method: string }) => (
+        method === "eth_requestAccounts" ? ["TGate"] : undefined
+      )),
+      on: vi.fn(),
+      off: vi.fn()
+    };
     const bybitProvider = makeProvider("TBybit");
     const binanceProvider = {
       getAccount: vi.fn(async () => ({ address: "TBinance" })),
@@ -824,7 +832,7 @@ describe("client entrypoints", () => {
     };
     const oneKeyProvider = makeProvider("TOneKey");
     const backpackProvider = makeProvider("TBackpack");
-    (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = { tron: gateProvider };
+    (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = { tronLink: {}, tron: gateProvider };
     (globalThis as typeof globalThis & { bybitWallet?: unknown }).bybitWallet = { tronLink: bybitProvider };
     (globalThis as typeof globalThis & { binancew3w?: unknown }).binancew3w = { tron: binanceProvider };
     (globalThis as typeof globalThis & { $onekey?: unknown }).$onekey = { tron: oneKeyProvider };
@@ -846,49 +854,6 @@ describe("client entrypoints", () => {
     await expect(manager.connect("backpack")).resolves.toMatchObject({ account: { address: "TBackpack" } });
   });
 
-  it("merges Gate parent tronWeb when the request provider is nested", async () => {
-    (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = {
-      tronLink: {
-        request: async () => ({ code: 200 })
-      },
-      tronWeb: {
-        defaultAddress: { base58: "TGateParent", hex: "41gate" },
-        trx: {
-          signMessageV2: async (message: string) => `gate:${message}`,
-          sign: async <TTransaction,>(transaction: TTransaction) => transaction
-        }
-      }
-    };
-
-    const manager = createWalletClient({ wallets: ["gate"] });
-
-    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
-    await expect(manager.connect("gate")).resolves.toMatchObject({
-      account: { address: "TGateParent", hexAddress: "41gate" }
-    });
-    await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "gate:hello" });
-  });
-
-  it("treats Gate tronLink marker with parent tronWeb as available", async () => {
-    (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = {
-      tronLink: {},
-      tronWeb: {
-        defaultAddress: { base58: "TGateMarker", hex: "41gatemarker" },
-        trx: {
-          signMessageV2: async (message: string) => `gate-marker:${message}`,
-          sign: async <TTransaction,>(transaction: TTransaction) => transaction
-        }
-      }
-    };
-
-    const manager = createWalletClient({ wallets: ["gate"] });
-
-    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
-    await expect(manager.connect("gate")).resolves.toMatchObject({
-      account: { address: "TGateMarker", hexAddress: "41gatemarker" }
-    });
-  });
-
   it("marks Gate available from its upstream installed marker before provider is connect-ready", async () => {
     (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = {
       tronLink: {}
@@ -899,16 +864,24 @@ describe("client entrypoints", () => {
     await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
   });
 
-  it("connects Gate from the documented preferred gatewallet.tronWeb object", async () => {
+  it("connects Gate through the upstream tronweb3 bridge from the extension shape", async () => {
+    const request = vi.fn(async ({ method }: { method: string }) => (
+      method === "eth_requestAccounts" ? ["TGateOfficial"] : undefined
+    ));
     (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = {
-      tronWeb: {
-        defaultAddress: { base58: "TGateDocs", hex: "41gatedocs" },
-        trx: {
-          signMessageV2: async (message: string) => `gate-docs:${message}`,
-          sign: async <TTransaction,>(transaction: TTransaction) => transaction
-        },
-        transactionBuilder: {
-          sendTrx: async () => ({ txID: "gate-docs-tx" })
+      tronLink: {},
+      tron: {
+        request,
+        on: vi.fn(),
+        off: vi.fn(),
+        tronWeb: {
+          trx: {
+            signMessageV2: async (message: string) => `gate-official:${message}`,
+            sign: async <TTransaction,>(transaction: TTransaction) => transaction
+          },
+          transactionBuilder: {
+            sendTrx: async () => ({ txID: "gate-official-tx" })
+          }
         }
       }
     };
@@ -917,107 +890,25 @@ describe("client entrypoints", () => {
 
     await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
     await expect(manager.connect("gate")).resolves.toMatchObject({
-      account: { address: "TGateDocs", hexAddress: "41gatedocs" }
-    });
-    await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "gate-docs:hello" });
-  });
-
-  it("uses Gate injected address directly when it is already exposed", async () => {
-    const request = vi.fn(async ({ method }: { method: string }) => {
-      if (method === "eth_requestAccounts") return ["TGateRequested"];
-      return undefined;
-    });
-    (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = {
-      request,
-      tronWeb: {
-        defaultAddress: { base58: "TGateDefaultShouldNotWin", hex: "41default" },
-        trx: {
-          signMessageV2: async (message: string) => `gate-requested:${message}`
-        }
-      }
-    };
-
-    const manager = createWalletClient({ wallets: ["gate"] });
-
-    await expect(manager.connect("gate")).resolves.toMatchObject({
-      account: { address: "TGateDefaultShouldNotWin", hexAddress: "41default" }
-    });
-    expect(request).not.toHaveBeenCalled();
-  });
-
-  it("waits for Gate to hydrate tronWeb after a first approval request", async () => {
-    const gatewallet: Record<string, unknown> = {
-      tronWeb: {
-        trx: {
-          signMessageV2: async (message: string) => `gate-late:${message}`
-        }
-      }
-    };
-    const request = vi.fn(async ({ method }: { method: string }) => {
-      if (method === "eth_requestAccounts") {
-        setTimeout(() => {
-          gatewallet.tronWeb = {
-            defaultAddress: { base58: "TGateHydrated", hex: "41hydrated" },
-            trx: {
-              signMessageV2: async (message: string) => `gate-late:${message}`
-            }
-          };
-        }, 10);
-        return [];
-      }
-      return undefined;
-    });
-    gatewallet.request = request;
-    (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = gatewallet;
-
-    const manager = createWalletClient({ wallets: ["gate"] });
-
-    await expect(manager.connect("gate")).resolves.toMatchObject({
-      account: { address: "TGateHydrated", hexAddress: "41hydrated" }
+      account: { address: "TGateOfficial" }
     });
     expect(request).toHaveBeenCalledWith({ method: "eth_requestAccounts" });
+    await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "gate-official:hello" });
   });
 
-  it("reads Gate first approval address from refreshed global paths", async () => {
-    const gatewallet: Record<string, unknown> = {
-      tron: {
-        request: async ({ method }: { method: string }) => {
-          if (method === "eth_requestAccounts") {
-            setTimeout(() => {
-              gatewallet.tronWeb = {
-                defaultAddress: "TGateRootString",
-                trx: {
-                  signMessageV2: async (message: string) => `gate-root:${message}`
-                }
-              };
-            }, 10);
-            return { code: 200 };
-          }
-          return undefined;
-        }
-      }
-    };
-    (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = gatewallet;
-
-    const manager = createWalletClient({ wallets: ["gate"] });
-
-    await expect(manager.connect("gate")).resolves.toMatchObject({
-      account: { address: "TGateRootString" }
-    });
-  });
-
-  it("reads Gate accountAddress responses from the extension request", async () => {
+  it("uses Gate already-connected defaultAddress without requesting accounts again", async () => {
+    const request = vi.fn(async () => ["TGateRequested"]);
     (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = {
       tronLink: {},
       tron: {
-        request: async ({ method }: { method: string }) => (
-          method === "eth_requestAccounts"
-            ? { code: 200, accountAddress: "TGateAccountAddress", hex: "41gateaccount" }
-            : undefined
-        ),
+        request,
+        on: vi.fn(),
+        off: vi.fn(),
         tronWeb: {
+          defaultAddress: { base58: "TGateConnected" },
           trx: {
-            signMessageV2: async (message: string) => `gate-account:${message}`
+            signMessageV2: async (message: string) => `gate-connected:${message}`,
+            sign: async <TTransaction,>(transaction: TTransaction) => transaction
           }
         }
       }
@@ -1026,85 +917,60 @@ describe("client entrypoints", () => {
     const manager = createWalletClient({ wallets: ["gate"] });
 
     await expect(manager.connect("gate")).resolves.toMatchObject({
-      account: { address: "TGateAccountAddress" }
+      account: { address: "TGateConnected" }
     });
+    expect(request).not.toHaveBeenCalled();
+    await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "gate-connected:hello" });
   });
 
-  it("waits for Gate live address when the first approval request returns no address", async () => {
-    let attempts = 0;
-    const gatewallet: Record<string, unknown> = {};
-    const request = vi.fn(async ({ method }: { method: string }) => {
-      if (method !== "eth_requestAccounts") return undefined;
-      attempts += 1;
-      setTimeout(() => {
-        gatewallet.tron = {
-          request,
-          tronWeb: {
-            defaultAddress: { base58: "TGateAfterApproval" },
-            trx: {
-              signMessageV2: async (message: string) => `gate-wait:${message}`
-            }
-          }
-        };
-      }, 10);
-      return { code: 200 };
-    });
-    Object.assign(gatewallet, {
-      tronLink: {},
-      tron: {
-        request,
-        tronWeb: {
-          trx: {
-            signMessageV2: async (message: string) => `gate-retry:${message}`
-          }
-        }
-      }
-    });
-    (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = gatewallet;
-
-    const manager = createWalletClient({ wallets: ["gate"] });
-
-    await expect(manager.connect("gate")).resolves.toMatchObject({
-      account: { address: "TGateAfterApproval" }
-    });
-    expect(request).toHaveBeenCalledTimes(1);
-  });
-
-  it("connects Gate from accountsChanged when request returns no address", async () => {
-    const listeners = new Set<(...args: unknown[]) => void>();
-    const request = vi.fn(async ({ method }: { method: string }) => {
-      if (method === "eth_requestAccounts") {
-        setTimeout(() => {
-          for (const listener of listeners) listener(["TGateEventAddress"]);
-        }, 10);
+  it("connects Gate in-app after a tron_requestAccounts approval", async () => {
+    const gateTronLink = {
+      request: vi.fn(async ({ method }: { method: string }) => {
+        if (method !== "tron_requestAccounts") return undefined;
+        gateTronLink.tronWeb.defaultAddress = { base58: "TGateInAppRequested" };
         return { code: 200 };
+      }),
+      on: vi.fn(),
+      off: vi.fn(),
+      tronWeb: {
+        defaultAddress: null as { base58: string } | null,
+        trx: {
+          signMessageV2: async (message: string) => `gate-in-app-requested:${message}`,
+          sign: async <TTransaction,>(transaction: TTransaction) => transaction
+        }
       }
-      return undefined;
+    };
+    const previousNavigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+    Object.defineProperty(globalThis, "navigator", {
+      configurable: true,
+      value: { userAgent: "GateApp" }
     });
     (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = {
-      tronLink: {},
+      tronLink: {
+        ...gateTronLink
+      },
       tron: {
-        request,
-        on: (event: string, listener: (...args: unknown[]) => void) => {
-          if (event === "accountsChanged") listeners.add(listener);
-        },
-        off: (_event: string, listener: (...args: unknown[]) => void) => {
-          listeners.delete(listener);
-        },
+        request: vi.fn(),
         tronWeb: {
-          trx: {
-            signMessageV2: async (message: string) => `gate-event:${message}`
-          }
+          trx: {}
         }
       }
     };
 
-    const manager = createWalletClient({ wallets: ["gate"] });
+    try {
+      const manager = createWalletClient({ wallets: ["gate"] });
 
-    await expect(manager.connect("gate")).resolves.toMatchObject({
-      account: { address: "TGateEventAddress" }
-    });
-    expect(listeners.size).toBe(0);
+      await expect(manager.connect("gate")).resolves.toMatchObject({
+        account: { address: "TGateInAppRequested" }
+      });
+      expect(gateTronLink.request).toHaveBeenCalledWith({ method: "tron_requestAccounts" });
+    } finally {
+      if (previousNavigatorDescriptor) {
+        Object.defineProperty(globalThis, "navigator", previousNavigatorDescriptor);
+      } else {
+        delete (globalThis as Record<string, unknown>).navigator;
+      }
+    }
   });
 
   it("marks Gate available from camelCase and EIP-6963 Gate markers", async () => {

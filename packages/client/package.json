@@ -34,11 +34,15 @@
     "tronweb": "^6.4.0"
   },
   "peerDependencies": {
+    "@tronweb3/tronwallet-adapter-gatewallet": "*",
     "@tronweb3/tronwallet-adapter-imtoken": "*",
     "@tronweb3/tronwallet-adapter-ledger": "*",
     "@tronweb3/tronwallet-adapter-metamask-tron": "*"
   },
   "peerDependenciesMeta": {
+    "@tronweb3/tronwallet-adapter-gatewallet": {
+      "optional": true
+    },
     "@tronweb3/tronwallet-adapter-imtoken": {
       "optional": true
     },
