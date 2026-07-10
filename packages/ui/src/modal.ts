@@ -487,8 +487,10 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
       render();
       return;
     }
+    const wasOpen = Boolean(root && !root.hidden);
     if (root) root.hidden = true;
     resetFlow();
+    if (wasOpen) config.modal.onModalClose();
     lastFocusedElement?.focus?.();
   };
 
@@ -497,9 +499,11 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
       if (mode !== "modal") return;
       if (!root) mount();
       if (root) {
+        const wasHidden = root.hidden;
         lastFocusedElement = documentRef.activeElement instanceof HTMLElement ? documentRef.activeElement : null;
         root.hidden = false;
         refreshAvailability();
+        if (wasHidden) config.modal.onModalOpen();
       }
     },
     close() {

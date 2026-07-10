@@ -20,7 +20,7 @@ import type {
   WalletPlatform,
   WalletSessionBalance
 } from "@tron-wallet-kit/core";
-import type { ThemeConfig, WalletButton, WalletModal, WalletToast, WalletUiConfig } from "@tron-wallet-kit/ui";
+import type { ResolvedWalletUiConfig, ThemeConfig, WalletButton, WalletModal, WalletToast, WalletUiConfig } from "@tron-wallet-kit/ui";
 import type { TronWalletCatalogItem } from "@tron-wallet-kit/ui";
 import type { WalletDescriptor } from "./wallets/types";
 
@@ -160,6 +160,7 @@ export type WalletKit = {
   button: WalletButton | null;
   toast: WalletToast | null;
   catalog: readonly TronWalletCatalogItem[];
+  uiConfig: ResolvedWalletUiConfig;
   setTheme(theme: ThemeConfig): void;
   destroy(): void;
   openModal(): void;

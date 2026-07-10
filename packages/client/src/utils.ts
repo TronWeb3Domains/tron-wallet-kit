@@ -6,6 +6,8 @@ export function toThemeConfig(ui: WalletUiConfig | undefined): ThemeConfig | und
   if (ui.themeName) theme.themeName = ui.themeName;
   if (ui.mode) theme.mode = ui.mode;
   if (ui.themeMode) theme.themeMode = ui.themeMode;
+  if (ui.accent) theme.accent = ui.accent;
+  if (ui.fontFamily) theme.fontFamily = ui.fontFamily;
   if (ui.customTheme) theme.tokens = ui.customTheme;
   return Object.keys(theme).length > 0 ? theme : undefined;
 }

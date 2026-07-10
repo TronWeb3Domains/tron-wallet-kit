@@ -102,10 +102,15 @@ export const cssVariableNames: Record<keyof ThemeTokens, string> = {
 
 export function resolveTheme(config: ThemeConfig = {}): ResolvedTheme {
   const name = config.themeName ?? (resolveMode(config.themeMode ?? config.mode) === "dark" ? "dark" : "light");
+  const shortcutTokens: Partial<ThemeTokens> = {
+    ...(config.accent ? { accent: config.accent, focusRing: config.accent } : {}),
+    ...(config.fontFamily ? { fontFamily: config.fontFamily } : {})
+  };
   return {
     name,
     tokens: {
       ...themePresets[name],
+      ...shortcutTokens,
       ...config.tokens
     }
   };

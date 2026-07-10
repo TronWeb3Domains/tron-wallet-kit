@@ -1220,6 +1220,20 @@ describe("client entrypoints", () => {
     expect(kit.manager.getSession()?.balance?.formatted).toBe("42.5");
   });
 
+  it("falls back to shared RPC TronWeb when injected balance provider is not ready", async () => {
+    (globalThis as Record<string, unknown>).__tronWalletKitTronWebForTest = {
+      trx: {
+        getBalance: async (address: string) => (address === "TMockAddress" ? "99000000" : "0")
+      },
+      setAddress: () => undefined,
+      contract: () => ({ at: async () => ({}) })
+    };
+    const kit = createWalletKit({ adapters: [createMockAdapter()] });
+
+    await kit.manager.connect("mock");
+    await expect(kit.refreshBalance()).resolves.toMatchObject({ formatted: "99", symbol: "TRX" });
+  });
+
   it("uses FoxWallet app tronWeb path for default balance lookup", async () => {
     (globalThis as Record<string, unknown>).foxwallet = {
       tronLink: {

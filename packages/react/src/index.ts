@@ -26,6 +26,8 @@ export type WalletButtonProps = Omit<WalletButtonViewModel, "status" | "address"
   onClick?: () => void;
   accountPanelMode?: "dropdown" | "modal";
   showRecentTransactions?: boolean;
+  maxVisibleTransactions?: number;
+  explorerAccountUrl?: string;
 };
 
 type WalletButtonAccountPanelModel = {
@@ -39,6 +41,8 @@ type WalletButtonAccountPanelModel = {
   mode: "dropdown" | "modal";
   view: "account" | "address-qr" | "tx-history";
   showRecentTransactions?: boolean;
+  maxVisibleTransactions?: number;
+  explorerAccountUrl?: string;
   addressQrSrc?: string;
 };
 
@@ -142,9 +146,11 @@ export function WalletButton(props: WalletButtonProps) {
         copyState,
         identityLoading,
         balanceLoading,
-        mode: props.accountPanelMode ?? "dropdown",
+        mode: props.accountPanelMode ?? (kit.uiConfig.accountPanel.mode === "modal" ? "modal" : "dropdown"),
         view: accountPanelView,
-        ...(props.showRecentTransactions !== undefined ? { showRecentTransactions: props.showRecentTransactions } : {})
+        showRecentTransactions: props.showRecentTransactions ?? kit.uiConfig.accountPanel.showRecentTransactions,
+        maxVisibleTransactions: props.maxVisibleTransactions ?? kit.uiConfig.accountPanel.maxVisibleTransactions,
+        explorerAccountUrl: props.explorerAccountUrl ?? kit.uiConfig.accountPanel.explorerAccountUrl
       }
     : undefined;
   if (panelModel && identityName) panelModel.displayName = identityName;
@@ -345,7 +351,7 @@ export function WalletButton(props: WalletButtonProps) {
 }
 
 function createWalletButtonAccountPanelHtml(input: WalletButtonAccountPanelModel): string {
-  const transactions = input.kit.manager.getTransactions(10).map(mapTransaction);
+  const transactions = input.kit.manager.getTransactions(Math.max(10, input.maxVisibleTransactions ?? 0)).map(mapTransaction);
   const account = {
     ...input.session.account,
     ...(input.displayName?.endsWith(".trx") ? { domain: input.displayName } : input.displayName ? { displayName: input.displayName } : {})
@@ -363,10 +369,11 @@ function createWalletButtonAccountPanelHtml(input: WalletButtonAccountPanelModel
       ...(input.balanceTrx ? { balanceTrx: input.balanceTrx } : {}),
       identityLoading: input.identityLoading,
       balanceLoading: input.balanceLoading,
-      ...(input.session.network.explorerAccountUrl ? { explorerUrl: input.session.network.explorerAccountUrl.replace("{address}", input.session.account.address) } : {}),
+      ...((input.explorerAccountUrl || input.session.network.explorerAccountUrl) ? { explorerUrl: (input.explorerAccountUrl || input.session.network.explorerAccountUrl)!.replace("{address}", input.session.account.address) } : {}),
       copyState: input.copyState,
       recentTransactions: transactions,
       ...(input.showRecentTransactions !== undefined ? { showRecentTransactions: input.showRecentTransactions } : {}),
+      ...(input.maxVisibleTransactions ? { maxVisibleTransactions: input.maxVisibleTransactions } : {}),
       showAddressQrButton: true
     } satisfies AccountPanelViewModel;
     panel = input.view === "tx-history" ? createTransactionHistoryPanelHtml(accountPanelModel) : createAccountPanelHtml(accountPanelModel);

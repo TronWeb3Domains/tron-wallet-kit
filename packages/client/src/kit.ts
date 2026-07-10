@@ -1,5 +1,5 @@
 import { type TransactionPayload, type TronMethodHint } from "@tron-wallet-kit/core";
-import { createWalletButton, createWalletModal, createWalletToast } from "@tron-wallet-kit/ui";
+import { createWalletButton, createWalletModal, createWalletToast, resolveWalletUiConfig } from "@tron-wallet-kit/ui";
 import { createDefaultTrxBalanceResolver, normalizeBalance } from "./balance";
 import { createWalletClient } from "./client";
 import { resolveIdentityResolver } from "./identity";
@@ -12,6 +12,7 @@ export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
   const manager = createWalletClient(config);
   const catalog = buildCatalog(resolveWalletDescriptors(config.wallets));
   const ui = { ...config.ui, catalog };
+  const uiConfig = resolveWalletUiConfig(ui);
   const modal = createWalletModal({ manager, ui });
   const buttonTheme = toThemeConfig(config.ui);
   const button = config.connectButton
@@ -56,6 +57,7 @@ export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
     button,
     toast,
     catalog,
+    uiConfig,
     setTheme: (theme) => {
       modal.setTheme(theme);
       button?.setTheme(theme);

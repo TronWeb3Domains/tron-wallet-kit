@@ -169,6 +169,18 @@ describe("themeName presets", () => {
     expect(theme.tokens.accent).toBe("#ff0000");
   });
 
+  it("supports accent and fontFamily theme shortcuts", () => {
+    const theme = resolveTheme({
+      themeName: "light",
+      accent: "#00e5ff",
+      fontFamily: "Inter, sans-serif",
+    });
+
+    expect(theme.tokens.accent).toBe("#00e5ff");
+    expect(theme.tokens.focusRing).toBe("#00e5ff");
+    expect(theme.tokens.fontFamily).toBe("Inter, sans-serif");
+  });
+
   it("creates scoped CSS variables for portal roots", () => {
     expect(createThemeStyleText({ themeName: "energy" }, "[data-twk-root]")).toContain(
       "[data-twk-root]",
@@ -1195,6 +1207,25 @@ describe("wallet kit surfaces", () => {
     expect(config.walletList.featuredMode).toBe("installed-first");
     expect(config.toast && config.toast.position).toBe("bottom-right");
     expect(createDefaultWalletUiConfig().accountPanel.showAddressQr).toBe(true);
+
+    const polishedConfig = resolveWalletUiConfig({
+      accent: "#00e5ff",
+      fontFamily: "Inter, sans-serif",
+      modal: {
+        onModalOpen: () => undefined,
+        onModalClose: () => undefined,
+      },
+      accountPanel: {
+        maxVisibleTransactions: 7,
+        explorerAccountUrl: "https://example.com/account/{address}",
+      },
+    });
+    expect(polishedConfig.theme.tokens.accent).toBe("#00e5ff");
+    expect(polishedConfig.theme.tokens.fontFamily).toBe("Inter, sans-serif");
+    expect(polishedConfig.accountPanel.maxVisibleTransactions).toBe(7);
+    expect(polishedConfig.accountPanel.explorerAccountUrl).toBe("https://example.com/account/{address}");
+    expect(typeof polishedConfig.modal.onModalOpen).toBe("function");
+    expect(typeof polishedConfig.modal.onModalClose).toBe("function");
 
     const manualConfig = resolveWalletUiConfig({
       walletList: {

@@ -3496,3 +3496,25 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 50 tests.
+
+## 2026-07-10 Reviewer Follow-Up: Balance Fallback And UI Config Gaps
+
+- Closed reviewer follow-up items 3, 4, and 5.
+- Balance:
+  - Default TRX balance resolver now tries the wallet-specific injected `tronWeb` first, then falls back to RPC-scoped shared TronWeb when the injected balance provider is not ready.
+  - Added client coverage for fallback balance lookup through `__tronWalletKitTronWebForTest`.
+- UI config:
+  - Added theme shortcuts `accent` and `fontFamily` to `ThemeConfig` / `WalletUiConfig`.
+  - Added modal lifecycle callbacks `modal.onModalOpen` and `modal.onModalClose`.
+  - Exposed resolved UI config from `createWalletKit()` as `kit.uiConfig`.
+  - React `WalletButton` now respects `kit.uiConfig.accountPanel.mode`, `maxVisibleTransactions`, and `explorerAccountUrl`, with prop-level overrides.
+- Docs/status:
+  - Updated theming docs for shortcut merge order.
+  - Updated handoff/tracker status to reflect direct-contract identity and completed config knobs.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 51 tests.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 42 tests.
+  - `pnpm --filter @tron-wallet-kit/react test -- --run` passed with 3 tests.

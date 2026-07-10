@@ -66,6 +66,8 @@ export type ThemeConfig = {
   mode?: UiMode;
   themeMode?: UiMode;
   themeName?: ThemeName;
+  accent?: string;
+  fontFamily?: string;
   tokens?: Partial<ThemeTokens>;
 };
 
@@ -120,6 +122,8 @@ export type WalletUiConfig = {
   themeMode?: UiMode;
   mode?: UiMode;
   themeName?: ThemeName;
+  accent?: string;
+  fontFamily?: string;
   customTheme?: Partial<ThemeTokens>;
   locale?: WalletKitLocale;
   labels?: WalletUiLabels;
@@ -135,6 +139,8 @@ export type WalletUiConfig = {
     closeOnBackdropClick?: boolean;
     closeOnSelect?: boolean;
     disableAnimations?: boolean;
+    onModalOpen?: () => void;
+    onModalClose?: () => void;
     branding?: {
       showPoweredBy?: boolean;
       poweredByText?: string;

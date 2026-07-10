@@ -30,7 +30,7 @@ Cập nhật: 2026-07-07.
 | **P0** | Core runtime: session · autoReconnect · timeout · recover-return · callback | `CORE_RUNTIME_SPEC.md` | ✅ Code + unit/type/build verify xong 2026-07-07 |
 | **P1** | UI i18n (đa ngôn ngữ) + các knob config còn thiếu | `UI_CONFIG_GAPS_SPEC.md` (Phần A) | ⬜ Chưa làm |
 | **P1.5** | UI hardening hành vi (copy fallback, img/QR error…) | `UI_CONFIG_GAPS_SPEC.md` (Phần B) | ⬜ Chưa làm (1 mục skeleton-timer đã fix sẵn) |
-| **P1.5** | Identity: bỏ `trondomainjs`, gọi thẳng contract (mainnet-only, dùng chung tronWeb) | `IDENTITY_DIRECT_CONTRACT_SPEC.md` | ⬜ Chưa làm |
+| **P1.5** | Identity: bỏ `trondomainjs`, gọi thẳng contract (mainnet-only, RPC-scoped TronWeb) | `IDENTITY_DIRECT_CONTRACT_SPEC.md` | ✅ Đã làm |
 | **P2** | Bridge `tronwallet-adapter`: QA ví thật + docs + đóng gói | `TRONWALLET_ADAPTER_BRIDGE_SPEC.md` | 🟩 Code Phase 1–2 xong; còn QA/docs |
 | **P3** | Tách module `packages/client` (index.ts 1.120 dòng → theo đối tượng) | mục 5b (dưới) | ⬜ Chưa làm — nên làm CHUNG với P1.5 identity |
 | **P3** | Wallet Registry mở: descriptor tự chứa + inject catalog runtime (PR 1 file HOẶC runtime plugin) | `WALLET_REGISTRY_SPEC.md` + **quyết định CUỐI ở mục 5c** | ⬜ Chưa làm — đọc 5c TRƯỚC (chốt kiến trúc, bãi bỏ manifest-in-core) |
@@ -62,7 +62,7 @@ Lý do thứ tự: Core là nền cho mọi thứ chạy mượt (timeout/treo, 
 1. Tách `src/locales/{en,vi,index}.ts`; `en` = default hiện tại; component import từ `locales/en`. Bộ `vi` đã viết sẵn trong spec (dán vào).
 2. Thêm `locale` + `labels` vào `WalletUiConfig`; `resolveLabelPack(locale, overrides)` merge **en(nền) → locale → override app**.
 3. Plumb qua `resolveWalletUiConfig` + controllers (`config.labels.*`), badge lấy từ labels.
-4. Các knob còn thiếu (mức TB, làm sau i18n): `modal.showCloseButton/closeOnBackdropClick/closeOnSelect/disableAnimations`, branding powered-by toggle, QR size/margin, `accountPanel.maxVisibleTransactions` (đang khai báo mà chưa plumb), explorer override, shortcut theme `accent`/`fontFamily`.
+4. Các knob còn thiếu (mức TB, làm sau i18n): `modal.showCloseButton/closeOnBackdropClick/closeOnSelect/disableAnimations`, branding powered-by toggle, QR size/margin. Đã plumb `accountPanel.maxVisibleTransactions`, explorer override, shortcut theme `accent`/`fontFamily`, và modal open/close callbacks.
 5. Đảm bảo `client`/`react`/`next` không nuốt field mới.
 
 **Ràng buộc**: backward-compat tuyệt đối — không set gì ⇒ y hệt hiện tại (English); English luôn là lớp nền fallback.
@@ -210,7 +210,7 @@ Hai kit đang tổ chức khác nhau, **KHÔNG bê nguyên XRPL sang TRON**. B�
 - `IMPLEMENTATION_HANDOFF.md` — đọc trước, là điểm vào/mục lục work-order.
 - `CORE_RUNTIME_SPEC.md` — P0.
 - `UI_CONFIG_GAPS_SPEC.md` — P1 (Phần A) + P1.5 (Phần B).
-- `IDENTITY_DIRECT_CONTRACT_SPEC.md` — P1.5 (bỏ trondomainjs, gọi contract mainnet-only, tronWeb dùng chung).
+- `IDENTITY_DIRECT_CONTRACT_SPEC.md` — P1.5 (bỏ trondomainjs, gọi contract mainnet-only, RPC-scoped TronWeb).
 - `TRONWALLET_ADAPTER_BRIDGE_SPEC.md` — P2 (code xong, còn QA/docs).
 - `WALLET_REGISTRY_SPEC.md` — P3 (descriptor mở, gộp khai báo ví, quy trình push ví mới).
 - `ADD_NEW_WALLET_GUIDE.md` — hướng dẫn thêm ví (cây quyết định bridge/injected/WC + ví dụ SafePal).

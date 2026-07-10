@@ -7,11 +7,16 @@ const FEATURED_DEFAULT_LIMIT = 5;
 
 export function resolveWalletUiConfig(config: WalletUiConfig = {}): ResolvedWalletUiConfig {
   const themeName = config.themeName ?? (resolveMode(config.themeMode ?? config.mode) === "dark" ? "dark" : "light");
+  const customTheme = {
+    ...(config.accent ? { accent: config.accent, focusRing: config.accent } : {}),
+    ...(config.fontFamily ? { fontFamily: config.fontFamily } : {}),
+    ...(config.customTheme ?? {})
+  };
   const featuredLimit = normalizeDeprecatedFeaturedLimit(config.walletList?.featuredLimit);
   const featuredWallets = config.walletList?.featuredWallets;
   const labels = resolveLabelPack(config.locale, config.labels);
   return {
-    theme: resolveTheme({ themeName, ...(config.customTheme ? { tokens: config.customTheme } : {}) }),
+    theme: resolveTheme({ themeName, ...(Object.keys(customTheme).length > 0 ? { tokens: customTheme } : {}) }),
     labels,
     catalog: config.catalog ?? TRON_WALLET_CATALOG,
     modal: {
@@ -23,6 +28,8 @@ export function resolveWalletUiConfig(config: WalletUiConfig = {}): ResolvedWall
       closeOnBackdropClick: config.modal?.closeOnBackdropClick ?? true,
       closeOnSelect: config.modal?.closeOnSelect ?? true,
       disableAnimations: config.modal?.disableAnimations ?? false,
+      onModalOpen: config.modal?.onModalOpen ?? (() => undefined),
+      onModalClose: config.modal?.onModalClose ?? (() => undefined),
       branding: {
         showPoweredBy: config.modal?.branding?.showPoweredBy ?? true,
         poweredByText: config.modal?.branding?.poweredByText ?? config.modal?.footerText ?? labels.connectModal.poweredBy

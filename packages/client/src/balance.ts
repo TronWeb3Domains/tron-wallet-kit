@@ -1,5 +1,5 @@
 import type { WalletSessionBalance } from "@tron-wallet-kit/core";
-import { resolveBalanceTronWeb } from "./tronweb";
+import { getSharedTronWeb, resolveBalanceTronWeb } from "./tronweb";
 import type { TronBalanceResolver, TronBalanceResolverResult } from "./types";
 
 export function normalizeBalance(result: TronBalanceResolverResult): WalletSessionBalance | undefined {
@@ -15,7 +15,7 @@ export function normalizeBalance(result: TronBalanceResolverResult): WalletSessi
 
 export function createDefaultTrxBalanceResolver(): TronBalanceResolver {
   return async (account, context) => {
-    const tronWeb = resolveBalanceTronWeb(context.walletId);
+    const tronWeb = resolveBalanceTronWeb(context.walletId) ?? await getSharedTronWeb(undefined, context.network, context.walletId).catch(() => undefined);
     const value = await tronWeb?.trx?.getBalance?.(account.address);
     if (value === undefined || value === null) return undefined;
     return normalizeSunBalance(value);
