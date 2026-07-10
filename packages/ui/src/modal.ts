@@ -44,6 +44,7 @@ function normalizeConnectErrorMessage(error: unknown, wallet?: WalletOptionViewM
 
 function shouldAutoRetryConnect(error: unknown, wallet: WalletOptionViewModel, options: { isQrFlow: boolean; attempt?: number }): boolean {
   if (options.isQrFlow) return false;
+  if (wallet.id === "gate" || wallet.adapterId === "gate") return false;
   if ((options.attempt ?? 0) >= 1) return false;
   const code = typeof error === "object" && error !== null && "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
   const message = error instanceof Error ? error.message : String(error);

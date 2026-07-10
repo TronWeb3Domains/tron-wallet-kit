@@ -655,3 +655,14 @@ pnpm add @tronweb3/tronwallet-adapter-ledger
 - Rationale:
   - The user's real QA shows manual second connect succeeds.
   - Handling this at modal flow level can also help other injected extensions with first-connect hydration timing issues without adding wallet-specific bridge packages.
+
+# 2026-07-10 Gate excluded from modal auto-retry
+
+- User observed Gate was being called twice on the first attempt.
+- Gate must not use the modal-level silent auto-retry:
+  - Gate's injected adapter already performs one `eth_requestAccounts` call and then waits/polls for address hydration.
+  - A modal auto retry can trigger a second wallet request/popup before the user intentionally clicks Try again.
+- Current behavior:
+  - `shouldAutoRetryConnect()` returns false for Gate.
+  - Gate retains the visible manual Try again action.
+  - Other non-QR transient extension failures may still use the one-shot auto retry.

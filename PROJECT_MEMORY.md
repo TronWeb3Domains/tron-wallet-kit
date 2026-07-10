@@ -3212,3 +3212,18 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 39 tests.
+
+## 2026-07-10 Gate Double Prompt Follow-Up
+
+- User observed Gate appeared to be called twice on the first connect attempt.
+- Root cause:
+  - The modal-level auto retry was still enabled for Gate.
+  - Gate injected adapter already calls `eth_requestAccounts` once and waits for address hydration/events; modal retry can trigger a second Gate prompt/request after the first failure path.
+- Fix:
+  - `shouldAutoRetryConnect()` now excludes Gate (`wallet.id === "gate"` or `adapterId === "gate"`).
+  - Gate can still use the manual Try again button, but the modal will not silently call Gate twice on the first attempt.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 46 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 39 tests.
