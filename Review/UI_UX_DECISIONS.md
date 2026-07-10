@@ -195,3 +195,11 @@
 - Mobile lists keep mobile-capable wallets plus WalletConnect; hardware wallets such as Ledger are hidden from normal mobile browser lists.
 - Mobile browser mode treats installed-first differently from desktop: WalletConnect is shown first, then mobile-capable wallets sorted by TRON rank/name. Extension-only wallets are hidden.
 - On mobile browser, `showUnavailable:false` must not hide mobile-capable launch/WC wallets merely because no injected provider exists.
+
+## 2026-07-10 Featured Installed-First Actionability
+
+- Featured installed-first is an actionable surface, not a full wallet directory.
+- Desktop featured installed-first must not show pure `NOT INSTALLED` extension wallets.
+- After installed extensions, the list may use QR/WalletConnect-capable wallets, hardware wallets, or loading entries to keep the layout useful.
+- Not-installed extension wallets remain discoverable in All Wallets, where directory/search behavior is expected.
+- Manual featured configuration still follows the integrator's explicit list, even if that list includes unavailable wallets.

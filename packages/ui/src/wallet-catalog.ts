@@ -97,8 +97,11 @@ export function getFeaturedWalletOptions(wallets: readonly WalletOptionViewModel
   }
 
   const installedIds = new Set(installed.map((wallet) => wallet.id));
-  const recommended = ranked.filter((wallet) => !installedIds.has(wallet.id));
-  const featured = uniqueWalletsById([...installed, ...recommended]);
+  const targetCount = Math.max(installed.length, rankedIds.length);
+  const recommended = wallets
+    .filter((wallet) => !installedIds.has(wallet.id) && isFeaturedFallbackWallet(wallet))
+    .sort(compareWalletRank);
+  const featured = uniqueWalletsById([...installed, ...recommended]).slice(0, targetCount);
   if (installed.length === 0) {
     const walletConnect = byId.get("walletconnect");
     return walletConnect ? uniqueWalletsById([walletConnect, ...featured]) : featured;
@@ -240,6 +243,12 @@ function isInstalledWallet(wallet: WalletOptionViewModel): boolean {
   if (wallet.id === "walletconnect" || wallet.transport === "walletconnect" || wallet.transport === "qr" || wallet.capabilities?.includes("qr")) return false;
   if (wallet.transport === "hardware" || wallet.platforms?.includes("hardware")) return false;
   return wallet.readyState === "found" || wallet.available === true;
+}
+
+function isFeaturedFallbackWallet(wallet: WalletOptionViewModel): boolean {
+  if (wallet.readyState === "loading") return true;
+  if (wallet.transport === "hardware" || wallet.platforms?.includes("hardware")) return true;
+  return isWalletConnectLike(wallet) || wallet.transport === "qr" || wallet.capabilities?.includes("qr") === true;
 }
 
 function createCatalogBadge(item: TronWalletCatalogItem, available: boolean, labels: ConnectModalLabels): NonNullable<WalletOptionViewModel["badge"]> {

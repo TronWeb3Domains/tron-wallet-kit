@@ -296,9 +296,11 @@ describe("wallet kit surfaces", () => {
     expect(wallets.find((wallet) => wallet.id === "okx")?.adapterId).toBe("okx");
     expect(wallets.find((wallet) => wallet.id === "bitget")?.adapterId).toBe("bitget");
     expect(filterWalletOptions(wallets, "trust").map((wallet) => wallet.id)).toEqual(["trust"]);
-    expect(getFeaturedWalletOptions(wallets)).toHaveLength(5);
-    expect(getFeaturedWalletOptions(wallets).at(0)?.id).toBe("tronlink");
-    expect(getFeaturedWalletOptions(wallets).at(-1)?.id).toBe("walletconnect");
+    const featured = getFeaturedWalletOptions(wallets);
+    expect(featured).toHaveLength(5);
+    expect(featured.at(0)?.id).toBe("tronlink");
+    expect(featured.map((wallet) => wallet.id)).toEqual(["tronlink", "tokenpocket", "walletconnect", "binance", "ledger"]);
+    expect(featured.some((wallet) => wallet.readyState === "notFound" && !wallet.capabilities?.includes("qr") && wallet.transport !== "hardware")).toBe(false);
   });
 
   it("falls back dual-mode wallets to WalletConnect QR when the extension is unavailable", () => {
@@ -407,7 +409,9 @@ describe("wallet kit surfaces", () => {
     );
 
     expect(featuredWallets.map((wallet) => wallet.id)).toEqual(["tronlink", "tokenpocket", "okx", "bitget", "trust", "binance", "walletconnect", "metamask", "gate", "bybit", "guarda"]);
-    expect(installedFirstWallets.map((wallet) => wallet.id)).toEqual(["tronlink", "tokenpocket", "okx", "bitget", "walletconnect"]);
+    expect(installedFirstWallets.map((wallet) => wallet.id)).toEqual(["tronlink", "tokenpocket", "walletconnect", "binance", "ledger"]);
+    expect(installedFirstWallets.map((wallet) => wallet.id)).not.toEqual(expect.arrayContaining(["okx", "bitget"]));
+    expect(installedFirstWallets.some((wallet) => wallet.readyState === "notFound" && !wallet.capabilities?.includes("qr") && wallet.transport !== "hardware")).toBe(false);
     expect(installedOnlyWithoutInstalled.map((wallet) => wallet.id)).toEqual(["walletconnect"]);
     expect(installedFirstWithoutInstalled[0]?.id).toBe("walletconnect");
 
