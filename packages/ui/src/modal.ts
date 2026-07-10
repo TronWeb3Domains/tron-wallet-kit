@@ -185,6 +185,10 @@ export function createWalletModal(options: { manager: WalletManager; ui?: Wallet
 
   const refreshAvailability = () => {
     for (const adapter of options.manager.getWallets()) {
+      if (adapter.metadata.availabilityMode === "on-demand") {
+        if (availability.get(adapter.metadata.id) === undefined) availability.set(adapter.metadata.id, true);
+        continue;
+      }
       if (!adapter.isAvailable) {
         availability.set(adapter.metadata.id, true);
         continue;
@@ -576,6 +580,10 @@ export function createWalletInline(options: { manager: WalletManager; ui?: Walle
 
   const refreshAvailability = () => {
     for (const adapter of options.manager.getWallets()) {
+      if (adapter.metadata.availabilityMode === "on-demand") {
+        if (availability.get(adapter.metadata.id) === undefined) availability.set(adapter.metadata.id, true);
+        continue;
+      }
       if (!adapter.isAvailable) {
         availability.set(adapter.metadata.id, true);
         continue;

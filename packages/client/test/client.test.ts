@@ -322,6 +322,16 @@ describe("client entrypoints", () => {
     });
   });
 
+  it("keeps OneKey availability probing on-demand to avoid cross-wallet provider conflicts", () => {
+    const manager = createWalletClient({ wallets: ["onekey"] });
+    const [onekey] = manager.getWallets();
+
+    expect(onekey?.metadata).toMatchObject({
+      id: "onekey",
+      availabilityMode: "on-demand"
+    });
+  });
+
   it("resolves builtin wallet icons from the client generated icon map", () => {
     const catalog = buildCatalog(BUILTIN_WALLET_DESCRIPTORS);
 

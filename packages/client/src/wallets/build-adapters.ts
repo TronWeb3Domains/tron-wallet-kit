@@ -77,6 +77,7 @@ function toInjectedConfig(wallet: Extract<WalletDescriptor, { integration: "inje
     homepage: wallet.homepage,
     downloadUrl: wallet.downloadUrl ?? wallet.homepage,
     platforms: [...wallet.platforms],
+    ...(wallet.availabilityMode ? { metadata: { availabilityMode: wallet.availabilityMode } } : {}),
     ...(wallet.requestMethods ? { requestMethods: wallet.requestMethods } : {}),
     ...(wallet.signMessageMode ? { signMessageMode: wallet.signMessageMode } : {}),
     ...(wallet.availabilityTimeoutMs ? { availabilityTimeoutMs: wallet.availabilityTimeoutMs } : {}),
@@ -92,10 +93,11 @@ function toInjectedConfig(wallet: Extract<WalletDescriptor, { integration: "inje
 
 function hydrateAdapterMetadata(wallet: WalletDescriptor, adapter: WalletAdapter): WalletAdapter {
   const icon = wallet.icon ?? getWalletIcon(wallet.id);
-  if (!icon) return adapter;
+  if (!icon && !wallet.availabilityMode) return adapter;
   (adapter as WalletAdapter & { metadata: WalletMetadata }).metadata = {
     ...adapter.metadata,
-    icon
+    ...(icon ? { icon } : {}),
+    ...(wallet.availabilityMode ? { availabilityMode: wallet.availabilityMode } : {})
   };
   return adapter;
 }

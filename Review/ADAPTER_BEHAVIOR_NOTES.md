@@ -628,3 +628,14 @@ pnpm add @tronweb3/tronwallet-adapter-ledger
   - OneKey and other multi-chain wallets can participate in generic ethereum/EIP-6963 provider surfaces.
   - Broad Gate probes can make the UI construct/connect Gate without a real `window.gatewallet.tronLink`, or trigger provider side effects across wallets.
 - Regression coverage now verifies OneKey can be installed while Gate remains unavailable unless the exact Gate marker exists.
+
+# 2026-07-10 OneKey availability is on-demand
+
+- User confirmed the Gate conflict still happens while the OneKey extension is enabled, and disappears when OneKey is disabled.
+- Additional mitigation:
+  - OneKey is now marked `availabilityMode: "on-demand"`.
+  - The connect modal does not call OneKey `isAvailable()` during its automatic availability sweep.
+  - OneKey remains in the catalog and is still selectable; its provider is touched only when the user explicitly chooses OneKey.
+- Rationale:
+  - Some multi-chain extensions have provider side effects during detection, not only during connect.
+  - Auto-probing every wallet can harm unrelated wallets. Use on-demand mode for conflict-prone wallets rather than removing them from the registry.

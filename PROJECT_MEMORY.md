@@ -3171,3 +3171,20 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Verification:
   - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 45 tests.
   - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+
+## 2026-07-10 OneKey On-Demand Availability Mitigation
+
+- User confirmed Gate still conflicts when the OneKey extension is enabled, and Gate connects immediately after OneKey is disabled.
+- Root cause refinement:
+  - Even strict Gate detection is not enough if the modal auto-probes OneKey while Gate is present.
+  - OneKey is a multi-chain extension; touching its injected provider during the modal availability sweep can still trigger cross-wallet provider side effects before the user clicks OneKey.
+- Fix:
+  - Added `WalletMetadata.availabilityMode?: "auto" | "on-demand"`.
+  - Added descriptor-level `availabilityMode`.
+  - Marked OneKey as `availabilityMode: "on-demand"`.
+  - Modal availability refresh now skips `isAvailable()` for on-demand wallets and treats them as selectable until the user explicitly clicks that wallet.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 46 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 39 tests.

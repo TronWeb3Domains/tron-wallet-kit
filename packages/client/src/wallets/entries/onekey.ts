@@ -7,5 +7,6 @@ export const onekey: WalletDescriptor = {
   homepage: "https://onekey.so/",
   platforms: ["extension"],
   group: "popular",
+  availabilityMode: "on-demand",
   detect: { providerPaths: ["$onekey.tron", "$onekey.tronLink"] }
 };

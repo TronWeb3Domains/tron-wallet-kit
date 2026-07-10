@@ -63,6 +63,7 @@ export interface WalletMetadata {
   type?: WalletAdapterType;
   group?: string;
   platforms?: WalletPlatform[];
+  availabilityMode?: "auto" | "on-demand";
 }
 
 export interface WalletCapabilities {

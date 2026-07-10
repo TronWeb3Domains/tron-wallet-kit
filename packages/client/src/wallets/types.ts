@@ -13,6 +13,7 @@ export type WalletDescriptorBase = {
   description?: string;
   icon?: string;
   enabled?: boolean;
+  availabilityMode?: "auto" | "on-demand";
   supportsWalletConnect?: boolean;
   mobileDeepLink?: {
     scheme: string;
