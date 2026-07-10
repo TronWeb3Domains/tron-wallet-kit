@@ -3102,3 +3102,21 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Verification:
   - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 50 tests.
   - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+
+## 2026-07-10 Gate AccountsChanged Recovery
+
+- User reported Gate still returned `Gate Wallet did not return an address` after the empty-address retry.
+- Hypothesis from upstream Gate adapter:
+  - Gate extension may complete authorization through provider events while request returns no usable address.
+  - Our cloned provider previously dropped `on/off/removeListener`, so the injected adapter could not observe `accountsChanged`.
+- Fixes:
+  - `InjectedTronProvider` now includes optional `on`, `off`, and `removeListener`.
+  - `cloneInjectedProvider()` preserves those event APIs.
+  - Gate descriptor now subscribes during connect to `accountsChanged`, `accountChanged`, and `connect` for up to 5s.
+  - Injected connect now resolves from account-change event payloads while request/live polling continues in parallel.
+  - Event listeners are cleaned up on success, timeout, fallback, or rejection.
+- Regression coverage:
+  - Added test for Gate request returning `{ code: 200 }` while `accountsChanged` emits `["TGateEventAddress"]`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 51 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.

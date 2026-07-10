@@ -11,6 +11,8 @@ export const gate: WalletDescriptor = {
   availabilityTimeoutMs: 5000,
   addressTimeoutMs: 15000,
   addressSettleMs: 800,
+  accountChangeEventNames: ["accountsChanged", "accountChanged", "connect"],
+  accountChangeTimeoutMs: 5000,
   emptyAddressRetryDelayMs: 300,
   emptyAddressRetryTimeoutMs: 3000,
   // Gate exposes tronWeb.defaultAddress even before an explicit dapp request, and calling

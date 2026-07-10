@@ -1057,6 +1057,43 @@ describe("client entrypoints", () => {
     expect(request).toHaveBeenCalledTimes(2);
   });
 
+  it("connects Gate from accountsChanged when request returns no address", async () => {
+    const listeners = new Set<(...args: unknown[]) => void>();
+    const request = vi.fn(async ({ method }: { method: string }) => {
+      if (method === "eth_requestAccounts") {
+        setTimeout(() => {
+          for (const listener of listeners) listener(["TGateEventAddress"]);
+        }, 10);
+        return { code: 200 };
+      }
+      return undefined;
+    });
+    (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = {
+      tronLink: {},
+      tron: {
+        request,
+        on: (event: string, listener: (...args: unknown[]) => void) => {
+          if (event === "accountsChanged") listeners.add(listener);
+        },
+        off: (_event: string, listener: (...args: unknown[]) => void) => {
+          listeners.delete(listener);
+        },
+        tronWeb: {
+          trx: {
+            signMessageV2: async (message: string) => `gate-event:${message}`
+          }
+        }
+      }
+    };
+
+    const manager = createWalletClient({ wallets: ["gate"] });
+
+    await expect(manager.connect("gate")).resolves.toMatchObject({
+      account: { address: "TGateEventAddress" }
+    });
+    expect(listeners.size).toBe(0);
+  });
+
   it("marks Gate available from camelCase and EIP-6963 Gate markers", async () => {
     (globalThis as typeof globalThis & { gateWallet?: unknown }).gateWallet = {
       tron: {}

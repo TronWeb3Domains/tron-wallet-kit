@@ -199,6 +199,10 @@ export function readInjectedAddress(provider?: InjectedTronProvider): string | u
     extractInjectedAddress(provider?.tronWeb);
 }
 
+export function readInjectedAddressPayload(value: unknown): string | undefined {
+  return extractInjectedAddress(value);
+}
+
 export function readInjectedAddressFromPaths(paths: readonly string[]): string | undefined {
   for (const path of paths) {
     const value = getPathValue(globalThis as unknown as Record<string, unknown>, path);
@@ -261,10 +265,22 @@ function isInjectedTronProvider(value: unknown): value is InjectedTronProvider {
 function cloneInjectedProvider(value: unknown): InjectedTronProvider {
   const source = value as unknown as Record<string, unknown>;
   const request = safeGetProperty(source, "request");
+  const on = safeGetProperty(source, "on");
+  const off = safeGetProperty(source, "off");
+  const removeListener = safeGetProperty(source, "removeListener");
   const tronWeb = safeGetProperty(source, "tronWeb");
   const provider: InjectedTronProvider = {};
   if (typeof request === "function") {
     provider.request = request.bind(source) as (args: { method: string; params?: unknown }) => Promise<unknown>;
+  }
+  if (typeof on === "function") {
+    provider.on = on.bind(source) as (event: string, listener: (...args: unknown[]) => void) => void;
+  }
+  if (typeof off === "function") {
+    provider.off = off.bind(source) as (event: string, listener: (...args: unknown[]) => void) => void;
+  }
+  if (typeof removeListener === "function") {
+    provider.removeListener = removeListener.bind(source) as (event: string, listener: (...args: unknown[]) => void) => void;
   }
   if (typeof tronWeb === "object" && tronWeb !== null) {
     provider.tronWeb = tronWeb as NonNullable<InjectedTronProvider["tronWeb"]>;

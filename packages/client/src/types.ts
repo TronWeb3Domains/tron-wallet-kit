@@ -86,6 +86,9 @@ export type InjectedTronProvider = {
     };
   };
   request?: (args: { method: string; params?: unknown }) => Promise<unknown>;
+  on?: (event: string, listener: (...args: unknown[]) => void) => void;
+  off?: (event: string, listener: (...args: unknown[]) => void) => void;
+  removeListener?: (event: string, listener: (...args: unknown[]) => void) => void;
 };
 
 export type InjectedTronAdapterConfig = {
@@ -103,6 +106,8 @@ export type InjectedTronAdapterConfig = {
   availabilityTimeoutMs?: number;
   addressTimeoutMs?: number;
   addressSettleMs?: number;
+  accountChangeEventNames?: readonly string[];
+  accountChangeTimeoutMs?: number;
   emptyAddressRetryDelayMs?: number;
   emptyAddressRetryTimeoutMs?: number;
   preferInjectedAddress?: boolean;

@@ -82,6 +82,8 @@ function toInjectedConfig(wallet: Extract<WalletDescriptor, { integration: "inje
     ...(wallet.availabilityTimeoutMs ? { availabilityTimeoutMs: wallet.availabilityTimeoutMs } : {}),
     ...(wallet.addressTimeoutMs ? { addressTimeoutMs: wallet.addressTimeoutMs } : {}),
     ...(wallet.addressSettleMs ? { addressSettleMs: wallet.addressSettleMs } : {}),
+    ...(wallet.accountChangeEventNames ? { accountChangeEventNames: wallet.accountChangeEventNames } : {}),
+    ...(wallet.accountChangeTimeoutMs ? { accountChangeTimeoutMs: wallet.accountChangeTimeoutMs } : {}),
     ...(wallet.emptyAddressRetryDelayMs ? { emptyAddressRetryDelayMs: wallet.emptyAddressRetryDelayMs } : {}),
     ...(wallet.emptyAddressRetryTimeoutMs ? { emptyAddressRetryTimeoutMs: wallet.emptyAddressRetryTimeoutMs } : {}),
     ...(wallet.preferInjectedAddress ? { preferInjectedAddress: true } : {})

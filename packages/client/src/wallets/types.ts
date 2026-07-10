@@ -44,6 +44,8 @@ export type InjectedWalletDescriptor = WalletDescriptorBase & {
   availabilityTimeoutMs?: number;
   addressTimeoutMs?: number;
   addressSettleMs?: number;
+  accountChangeEventNames?: readonly string[];
+  accountChangeTimeoutMs?: number;
   emptyAddressRetryDelayMs?: number;
   emptyAddressRetryTimeoutMs?: number;
   // For wallets whose request() hangs/re-prompts when already exposing an account (e.g. Gate):

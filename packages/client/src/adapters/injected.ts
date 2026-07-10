@@ -9,6 +9,7 @@ import {
 import {
   getInjectedTronProvider,
   readInjectedAddress,
+  readInjectedAddressPayload,
   readInjectedAddressFromPaths,
   requestInjectedAddress,
   requestOptionalString,
@@ -147,6 +148,7 @@ async function acquireInjectedAddress(
   let requestedAddress: string | undefined;
   let requestSettled = false;
   let requestSettledAt = 0;
+  const eventWatcher = watchInjectedAccountEvents(resolveProvider, nextProvider, config);
   // Fire request() in the background — capture an address if it resolves, surface user rejection,
   // but never let a hanging request() block the poll below.
   void requestInjectedAddress(nextProvider, config.requestMethods)
@@ -158,23 +160,29 @@ async function acquireInjectedAddress(
     });
 
   const immediate = config.preferInjectedAddress ? readLive() : undefined;
-  if (immediate) return immediate;
+  if (immediate) return eventWatcher.close(immediate);
   const deadline = Date.now() + (config.addressTimeoutMs ?? DEFAULT_ADDRESS_TIMEOUT_MS);
   while (Date.now() < deadline) {
     await delay(100);
-    if (userRejected) throw userRejected;
+    if (userRejected) {
+      eventWatcher.close(undefined);
+      throw userRejected;
+    }
     if (requestedAddress) return requestedAddress;
+    const eventAddress = eventWatcher.read();
+    if (eventAddress) return eventWatcher.close(eventAddress);
     const live = readLive();
-    if (live) return live;
+    if (live) return eventWatcher.close(live);
     // request settled without an address AND no live address yet → give the wallet a brief grace,
     // then stop (avoids spinning the full timeout when the wallet simply returned nothing).
     if (requestSettled && !requestedAddress) {
       const grace = readLive();
-      if (grace) return grace;
+      if (grace) return eventWatcher.close(grace);
       if (Date.now() - requestSettledAt >= (config.addressSettleMs ?? DEFAULT_ADDRESS_SETTLE_MS)) break;
     }
   }
-  return requestedAddress ?? readLive() ?? await retryEmptyAddressRequest(readLive, resolveProvider, nextProvider, config);
+  const fallback = requestedAddress ?? eventWatcher.read() ?? readLive() ?? await retryEmptyAddressRequest(readLive, resolveProvider, nextProvider, config);
+  return eventWatcher.close(fallback);
 }
 
 function delay(ms: number): Promise<void> {
@@ -210,6 +218,72 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | und
       .catch((error) => reject(error))
       .finally(() => clearTimeout(timer));
   });
+}
+
+function watchInjectedAccountEvents(
+  resolveProvider: () => InjectedTronProvider | undefined,
+  nextProvider: InjectedTronProvider,
+  config: InjectedTronAdapterConfig
+): { read(): string | undefined; close<T>(value: T): T } {
+  const eventNames = config.accountChangeEventNames ?? [];
+  const timeoutMs = config.accountChangeTimeoutMs ?? 0;
+  let address: string | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const providers = [resolveProvider(), nextProvider].filter(Boolean) as InjectedTronProvider[];
+  const subscriptions: Array<{ provider: InjectedTronProvider; eventName: string; listener: (...args: unknown[]) => void }> = [];
+  const cleanup = () => {
+    if (timer) {
+      clearTimeout(timer);
+      timer = undefined;
+    }
+    while (subscriptions.length > 0) {
+      const subscription = subscriptions.pop()!;
+      try {
+        subscription.provider.off?.(subscription.eventName, subscription.listener);
+      } catch {
+        // best effort cleanup
+      }
+      try {
+        subscription.provider.removeListener?.(subscription.eventName, subscription.listener);
+      } catch {
+        // best effort cleanup
+      }
+    }
+  };
+  const listener = (...args: unknown[]) => {
+    for (const arg of args) {
+      const nextAddress = readInjectedAddressPayload(arg);
+      if (nextAddress) {
+        address = nextAddress;
+        cleanup();
+        return;
+      }
+    }
+    const live = readInjectedAddress(resolveProvider()) ?? readInjectedAddressFromPaths(config.providerPaths);
+    if (live) {
+      address = live;
+      cleanup();
+    }
+  };
+  for (const provider of providers) {
+    if (!provider.on) continue;
+    for (const eventName of eventNames) {
+      try {
+        provider.on(eventName, listener);
+        subscriptions.push({ provider, eventName, listener });
+      } catch {
+        // best effort event subscription
+      }
+    }
+  }
+  if (timeoutMs > 0 && subscriptions.length > 0) timer = setTimeout(() => cleanup(), timeoutMs);
+  return {
+    read: () => address,
+    close: (value) => {
+      cleanup();
+      return value;
+    }
+  };
 }
 
 async function signInjectedMessage(provider: InjectedTronProvider, message: string, mode?: InjectedTronAdapterConfig["signMessageMode"]): Promise<string | undefined> {
