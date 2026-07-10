@@ -3120,3 +3120,20 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Verification:
   - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 51 tests.
   - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+
+## 2026-07-10 Gate Provider Internal updateStatus Error
+
+- User observed Gate extension console error:
+  - `Uncaught TypeError: R.updateStatus is not a function`
+  - Location: `gt-window-provider.js` / `internalBridgeListener`
+- Assessment:
+  - The error is inside Gate's injected provider, but our previous workaround may have triggered it by subscribing to non-upstream events (`accountChanged`, `connect`) and by retrying `eth_requestAccounts`.
+  - Upstream Gate adapter only listens to `accountsChanged` and does not call request twice.
+- Fix:
+  - Gate descriptor now only subscribes to `accountsChanged`.
+  - Removed Gate's second request retry by clearing `emptyAddressRetry*` config.
+  - Increased `addressSettleMs` to 5000 so the adapter waits/polls for `tronWeb.defaultAddress` after the single approval request.
+  - Updated regression test to assert a single request followed by live address hydration.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 51 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.

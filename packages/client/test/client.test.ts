@@ -1030,14 +1030,26 @@ describe("client entrypoints", () => {
     });
   });
 
-  it("retries Gate once when the first approval request returns no address", async () => {
+  it("waits for Gate live address when the first approval request returns no address", async () => {
     let attempts = 0;
+    const gatewallet: Record<string, unknown> = {};
     const request = vi.fn(async ({ method }: { method: string }) => {
       if (method !== "eth_requestAccounts") return undefined;
       attempts += 1;
-      return attempts === 1 ? { code: 200 } : ["TGateSecondAttempt"];
+      setTimeout(() => {
+        gatewallet.tron = {
+          request,
+          tronWeb: {
+            defaultAddress: { base58: "TGateAfterApproval" },
+            trx: {
+              signMessageV2: async (message: string) => `gate-wait:${message}`
+            }
+          }
+        };
+      }, 10);
+      return { code: 200 };
     });
-    (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = {
+    Object.assign(gatewallet, {
       tronLink: {},
       tron: {
         request,
@@ -1047,14 +1059,15 @@ describe("client entrypoints", () => {
           }
         }
       }
-    };
+    });
+    (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = gatewallet;
 
     const manager = createWalletClient({ wallets: ["gate"] });
 
     await expect(manager.connect("gate")).resolves.toMatchObject({
-      account: { address: "TGateSecondAttempt" }
+      account: { address: "TGateAfterApproval" }
     });
-    expect(request).toHaveBeenCalledTimes(2);
+    expect(request).toHaveBeenCalledTimes(1);
   });
 
   it("connects Gate from accountsChanged when request returns no address", async () => {
