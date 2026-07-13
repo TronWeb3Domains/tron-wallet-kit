@@ -650,6 +650,20 @@ describe("client entrypoints", () => {
     }
   });
 
+  it("keeps wallet catalog data in client descriptors instead of the deprecated core registry", () => {
+    const catalog = buildCatalog(BUILTIN_WALLET_DESCRIPTORS);
+
+    expect(catalog.find((wallet) => wallet.id === "tronlink")).toMatchObject({
+      name: "TronLink",
+      transport: "extension",
+      platforms: ["extension", "mobile"]
+    });
+    expect(catalog.find((wallet) => wallet.id === "trust")).toMatchObject({
+      providerPaths: ["trustwallet.tronLink", "trustwallet.tron"],
+      supportsWalletConnect: true
+    });
+  });
+
   it("accepts runtime wallet descriptors with inline catalog metadata", async () => {
     const icon = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%2F%3E";
     const wallet = {

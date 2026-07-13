@@ -4230,3 +4230,24 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed with 63 tests.
   - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot` passed with 43 tests.
+
+## 2026-07-13 Core Registry + UI Fallback Catalog Cleanup
+
+- Continued the metadata single-source cleanup.
+- Replaced the old hardcoded `packages/core/src/wallet-registry.ts` metadata list with an empty compatibility shim:
+  - public types/functions still exist for pre-1.0 imports;
+  - core no longer duplicates supported wallet catalog metadata;
+  - runtime catalog data now lives in client wallet descriptors and `buildCatalog()`.
+- Updated UI config so it no longer imports `TRON_WALLET_CATALOG` as the default catalog source:
+  - default catalog is now a local empty runtime catalog;
+  - `TRON_WALLET_CATALOG` remains exported only for backward compatibility and is still empty.
+- Added tests:
+  - core registry compatibility shim returns empty results;
+  - client descriptor catalog remains the source for TronLink/Trust metadata.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/core typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/core test -- --run --reporter=dot` passed with 23 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed with 64 tests.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot` passed with 43 tests.

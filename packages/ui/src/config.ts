@@ -1,9 +1,9 @@
 import { resolveMode, resolveTheme } from "./themes";
 import { resolveLabelPack } from "./locales";
-import { TRON_WALLET_CATALOG } from "./wallet-catalog";
-import type { ResolvedWalletUiConfig, WalletListLayout, WalletUiConfig } from "./types";
+import type { ResolvedWalletUiConfig, TronWalletCatalogItem, WalletListLayout, WalletUiConfig } from "./types";
 
 const FEATURED_DEFAULT_LIMIT = 5;
+const EMPTY_RUNTIME_CATALOG: readonly TronWalletCatalogItem[] = [];
 
 export function resolveWalletUiConfig(config: WalletUiConfig = {}): ResolvedWalletUiConfig {
   const themeName = config.themeName ?? (resolveMode(config.themeMode ?? config.mode) === "dark" ? "dark" : "light");
@@ -18,7 +18,7 @@ export function resolveWalletUiConfig(config: WalletUiConfig = {}): ResolvedWall
   return {
     theme: resolveTheme({ themeName, ...(Object.keys(customTheme).length > 0 ? { tokens: customTheme } : {}) }),
     labels,
-    catalog: config.catalog ?? TRON_WALLET_CATALOG,
+    catalog: config.catalog ?? EMPTY_RUNTIME_CATALOG,
     modal: {
       title: config.modal?.title ?? labels.connectModal.title,
       subtitle: config.modal?.subtitle ?? labels.connectModal.subtitle,

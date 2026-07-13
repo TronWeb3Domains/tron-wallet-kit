@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { NetworkRegistry, TRON_MAINNET, TRON_NILE, WalletManager, type WalletAdapter } from "../src/index";
+import { getEnabledTronWalletRegistryItems, getTronWalletRegistryItem, NetworkRegistry, TRON_MAINNET, TRON_NILE, TRON_WALLET_REGISTRY, WalletManager, type WalletAdapter } from "../src/index";
 
 describe("core primitives", () => {
   it("resolves default TRON networks", () => {
@@ -19,5 +19,11 @@ describe("core primitives", () => {
 
     expect(manager.can("connect", "mock")).toBe(true);
     expect(manager.can("signTransaction", "mock")).toBe(false);
+  });
+
+  it("keeps the deprecated core wallet registry as an empty compatibility shim", () => {
+    expect(TRON_WALLET_REGISTRY).toEqual([]);
+    expect(getEnabledTronWalletRegistryItems()).toEqual([]);
+    expect(getTronWalletRegistryItem("tronlink")).toBeUndefined();
   });
 });
