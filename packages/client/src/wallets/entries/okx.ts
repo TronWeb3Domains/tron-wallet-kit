@@ -9,6 +9,6 @@ export const okx: WalletDescriptor = {
   platforms: ["extension", "mobile"],
   group: "popular",
   featured: 3,
-  injected: standardInjected({ providerPaths: ["okxwallet.tronLink"] }),
+  injected: standardInjected({ providerPaths: ["okxwallet.tronLink"], rdns: ["com.okex.wallet"] }),
   detect: { providerPaths: ["okxwallet.tronLink"] }
 };

@@ -8,6 +8,7 @@ import {
   requestOptionalString,
   resolveInjectedNetwork
 } from "../injected/detect";
+import { hasAnnouncedWalletRdns } from "../injected/eip6963";
 import type { InjectedTronAdapterConfig, InjectedTronProvider } from "../types";
 
 export type InjectedConnectResult = {
@@ -57,6 +58,7 @@ export type InjectedStrategy = {
 export type StandardInjectedOptions = {
   providerPaths?: readonly string[];
   provider?: () => InjectedTronProvider | undefined;
+  rdns?: readonly string[];
   marker?: () => boolean | Promise<boolean>;
   requestMethods?: readonly string[];
   signMessageMode?: InjectedTronAdapterConfig["signMessageMode"];
@@ -76,6 +78,7 @@ const TRON_ADDRESS_PATTERN = /^T[1-9A-HJ-NP-Za-km-z]{33}$/;
 export function standardInjected(opts: StandardInjectedOptions): InjectedStrategy {
   const strategy: InjectedStrategy = {
     detect: async () => {
+      if (await hasAnnouncedWalletRdns(opts.rdns).catch(() => false)) return true;
       if (await Promise.resolve(opts.marker?.()).catch(() => false)) return true;
       return Boolean(resolveProvider(opts));
     },

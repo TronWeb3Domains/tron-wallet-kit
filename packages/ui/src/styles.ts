@@ -58,7 +58,7 @@ ${selector} .twk-body {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
   padding: 8px 20px 12px;
   will-change: opacity, transform;
 }
@@ -478,6 +478,7 @@ ${selector} .twk-skeleton::after {
   transform: translateX(-100%);
 }
 ${selector} .twk-skeleton-circle { border-radius: 999px; flex-shrink: 0; }
+${selector} .twk-skeleton-icon { border-radius: var(--twk-wallet-icon-radius); flex-shrink: 0; }
 ${selector} .twk-skeleton-line { border-radius: 4px; }
 ${selector} .twk-skeleton-pill { border-radius: 999px; }
 ${selector} .twk-skeleton-card { border-radius: var(--twk-wallet-radius); }

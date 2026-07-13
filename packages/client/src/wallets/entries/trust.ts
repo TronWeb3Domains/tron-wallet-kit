@@ -29,8 +29,7 @@ export const trust: WalletDescriptor = {
   platforms: ["extension", "mobile"],
   group: "popular",
   supportsWalletConnect: true,
-  providerPaths: ["trustwallet.tronLink", "trustwallet.tron"],
   conflictMarkers: ["trustwallet"],
   injected: standardInjected({ provider: getTrustInjectedProvider }),
-  detect: { providerPaths: ["trustwallet.tronLink", "trustwallet.tron"], provider: getTrustInjectedProvider }
+  detect: { provider: getTrustInjectedProvider }
 };

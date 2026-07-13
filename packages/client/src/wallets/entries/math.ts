@@ -75,6 +75,5 @@ export const math: WalletDescriptor = {
   supportsWalletConnect: true,
   injected: standardInjected({ provider: getMathWalletInjectedProvider, requestMethods: ["tron_requestAccounts"] }),
   detect: { provider: getMathWalletInjectedProvider },
-  requestMethods: ["tron_requestAccounts"],
   description: "TronWeb-compatible injected wallet with WalletConnect fallback."
 };

@@ -133,13 +133,13 @@ export class TronLinkAdapter implements WalletAdapter {
     try {
       const provider = await this.getProvider();
       const address = await requestAddress(provider);
-      const tronWeb = getProviderTronWeb(provider);
+      const tronWeb = getOptionalProviderTronWeb(provider);
 
       if (!address) {
         throw new WalletKitError("CONNECTION_FAILED", "TronLink wallet is locked or no account is available.");
       }
 
-      const network = await resolveNetwork(tronWeb, options.network);
+      const network = tronWeb ? await resolveNetwork(tronWeb, options.network) : resolveNetworkFallback(options.network);
       this.provider = provider;
       this.network = network;
       this.account = {
@@ -147,7 +147,7 @@ export class TronLinkAdapter implements WalletAdapter {
         network,
         networkType: network.networkType,
         activationStatus: "unknown",
-        ...(tronWeb.defaultAddress?.hex ? { hexAddress: tronWeb.defaultAddress.hex } : {})
+        ...(tronWeb?.defaultAddress?.hex ? { hexAddress: tronWeb.defaultAddress.hex } : {})
       };
 
       return { account: this.account, network, raw: provider };
@@ -534,7 +534,7 @@ async function requestAddress(provider: TronLinkProvider): Promise<string | unde
   if (provider.kind === "tip1193") {
     const result = await provider.provider.request({ method: "eth_requestAccounts" });
     const address = Array.isArray(result) && typeof result[0] === "string" ? result[0] : undefined;
-    return address ?? getProviderTronWeb(provider).defaultAddress?.base58;
+    return address ?? getProviderOwnedTronWeb(provider)?.defaultAddress?.base58;
   }
 
   if (provider.kind === "legacy") {
@@ -548,16 +548,38 @@ async function requestAddress(provider: TronLinkProvider): Promise<string | unde
 }
 
 function getProviderTronWeb(provider: TronLinkProvider): TronWeb {
-  if (provider.kind === "legacy") hydrateLegacyTronWeb(provider.provider);
-  const tronWeb = provider.provider.tronWeb || (provider.kind === "tip1193" ? (globalThis as TronProviderGlobals).tronWeb : undefined);
+  const tronWeb = getOptionalProviderTronWeb(provider);
   if (!tronWeb) throw new WalletKitError("CONNECTION_FAILED", "TronLink tronWeb is not available.");
   return tronWeb;
+}
+
+function getOptionalProviderTronWeb(provider: TronLinkProvider): TronWeb | undefined {
+  if (provider.kind === "legacy") hydrateLegacyTronWeb(provider.provider);
+  return getProviderOwnedTronWeb(provider) ?? getSafeGlobalTronWebForProvider(provider);
+}
+
+function getProviderOwnedTronWeb(provider: TronLinkProvider): TronWeb | undefined {
+  const tronWeb = provider.provider.tronWeb;
+  return tronWeb && typeof tronWeb === "object" ? tronWeb : undefined;
+}
+
+function getSafeGlobalTronWebForProvider(provider: TronLinkProvider): TronWeb | undefined {
+  if (provider.kind !== "tip1193") return undefined;
+  const globalObject = globalThis as TronProviderGlobals;
+  if (!isUsableTronWeb(globalObject.tronWeb)) return undefined;
+  if (isTronWebLinkedToKnownWallet(globalObject.tronWeb, globalObject)) return undefined;
+  return globalObject.tronWeb;
 }
 
 function hydrateLegacyTronWeb(provider: LegacyTronLinkProvider): void {
   if (provider.tronWeb) return;
   const tronWeb = (globalThis as TronProviderGlobals).tronWeb;
   if (tronWeb) provider.tronWeb = tronWeb;
+}
+
+function resolveNetworkFallback(fallback: ConnectOptions["network"]): WalletNetwork {
+  if (typeof fallback === "object" && fallback) return fallback;
+  return TRON_MAINNET;
 }
 
 async function resolveNetwork(tronWeb: TronWeb, fallback: ConnectOptions["network"]): Promise<WalletNetwork> {

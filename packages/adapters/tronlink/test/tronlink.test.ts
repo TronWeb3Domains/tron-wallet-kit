@@ -582,6 +582,44 @@ describe("TronLinkAdapter", () => {
     }
   });
 
+  it("does not use a foreign global tronWeb for TIP-1193 hex or network fallback", async () => {
+    const globalObject = globalThis as typeof globalThis & {
+      tokenpocket?: unknown;
+      tronWeb?: unknown;
+    };
+    const previousTokenPocket = globalObject.tokenpocket;
+    const previousTronWeb = globalObject.tronWeb;
+    const foreignTronWeb = {
+      defaultAddress: { base58: "TTokenPocketAddress", hex: "41foreign" },
+      trx: {
+        getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "94a9059e" }),
+        sign: async <TTransaction extends Record<string, unknown>>(transaction: TTransaction) => transaction,
+        signMessageV2: async (message: string) => `foreign:${message}`
+      }
+    };
+    const provider = {
+      kind: "tip1193" as const,
+      provider: {
+        isTronLink: true,
+        request: async () => ["TMockAddress"]
+      }
+    };
+    globalObject.tronWeb = foreignTronWeb;
+    globalObject.tokenpocket = { tronWeb: foreignTronWeb };
+
+    try {
+      const adapter = createTronLinkAdapter({ provider: () => provider });
+      const result = await adapter.connect();
+
+      expect(result.account.address).toBe("TMockAddress");
+      expect(result.account.hexAddress).toBeUndefined();
+      expect(result.network?.id).toBe("mainnet");
+    } finally {
+      globalObject.tokenpocket = previousTokenPocket;
+      globalObject.tronWeb = previousTronWeb;
+    }
+  });
+
   it("ignores TIP-6963 TronLink-name announcements from a different rdns", async () => {
     const previousWindow = (globalThis as typeof globalThis & { window?: unknown }).window;
     const eventTarget = new EventTarget() as EventTarget & {

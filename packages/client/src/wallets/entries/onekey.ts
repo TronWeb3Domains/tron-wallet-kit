@@ -9,6 +9,6 @@ export const onekey: WalletDescriptor = {
   platforms: ["extension"],
   group: "popular",
   availabilityMode: "on-demand",
-  injected: standardInjected({ providerPaths: ["$onekey.tron", "$onekey.tronLink"] }),
+  injected: standardInjected({ providerPaths: ["$onekey.tron", "$onekey.tronLink"], rdns: ["so.onekey.app.wallet"] }),
   detect: { providerPaths: ["$onekey.tron", "$onekey.tronLink"] }
 };

@@ -12,6 +12,7 @@ import {
   getSharedTronWeb,
   WALLET_ICONS
 } from "../src/index";
+import { resetWalletProviderDiscoveryForTests } from "../src/injected/eip6963";
 
 function createMockAdapter(id = "mock"): WalletAdapter {
   return {
@@ -96,6 +97,21 @@ function createMockTronDomainTronWeb(options: {
   };
 }
 
+function installMock6963Provider(rdns: string): void {
+  const target = new EventTarget();
+  const announce = (eventName: string) => {
+    const event = new Event(eventName) as Event & { detail?: unknown };
+    event.detail = { info: { rdns }, provider: { request: async () => undefined } };
+    target.dispatchEvent(event);
+  };
+  target.addEventListener("eip6963:requestProvider", () => announce("eip6963:announceProvider"));
+  target.addEventListener("TIP6963:requestProvider", () => announce("TIP6963:announceProvider"));
+  const globals = globalThis as unknown as Record<string, unknown>;
+  globals.addEventListener = target.addEventListener.bind(target);
+  globals.removeEventListener = target.removeEventListener.bind(target);
+  globals.dispatchEvent = target.dispatchEvent.bind(target);
+}
+
 describe("client entrypoints", () => {
   afterEach(() => {
     delete (globalThis as Record<string, unknown>).tokenpocket;
@@ -126,6 +142,10 @@ describe("client entrypoints", () => {
     delete (globalThis as Record<string, unknown>).isBitKeep;
     delete (globalThis as Record<string, unknown>).__tronWalletKitTronWebForTest;
     delete (globalThis as Record<string, unknown>).window;
+    delete (globalThis as Record<string, unknown>).addEventListener;
+    delete (globalThis as Record<string, unknown>).removeEventListener;
+    delete (globalThis as Record<string, unknown>).dispatchEvent;
+    resetWalletProviderDiscoveryForTests();
   });
 
   it("creates a WalletManager with registered adapters", async () => {
@@ -511,8 +531,7 @@ describe("client entrypoints", () => {
     expect(BUILTIN_WALLET_DESCRIPTORS.find((wallet) => wallet.id === "klever")).toMatchObject({ integration: "walletconnect", supportsWalletConnect: true });
     expect(BUILTIN_WALLET_DESCRIPTORS.find((wallet) => wallet.id === "math")).toMatchObject({
       integration: "injected",
-      supportsWalletConnect: true,
-      requestMethods: ["tron_requestAccounts"]
+      supportsWalletConnect: true
     });
   });
 
@@ -659,7 +678,6 @@ describe("client entrypoints", () => {
       platforms: ["extension", "mobile"]
     });
     expect(catalog.find((wallet) => wallet.id === "trust")).toMatchObject({
-      providerPaths: ["trustwallet.tronLink", "trustwallet.tron"],
       supportsWalletConnect: true
     });
   });
@@ -736,7 +754,6 @@ describe("client entrypoints", () => {
     const walletConnect = wallets.find((wallet) => wallet.metadata.id === "walletconnect");
 
     expect(trust?.metadata.catalog).toMatchObject({
-      providerPaths: ["trustwallet.tronLink", "trustwallet.tron"],
       conflictMarkers: ["trustwallet"],
       supportsWalletConnect: true
     });
@@ -747,9 +764,10 @@ describe("client entrypoints", () => {
     });
     expect(walletConnect?.metadata.catalog).toMatchObject({ supportsWalletConnect: true });
     expect(mapAdapterToWalletOption(trust as WalletAdapter, false)).toMatchObject({
-      providerPaths: ["trustwallet.tronLink", "trustwallet.tron"],
       supportsWalletConnect: true
     });
+    expect(trust?.metadata.catalog?.providerPaths).toBeUndefined();
+    expect(mapAdapterToWalletOption(trust as WalletAdapter, false).providerPaths).toBeUndefined();
   });
 
   it("keeps TronLink class adapter methods after icon metadata hydration", async () => {
@@ -1136,6 +1154,36 @@ describe("client entrypoints", () => {
     expect(request).toHaveBeenCalledWith({ method: "tron_requestAccounts" });
   });
 
+  it("prefers SafePalHook-owned address over an empty foreign global tronWeb address", async () => {
+    const request = vi.fn(async () => ({ code: 200 }));
+    (globalThis as Record<string, unknown>).SafePalHook = {
+      request,
+      defaultAddress: { base58: "TRBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB", hex: "41safepalhook" },
+      tronWeb: {
+        defaultAddress: { base58: "TRBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB", hex: "41safepalhook" },
+        trx: {
+          getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" }),
+          sign: async (payload: unknown) => (typeof payload === "string" ? `safepal-hook:${payload}` : payload)
+        }
+      }
+    };
+    (globalThis as Record<string, unknown>).tronWeb = {
+      defaultAddress: { base58: false, hex: false },
+      trx: {
+        getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "94a9059e" }),
+        sign: async (payload: unknown) => (typeof payload === "string" ? `foreign:${payload}` : payload)
+      }
+    };
+
+    const manager = createWalletClient({ wallets: ["safepal"] });
+
+    await expect(manager.connect("safepal")).resolves.toMatchObject({
+      account: { address: "TRBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB", hexAddress: "41safepalhook" },
+      network: { id: "mainnet" }
+    });
+    await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "safepal-hook:hello" });
+  });
+
   it("marks SafePal installed from SafePalHook even before tronWeb is ready", async () => {
     (globalThis as Record<string, unknown>).SafePalHook = {
       request: vi.fn(async () => ({ code: 200 })),
@@ -1241,6 +1289,31 @@ describe("client entrypoints", () => {
     await expect(manager.connect("binance")).resolves.toMatchObject({ account: { address: "TXAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } });
     await manager.disconnect();
     await expect(manager.connect("backpack")).resolves.toMatchObject({ account: { address: "TZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } });
+  });
+
+  it("composes Backpack request provider with global tronWeb when the branch omits tronWeb", async () => {
+    const request = vi.fn(async ({ method }: { method: string }) => (
+      method === "tron_requestAccounts" ? ["TbAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"] : undefined
+    ));
+    (globalThis as typeof globalThis & { backpack?: unknown; tronWeb?: unknown }).backpack = {
+      tron: { request }
+    };
+    (globalThis as typeof globalThis & { tronWeb?: unknown }).tronWeb = {
+      defaultAddress: { base58: "TbAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", hex: "41backpack" },
+      trx: {
+        signMessageV2: async (message: string) => `backpack:${message}`,
+        sign: async <TTransaction,>(transaction: TTransaction) => transaction
+      }
+    };
+
+    const manager = createWalletClient({ wallets: ["backpack"] });
+
+    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
+    await expect(manager.connect("backpack")).resolves.toMatchObject({
+      account: { address: "TbAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", hexAddress: "41backpack" }
+    });
+    expect(request).toHaveBeenCalledWith({ method: "tron_requestAccounts", params: undefined });
+    await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "backpack:hello" });
   });
 
   it("marks Gate available from its upstream installed marker before provider is connect-ready", async () => {
@@ -1409,6 +1482,16 @@ describe("client entrypoints", () => {
     const manager = createWalletClient({ wallets: ["binance"] });
 
     await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
+  });
+
+  it("uses shared 6963 rdns discovery as an installed signal without enabling Trust desktop false positives", async () => {
+    installMock6963Provider("com.okex.wallet");
+    const manager = createWalletClient({ wallets: ["okx", "trust"] });
+    const okx = manager.getWallets().find((wallet) => wallet.metadata.id === "okx");
+    const trust = manager.getWallets().find((wallet) => wallet.metadata.id === "trust");
+
+    await expect(Promise.resolve(okx?.isAvailable?.())).resolves.toBe(true);
+    await expect(Promise.resolve(trust?.isAvailable?.())).resolves.toBe(false);
   });
 
   it("waits briefly for late injected providers when configured", async () => {

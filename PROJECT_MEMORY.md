@@ -4286,3 +4286,102 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed with 64 tests.
   - `pnpm --filter @tron-wallet-kit/core typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/core test -- --run --reporter=dot` passed with 23 tests.
+
+## 2026-07-13 WALLET_ADAPTER_ORG_SPEC Rerun + Backpack Provider Composer
+
+- Re-read `Review/WALLET_ADAPTER_ORG_SPEC.md` after the latest reviewer additions.
+- Confirmed already-implemented items:
+  - TronLink remains rank-first while detect uses cached 6963 discovery instead of contested bare globals;
+  - Trust desktop extension no longer resolves namespace-only as TRON installed;
+  - Binance Web3 no longer resolves namespace-only as TRON installed;
+  - client descriptors now drive runtime catalog metadata instead of the old core/UI duplicate fallback lists.
+- Closed one remaining per-wallet matrix gap for Backpack:
+  - `backpack.tron` can expose `request` without `tronWeb`;
+  - `packages/client/src/wallets/entries/backpack.ts` now owns a Backpack-specific provider resolver;
+  - the resolver composes the Backpack branch with `globalThis.tronWeb` when needed, keeping the quirk inside the wallet entry instead of the generic adapter.
+- Added regression coverage:
+  - Backpack can connect when its provider branch only has `request`;
+  - Backpack uses the composed global `tronWeb` for `hexAddress` and `signMessage`.
+- Spec items still not fully closed:
+  - the old `InjectedTronAdapterConfig` flag plumbing remains for backward compatibility;
+  - decorator helpers such as `withEthRequest`, `withPreferInjectedAddress`, and `withAddressPoll` are still represented through `standardInjected()` options, not exported composable utilities;
+  - shared 6963 registry for every wallet is not implemented yet; current authoritative 6963 handling is focused on TronLink;
+  - MathWallet stays marker-gated and does not claim generic `tronLink`, but still needs live extension QA before being promoted in any recommended list.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed with 65 tests.
+
+## 2026-07-13 WALLET_ADAPTER_ORG_SPEC Status Addendum
+
+- Updated the end of `Review/WALLET_ADAPTER_ORG_SPEC.md` with an implementation-status addendum for reviewer handoff.
+- The addendum clarifies that the older "TronLink checking -> not installed bug is NOT fixed" note is stale:
+  - TronLink 6963 cached detect is now implemented;
+  - modal first-render async availability fallback is implemented;
+  - Backpack request/tronWeb split is implemented;
+  - Trust/Binance namespace-only guards remain correct.
+- The addendum keeps the remaining gaps visible:
+  - shared 6963 registry for all wallets;
+  - duplicate legacy flat quirk fields;
+  - Trust `providerPaths` cleanup;
+  - decorator helper extraction;
+  - MathWallet live QA before recommendation.
+- No test run was needed because this was a documentation/status update only.
+
+## 2026-07-13 WALLET_ADAPTER_ORG_SPEC Remaining Items Cleanup
+
+- Closed two smaller remaining items from the `WALLET_ADAPTER_ORG_SPEC.md` implementation-status addendum.
+- Trust cleanup:
+  - removed misleading desktop `providerPaths` (`trustwallet.tronLink`, `trustwallet.tron`) from `packages/client/src/wallets/entries/trust.ts`;
+  - Trust now keeps `supportsWalletConnect:true`, `conflictMarkers:["trustwallet"]`, and provider-based injected detect only.
+- Built-in duplicate flat quirk cleanup:
+  - removed dead flat descriptor duplicates from Bitget, Gate, SafePal, and MathWallet entries;
+  - quirks now live in `injected: standardInjected({ ... })` for those built-ins;
+  - legacy descriptor/config fields remain in types and adapter plumbing for backward compatibility.
+- Updated client tests so they assert the new Trust catalog behavior and no longer expect MathWallet flat `requestMethods`.
+- Updated the spec addendum to mark Trust path cleanup and built-in duplicate flat-field reduction as done.
+- Remaining items:
+  - shared cached 6963 registry for all rdns-announcing wallets;
+  - public decorator helper extraction;
+  - decision on whether/when to remove legacy flat config fields;
+  - MathWallet live QA before recommendation.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed with 65 tests.
+
+## 2026-07-13 Shared 6963 Registry + Connect-Path Fixes
+
+- Implemented the next items from the latest `Review/WALLET_ADAPTER_ORG_SPEC.md` tail section.
+- Shared injected 6963 installed-signal registry:
+  - added `packages/client/src/injected/eip6963.ts`;
+  - dispatches/listens on both `eip6963:*` and `TIP6963:*`;
+  - caches announced rdns values per session;
+  - `standardInjected({ rdns })` checks rdns before marker/provider fallback;
+  - wired rdns for OKX, Bitget, Gate, SafePal, OneKey, Bybit, Backpack, and Guarda;
+  - intentionally did not wire Trust/Binance rdns to avoid desktop EVM-only / namespace-only false installed states.
+- SafePal connect fix:
+  - `packages/client/src/wallets/entries/safepal.ts` now prefers `SafePalHook.tronWeb` and `SafePalHook.defaultAddress`;
+  - only treats a default address as selected when it has a non-empty base58 address;
+  - avoids being blocked by a foreign global `window.tronWeb.defaultAddress = { base58:false, hex:false }`.
+- TronLink TIP-1193 connect fix:
+  - `packages/adapters/tronlink/src/index.ts` no longer uses a known foreign global `window.tronWeb` for TIP-1193 fallback data;
+  - address comes from the TIP-1193 request result;
+  - when no TronLink-owned tronWeb exists, `hexAddress` is omitted and network resolves from explicit fallback/mainnet.
+- Updated `Review/WALLET_ADAPTER_ORG_SPEC.md` follow-up implementation status accordingly.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed with 67 tests.
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink test -- --run --reporter=dot` passed with 32 tests.
+
+## 2026-07-13 Wallet Card Skeleton + Initial Scrollbar UI Fix
+
+- Fixed wallet card loading skeleton shape:
+  - wallet icon skeletons now use `twk-skeleton-icon`;
+  - `twk-skeleton-icon` uses `border-radius: var(--twk-wallet-icon-radius)`;
+  - card/list wallet icon skeletons now match the real rectangular wallet icon shape instead of rendering as circles.
+- Fixed initial modal scrollbar:
+  - `.twk-body` now uses `overflow: hidden`;
+  - wallet lists continue to manage scroll through `.twk-wallet-grid`, preserving overflow/fade behavior while avoiding the unwanted body scrollbar on initial render.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot` passed with 43 tests.

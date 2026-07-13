@@ -25,6 +25,6 @@ export const guarda: WalletDescriptor = {
   homepage: "https://guarda.com/",
   platforms: ["extension"],
   group: "popular",
-  injected: standardInjected({ providerPaths: ["guarda.tron", "guarda"], provider: getGuardaInjectedProvider }),
+  injected: standardInjected({ providerPaths: ["guarda.tron", "guarda"], provider: getGuardaInjectedProvider, rdns: ["com.guarda.wallet"] }),
   detect: { providerPaths: ["guarda.tron", "guarda"], provider: getGuardaInjectedProvider }
 };

@@ -43,6 +43,7 @@ export const gate: WalletDescriptor = {
   injected: standardInjected({
     providerPaths: ["gatewallet.tron", "gatewallet.tronLink", "gatewallet.tronWeb"],
     provider: getGateInjectedProvider,
+    rdns: ["io.gate.wallet"],
     marker: hasGateInjectedMarker,
     requestMethods: ["eth_requestAccounts"],
     addressTimeoutMs: 15000,
@@ -54,6 +55,5 @@ export const gate: WalletDescriptor = {
     providerPaths: ["gatewallet.tron", "gatewallet.tronLink", "gatewallet.tronWeb"],
     provider: getGateInjectedProvider,
     availabilityProbe: hasGateInjectedMarker
-  },
-  requestMethods: ["eth_requestAccounts"]
+  }
 };

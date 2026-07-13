@@ -51,6 +51,7 @@ export const bitget: WalletDescriptor = {
   injected: standardInjected({
     providerPaths: ["bitkeep.tronLink", "bitkeep.tron"],
     provider: getBitgetInjectedProvider,
+    rdns: ["com.bitget.web3"],
     marker: hasBitgetInjectedMarker,
     requestMethods: ["tron_requestAccounts", "eth_requestAccounts"],
     addressSettleMs: 2500,
@@ -62,10 +63,5 @@ export const bitget: WalletDescriptor = {
     providerPaths: ["bitkeep.tronLink", "bitkeep.tron"],
     provider: getBitgetInjectedProvider,
     availabilityProbe: hasBitgetInjectedMarker
-  },
-  requestMethods: ["tron_requestAccounts", "eth_requestAccounts"],
-  addressSettleMs: 2500,
-  emptyAddressRetryDelayMs: 350,
-  emptyAddressRetryTimeoutMs: 3000,
-  preferInjectedAddress: true
+  }
 };

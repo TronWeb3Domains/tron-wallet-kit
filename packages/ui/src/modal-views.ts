@@ -88,8 +88,8 @@ function createPoweredByFooterHtml(viewModel: Pick<ConnectModalViewModel, "showP
 
 function createWalletSkeletonGridHtml(count: number, layout: "list" | "card", scope?: "featured" | "all"): string {
   const card = layout === "card"
-    ? `<span class="twk-wallet-card twk-skeleton-card" data-loading="true" aria-hidden="true"><span class="twk-wallet-icon twk-skeleton-circle" data-loading="true"><span class="twk-skeleton"></span></span><span class="twk-wallet-name twk-skeleton-line" data-loading="true"><span class="twk-skeleton"></span></span></span>`
-    : `<span class="twk-wallet-row twk-skeleton-row" data-loading="true" aria-hidden="true"><span class="twk-wallet-main"><span class="twk-wallet-icon twk-skeleton-circle" data-loading="true"><span class="twk-skeleton"></span></span><span class="twk-wallet-name twk-skeleton-line" data-loading="true"><span class="twk-skeleton"></span></span></span><span class="twk-badge twk-skeleton-pill" data-loading="true" data-tone="muted"><span class="twk-skeleton"></span></span></span>`;
+    ? `<span class="twk-wallet-card twk-skeleton-card" data-loading="true" aria-hidden="true"><span class="twk-wallet-icon twk-skeleton-icon" data-loading="true"><span class="twk-skeleton"></span></span><span class="twk-wallet-name twk-skeleton-line" data-loading="true"><span class="twk-skeleton"></span></span></span>`
+    : `<span class="twk-wallet-row twk-skeleton-row" data-loading="true" aria-hidden="true"><span class="twk-wallet-main"><span class="twk-wallet-icon twk-skeleton-icon" data-loading="true"><span class="twk-skeleton"></span></span><span class="twk-wallet-name twk-skeleton-line" data-loading="true"><span class="twk-skeleton"></span></span></span><span class="twk-badge twk-skeleton-pill" data-loading="true" data-tone="muted"><span class="twk-skeleton"></span></span></span>`;
   return `<div class="twk-wallet-grid" data-layout="${escapeAttribute(layout)}" ${scope ? `data-scope="${escapeAttribute(scope)}"` : ""} data-loading="true">${card.repeat(count)}</div>`;
 }
 
@@ -217,7 +217,7 @@ function createWalletBadgeHtml(wallet: WalletOptionViewModel, label: string, ton
 
 function createWalletIconHtml(wallet: WalletOptionViewModel, skeletonWhenLoading: boolean): string {
   if (wallet.readyState === "loading" && skeletonWhenLoading) {
-    return `<span class="twk-wallet-icon twk-skeleton-circle" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span></span>`;
+    return `<span class="twk-wallet-icon twk-skeleton-icon" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span></span>`;
   }
   const icon = wallet.icon
     ? `<img src="${escapeAttribute(wallet.icon)}" alt="" aria-hidden="true" onerror="this.remove()" /><span class="twk-wallet-icon-fallback" aria-hidden="true">${escapeHtml(wallet.name.slice(0, 1).toUpperCase())}</span>`
