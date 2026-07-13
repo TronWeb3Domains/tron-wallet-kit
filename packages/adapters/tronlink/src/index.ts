@@ -65,6 +65,8 @@ export { TRONLINK_ICON };
 
 const TIP6963_ANNOUNCE_PROVIDER_EVENT = "TIP6963:announceProvider";
 const TIP6963_REQUEST_PROVIDER_EVENT = "TIP6963:requestProvider";
+const EIP6963_ANNOUNCE_PROVIDER_EVENT = "eip6963:announceProvider";
+const EIP6963_REQUEST_PROVIDER_EVENT = "eip6963:requestProvider";
 const TRONLINK_TIP6963_NAME = "TronLink";
 const TRONLINK_TIP6963_RDNS = "org.tronlink.www";
 
@@ -92,6 +94,8 @@ export class TronLinkAdapter implements WalletAdapter {
   private readonly checkIntervalMs: number;
   private readonly hasCustomProviderResolver: boolean;
   private provider: TronLinkProvider | undefined;
+  private discoveredTip6963Provider: TronLinkProvider | undefined;
+  private tip6963Discovery: Promise<TronLinkProvider | undefined> | undefined;
   private account: WalletAccount | undefined;
   private network: WalletNetwork | undefined;
 
@@ -111,15 +115,18 @@ export class TronLinkAdapter implements WalletAdapter {
     this.providerResolver = options.provider ?? getGlobalTronLinkProvider;
     this.checkTimeoutMs = options.checkTimeoutMs ?? 5000;
     this.checkIntervalMs = options.checkIntervalMs ?? 100;
+    this.startTip6963Discovery();
   }
 
   async isAvailable(): Promise<boolean> {
+    this.startTip6963Discovery();
     if (hasGlobalTronLinkInstalledMarker()) return true;
     return Boolean(await this.waitForProvider());
   }
 
   detect(): boolean {
-    return hasGlobalTronLinkDetectMarker() || Boolean(this.providerResolver());
+    this.startTip6963Discovery();
+    return Boolean(this.discoveredTip6963Provider) || hasGlobalTronLinkDetectMarker() || Boolean(this.providerResolver());
   }
 
   async connect(options: ConnectOptions = {}): Promise<ConnectResult> {
@@ -230,15 +237,16 @@ export class TronLinkAdapter implements WalletAdapter {
   }
 
   private async waitForProvider(): Promise<TronLinkProvider | undefined> {
-    const immediate = this.providerResolver();
+    this.startTip6963Discovery();
+    const immediate = this.providerResolver() ?? this.discoveredTip6963Provider;
     if (immediate || this.checkTimeoutMs <= 0 || (typeof window === "undefined" && !this.hasCustomProviderResolver)) return immediate;
     return new Promise((resolve) => {
       let settled = false;
-      let tip6963Done = this.hasCustomProviderResolver;
+      let tip6963Done = false;
       let pollingDone = false;
       const check = () => {
         if (settled) return;
-        const provider = this.providerResolver();
+        const provider = this.providerResolver() ?? this.discoveredTip6963Provider;
         if (provider) {
           finish(provider);
           return;
@@ -256,15 +264,22 @@ export class TronLinkAdapter implements WalletAdapter {
         resolve(provider);
       };
       const startedAt = Date.now();
-      if (!this.hasCustomProviderResolver) {
-        void discoverTip6963TronLinkProvider(this.checkTimeoutMs).then((provider) => {
-          tip6963Done = true;
-          if (provider) finish(provider);
-          else if (pollingDone) finish();
-        });
-      }
+      void this.startTip6963Discovery().then((provider) => {
+        tip6963Done = true;
+        if (provider) finish(provider);
+        else if (pollingDone) finish();
+      });
       globalThis.setTimeout(check, this.checkIntervalMs);
     });
+  }
+
+  private startTip6963Discovery(): Promise<TronLinkProvider | undefined> {
+    if (this.tip6963Discovery) return this.tip6963Discovery;
+    this.tip6963Discovery = discoverTip6963TronLinkProvider(this.checkTimeoutMs).then((provider) => {
+      if (provider) this.discoveredTip6963Provider = provider;
+      return provider;
+    });
+    return this.tip6963Discovery;
   }
 
   private getConnectedTronWeb(): TronWeb {
@@ -340,6 +355,7 @@ async function discoverTip6963TronLinkProvider(timeoutMs: number): Promise<TronL
     let settled = false;
     const cleanup = () => {
       window.removeEventListener(TIP6963_ANNOUNCE_PROVIDER_EVENT, onAnnounce as EventListener);
+      window.removeEventListener(EIP6963_ANNOUNCE_PROVIDER_EVENT, onAnnounce as EventListener);
       globalThis.clearTimeout(timer);
     };
     const finish = (provider?: TronLinkProvider) => {
@@ -356,7 +372,9 @@ async function discoverTip6963TronLinkProvider(timeoutMs: number): Promise<TronL
     const timer = globalThis.setTimeout(() => finish(), timeoutMs);
 
     window.addEventListener(TIP6963_ANNOUNCE_PROVIDER_EVENT, onAnnounce as EventListener);
+    window.addEventListener(EIP6963_ANNOUNCE_PROVIDER_EVENT, onAnnounce as EventListener);
     window.dispatchEvent(new Event(TIP6963_REQUEST_PROVIDER_EVENT));
+    window.dispatchEvent(new Event(EIP6963_REQUEST_PROVIDER_EVENT));
   });
 }
 
@@ -531,7 +549,7 @@ async function requestAddress(provider: TronLinkProvider): Promise<string | unde
 
 function getProviderTronWeb(provider: TronLinkProvider): TronWeb {
   if (provider.kind === "legacy") hydrateLegacyTronWeb(provider.provider);
-  const tronWeb = provider.provider.tronWeb;
+  const tronWeb = provider.provider.tronWeb || (provider.kind === "tip1193" ? (globalThis as TronProviderGlobals).tronWeb : undefined);
   if (!tronWeb) throw new WalletKitError("CONNECTION_FAILED", "TronLink tronWeb is not available.");
   return tronWeb;
 }

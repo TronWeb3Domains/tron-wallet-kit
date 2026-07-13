@@ -4251,3 +4251,38 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed with 64 tests.
   - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot` passed with 43 tests.
+
+## 2026-07-13 TronLink 6963 Cached Detect + Modal Async Fallback
+
+- Re-read the updated `Review/WALLET_ADAPTER_ORG_SPEC.md`, especially the new TronLink badge section.
+- Root issue addressed:
+  - UI preferred `adapter.detect()` over `adapter.isAvailable()`;
+  - TronLink `detect()` was synchronous and bare-global based;
+  - TIP-6963 discovery lived only in `isAvailable()`, so the authoritative `org.tronlink.www` path was skipped for badges.
+- Updated TronLink adapter:
+  - starts one-shot 6963 discovery on construction and caches the discovered provider;
+  - `detect()` returns true from the cached 6963 provider;
+  - `waitForProvider()` uses the cached 6963 provider before/alongside bare globals;
+  - discovery now listens/dispatches both `TIP6963:*` and lowercase `eip6963:*`;
+  - TIP-6963 connect can use global `tronWeb` when the announced provider does not expose `tronWeb`.
+- Updated modal availability:
+  - fast `detect()` remains the first path;
+  - when `detect()` is false on first render and `isAvailable()` exists, the modal now allows a bounded async fallback during the grace window;
+  - this lets TronLink 6963 discovery settle without making all missing wallets wait for long adapter timeouts.
+- Added TronLink regression coverage for:
+  - cached TIP-6963 discovery making sync `detect()` stable;
+  - lowercase `eip6963:*` discovery;
+  - TIP-6963 provider without `tronWeb` connecting via global `tronWeb`.
+- Spec items still not fully closed:
+  - the old `InjectedTronAdapterConfig` flag plumbing remains for backward compatibility;
+  - decorator helpers like `withEthRequest` / `withPreferInjectedAddress` are not yet extracted as public composable utilities;
+  - a generic shared 6963 registry for all wallets is not implemented yet; current 6963 support is focused on TronLink.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink test -- --run --reporter=dot` passed with 31 tests.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot` passed with 43 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed with 64 tests.
+  - `pnpm --filter @tron-wallet-kit/core typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/core test -- --run --reporter=dot` passed with 23 tests.

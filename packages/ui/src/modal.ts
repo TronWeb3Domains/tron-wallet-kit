@@ -1,4 +1,4 @@
-import { formatWalletError, type WalletManager } from "@tron-wallet-kit/core";
+import { formatWalletError, type WalletAdapter, type WalletManager } from "@tron-wallet-kit/core";
 import { resolveWalletUiConfig } from "./config";
 import { applyThemeToElement, createElementFromHtml, createWalletKitRoot, ensureWalletKitStyles } from "./dom";
 import { backIcon, closeIcon } from "./icons";
@@ -223,8 +223,7 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
         if (availability.get(adapter.metadata.id) === undefined) availability.set(adapter.metadata.id, true);
         continue;
       }
-      const detectWallet = adapter.detect ?? adapter.isAvailable;
-      if (!detectWallet) {
+      if (!adapter.detect && !adapter.isAvailable) {
         availability.set(adapter.metadata.id, true);
         continue;
       }
@@ -232,7 +231,7 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
       const previous = availability.get(id);
       const first = previous === undefined || (refreshOptions.resetTransient === true && previous !== true);
       if (first) availability.set(id, "loading");
-      const check = detectWithGrace(() => Promise.resolve(detectWallet.call(adapter)).catch(() => false), first);
+      const check = detectWithGrace(() => detectAdapterAvailability(adapter, first), first);
       const settle = first
         ? Promise.all([check, new Promise<void>((resolve) => documentRef.defaultView?.setTimeout(resolve, DETECT_FIRST_RENDER_MIN_MS))]).then(([available]) => available)
         : check;
@@ -254,6 +253,30 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
       if (await detectWallet()) return true;
     }
     return false;
+  };
+
+  const detectAdapterAvailability = async (adapter: WalletAdapter, allowAsyncFallback: boolean): Promise<boolean> => {
+    if (await Promise.resolve(adapter.detect?.()).catch(() => false)) return true;
+    if (!adapter.detect && adapter.isAvailable) return Promise.resolve(adapter.isAvailable()).catch(() => false);
+    if (!allowAsyncFallback || !adapter.isAvailable) return false;
+    return withAvailabilityTimeout(Promise.resolve(adapter.isAvailable()).catch(() => false), DETECT_POLL_MS);
+  };
+
+  const withAvailabilityTimeout = (check: Promise<boolean>, timeoutMs: number): Promise<boolean> => {
+    return new Promise((resolve) => {
+      let settled = false;
+      const timer = documentRef.defaultView?.setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        resolve(false);
+      }, timeoutMs);
+      void check.then((available) => {
+        if (settled) return;
+        settled = true;
+        if (timer) documentRef.defaultView?.clearTimeout(timer);
+        resolve(available);
+      });
+    });
   };
 
   const pushView = (nextView: ConnectModalView) => {

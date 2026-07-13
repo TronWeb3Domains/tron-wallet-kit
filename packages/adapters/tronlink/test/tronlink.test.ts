@@ -464,6 +464,124 @@ describe("TronLinkAdapter", () => {
     }
   });
 
+  it("caches TIP-6963 discovery so synchronous detect becomes stable", async () => {
+    const previousWindow = (globalThis as typeof globalThis & { window?: unknown }).window;
+    const eventTarget = new EventTarget() as EventTarget & {
+      dispatchEvent(event: Event): boolean;
+    };
+    const provider = {
+      isTronLink: true,
+      request: async () => ["TMockAddress"]
+    };
+    const originalDispatchEvent = eventTarget.dispatchEvent.bind(eventTarget);
+    eventTarget.dispatchEvent = (event: Event) => {
+      const result = originalDispatchEvent(event);
+      if (event.type === "TIP6963:requestProvider") {
+        setTimeout(() => {
+          originalDispatchEvent(
+            new CustomEvent("TIP6963:announceProvider", {
+              detail: {
+                info: { name: "TronLink", rdns: "org.tronlink.www" },
+                provider
+              }
+            })
+          );
+        }, 0);
+      }
+      return result;
+    };
+    (globalThis as unknown as Record<string, unknown>).window = eventTarget;
+
+    try {
+      const adapter = createTronLinkAdapter({ checkTimeoutMs: 80, checkIntervalMs: 10 });
+      expect(adapter.detect()).toBe(false);
+      await expect(adapter.isAvailable()).resolves.toBe(true);
+      expect(adapter.detect()).toBe(true);
+    } finally {
+      (globalThis as unknown as Record<string, unknown>).window = previousWindow;
+    }
+  });
+
+  it("discovers TronLink through the lowercase eip6963 channel", async () => {
+    const previousWindow = (globalThis as typeof globalThis & { window?: unknown }).window;
+    const eventTarget = new EventTarget() as EventTarget & {
+      dispatchEvent(event: Event): boolean;
+    };
+    const provider = {
+      isTronLink: true,
+      request: async () => ["TMockAddress"]
+    };
+    const originalDispatchEvent = eventTarget.dispatchEvent.bind(eventTarget);
+    eventTarget.dispatchEvent = (event: Event) => {
+      const result = originalDispatchEvent(event);
+      if (event.type === "eip6963:requestProvider") {
+        setTimeout(() => {
+          originalDispatchEvent(
+            new CustomEvent("eip6963:announceProvider", {
+              detail: {
+                info: { name: "TronLink", rdns: "org.tronlink.www" },
+                provider
+              }
+            })
+          );
+        }, 0);
+      }
+      return result;
+    };
+    (globalThis as unknown as Record<string, unknown>).window = eventTarget;
+
+    try {
+      const adapter = createTronLinkAdapter({ checkTimeoutMs: 80, checkIntervalMs: 10 });
+      await expect(adapter.isAvailable()).resolves.toBe(true);
+      expect(adapter.detect()).toBe(true);
+    } finally {
+      (globalThis as unknown as Record<string, unknown>).window = previousWindow;
+    }
+  });
+
+  it("connects a TIP-6963 TronLink provider using global tronWeb when the announcement has no tronWeb", async () => {
+    const previousWindow = (globalThis as typeof globalThis & { window?: unknown }).window;
+    const globalObject = globalThis as typeof globalThis & { tronWeb?: unknown };
+    const previousTronWeb = globalObject.tronWeb;
+    const eventTarget = new EventTarget() as EventTarget & {
+      dispatchEvent(event: Event): boolean;
+    };
+    const provider = {
+      isTronLink: true,
+      request: async () => ["TMockAddress"]
+    };
+    const originalDispatchEvent = eventTarget.dispatchEvent.bind(eventTarget);
+    eventTarget.dispatchEvent = (event: Event) => {
+      const result = originalDispatchEvent(event);
+      if (event.type === "TIP6963:requestProvider") {
+        setTimeout(() => {
+          originalDispatchEvent(
+            new CustomEvent("TIP6963:announceProvider", {
+              detail: {
+                info: { name: "TronLink", rdns: "org.tronlink.www" },
+                provider
+              }
+            })
+          );
+        }, 0);
+      }
+      return result;
+    };
+    (globalThis as unknown as Record<string, unknown>).window = eventTarget;
+    globalObject.tronWeb = createTronWeb();
+
+    try {
+      const adapter = createTronLinkAdapter({ checkTimeoutMs: 80, checkIntervalMs: 10 });
+      await expect(adapter.connect()).resolves.toMatchObject({
+        account: { address: "TMockAddress" },
+        network: { id: "mainnet" }
+      });
+    } finally {
+      (globalThis as unknown as Record<string, unknown>).window = previousWindow;
+      globalObject.tronWeb = previousTronWeb;
+    }
+  });
+
   it("ignores TIP-6963 TronLink-name announcements from a different rdns", async () => {
     const previousWindow = (globalThis as typeof globalThis & { window?: unknown }).window;
     const eventTarget = new EventTarget() as EventTarget & {
