@@ -323,7 +323,6 @@ function hasGlobalTronLinkDetectMarker(): boolean {
   const globalObject = globalThis as TronProviderGlobals;
   if (globalObject.tron?.isTronLink && !isKnownNonTronLinkProvider(globalObject.tron, globalObject)) return true;
   if (globalObject.tronLink?.isTronLink && !isKnownNonTronLinkProvider(globalObject.tronLink, globalObject)) return true;
-  if (globalObject.tron && !globalObject.tron.isTronLink) return false;
   if (globalObject.tronLink && typeof globalObject.tronLink === "object") {
     if (isNestedKnownWalletProvider(globalObject.tronLink as LegacyTronLinkProvider, globalObject)) return false;
     if (isLinkedToKnownWalletProvider(globalObject.tronLink, globalObject)) return false;

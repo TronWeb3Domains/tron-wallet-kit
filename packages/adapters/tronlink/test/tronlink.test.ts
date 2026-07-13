@@ -374,6 +374,31 @@ describe("TronLinkAdapter", () => {
     }
   });
 
+  it("detects a TronLink install marker even when another wallet owns the generic tron global", () => {
+    const globalObject = globalThis as typeof globalThis & {
+      tron?: unknown;
+      tronLink?: unknown;
+      bybitWallet?: unknown;
+    };
+    const previousTron = globalObject.tron;
+    const previousTronLink = globalObject.tronLink;
+    const previousBybitWallet = globalObject.bybitWallet;
+    const bybitProvider = { request: async () => [], tronWeb: createTronWeb() };
+
+    globalObject.tron = bybitProvider;
+    globalObject.bybitWallet = { tron: bybitProvider };
+    globalObject.tronLink = {};
+
+    try {
+      const adapter = createTronLinkAdapter({ checkTimeoutMs: 0 });
+      expect(adapter.detect()).toBe(true);
+    } finally {
+      globalObject.tron = previousTron;
+      globalObject.tronLink = previousTronLink;
+      globalObject.bybitWallet = previousBybitWallet;
+    }
+  });
+
   it("detects TronLink from a global tronWeb-only injection when it is not linked to another wallet", () => {
     const globalObject = globalThis as typeof globalThis & {
       tronLink?: unknown;

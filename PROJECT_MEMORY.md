@@ -4179,3 +4179,23 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - update Trust/Binance desktop semantics so namespace-only globals do not imply usable TRON injection;
   - decide whether TronLink needs broader EIP-6963 cache/listener support beyond on-demand discovery;
   - continue reducing duplicate metadata between core registry, UI catalog, and client descriptors.
+
+## 2026-07-13 TronLink Detect With Competing Generic Tron Global
+
+- User reported TronLink still showed `Checking` then `Not Installed`.
+- Root cause found in `hasGlobalTronLinkDetectMarker()`:
+  - when another wallet such as Bybit owns `window.tron`, the detect code returned `false` before checking a separate `window.tronLink` install marker;
+  - this broke the UI-only detect case where TronLink has injected a marker but has not hydrated the full request/tronWeb provider yet.
+- Fixed the detect order:
+  - explicit `window.tron` TronLink marker still wins;
+  - explicit/separate `window.tronLink` marker is checked before generic `window.tron` blocks fallback;
+  - generic non-TronLink `window.tron` only blocks the weaker `tronWeb`-only fallback path.
+- Added regression coverage for:
+  - `window.tron` owned by Bybit;
+  - `window.tronLink = {}` present as the TronLink install marker;
+  - `adapter.detect()` must return true so UI does not downgrade to `Not Installed`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink test -- --run --reporter=dot` passed with 28 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed with 58 tests.
