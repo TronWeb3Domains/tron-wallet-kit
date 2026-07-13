@@ -9,6 +9,7 @@ export * from "./utils";
 export * from "./adapters/bridge";
 export * from "./adapters/combinators";
 export * from "./adapters/injected";
+export * from "./adapters/injected-strategy";
 export * from "./wallets/types";
 export * from "./wallets/registry";
 export * from "./wallets/build-adapters";

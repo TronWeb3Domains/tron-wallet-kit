@@ -109,17 +109,50 @@ export type InjectedTronAdapterConfig = {
   homepage?: string;
   downloadUrl?: string;
   platforms?: WalletPlatform[];
+  /**
+   * @deprecated Prefer `strategy: standardInjected(...)` with wallet-local provider composition.
+   */
   provider?: () => InjectedTronProvider | undefined;
+  /**
+   * @deprecated Prefer strategy-level `detect` / `withMarker(...)`.
+   */
   availabilityProbe?: () => boolean | Promise<boolean>;
+  /**
+   * @deprecated Prefer `strategy` with `withRequestMethods(...)`.
+   */
   requestMethods?: readonly string[];
+  /**
+   * @deprecated Prefer `strategy` with `withSignMode(...)`.
+   */
   signMessageMode?: "signMessageV2" | "sign" | "request";
   availabilityTimeoutMs?: number;
+  /**
+   * @deprecated Prefer `strategy` with `withAddressPoll(...)`.
+   */
   addressTimeoutMs?: number;
+  /**
+   * @deprecated Prefer `strategy` with `withAddressPoll(...)`.
+   */
   addressSettleMs?: number;
+  /**
+   * @deprecated Prefer `strategy` with `withEvents(...)`.
+   */
   accountChangeEventNames?: readonly string[];
+  /**
+   * @deprecated Prefer `strategy` with `withAddressPoll(...)` / `withEvents(...)`.
+   */
   accountChangeTimeoutMs?: number;
+  /**
+   * @deprecated Prefer `strategy` with `withAddressPoll(...)`.
+   */
   emptyAddressRetryDelayMs?: number;
+  /**
+   * @deprecated Prefer `strategy` with `withAddressPoll(...)`.
+   */
   emptyAddressRetryTimeoutMs?: number;
+  /**
+   * @deprecated Prefer `strategy` with `withPreferInjectedAddress(...)`.
+   */
   preferInjectedAddress?: boolean;
   metadata?: Partial<WalletMetadata>;
 };

@@ -139,14 +139,14 @@ function createQrHtml(viewModel: ConnectModalViewModel & { labels: ConnectModalL
   const qrContent = viewModel.qrUri
     ? `<span class="twk-qr-code" data-twk-qr-code="true" ${viewModel.qrRenderState === "error" ? 'data-twk-qr-renderer="error"' : ""}>${viewModel.qrRenderState === "error" ? `<span class="twk-qr-error">${escapeHtml(labels.qrRenderFailed)}</span>` : viewModel.qrImageSrc ? `<img src="${escapeAttribute(viewModel.qrImageSrc)}" alt="${escapeAttribute(`${name} ${labels.qrCode}`)}" />${wallet ? `<span class="twk-qr-center-logo">${createWalletIconHtml(wallet, false)}</span>` : ""}` : `<span class="twk-qr-skeleton twk-skeleton-qr" aria-hidden="true"></span>`}</span>`
     : `<span class="twk-qr-code" data-loading="true" data-twk-qr-code="true"><span class="twk-qr-skeleton twk-skeleton-qr" aria-hidden="true"></span><span class="twk-sr-only">${escapeHtml(labels.qrCode)}</span></span>`;
-  return `<div class="twk-connect-detail">
+  return `<div class="twk-connect-detail twk-qr-detail">
     <div class="twk-qr-slot twk-qr-large">${qrContent}</div>
     <p class="twk-detail-subtitle">${escapeHtml(isQrTransport ? labels.scanQr : labels.acceptRequest)}</p>
     <div class="twk-detail-actions">
       <button class="twk-action" type="button" data-twk-action="copy-uri" ${viewModel.qrUri ? "" : "disabled"}>${createActionContentHtml(copyIcon, labels.copyLink, copyState)}</button>
       <button class="twk-action" type="button" data-twk-action="retry" ${retryBusy ? `data-busy="true" disabled` : ""}>${createActionContentHtml(retryIcon, labels.tryAgain, retryBusy ? "busy" : undefined)}</button>
     </div>
-    ${createErrorHtml(viewModel.errorMessage ? resolveConnectErrorDisplay(viewModel.errorMessage, wallet, viewModel.errorMessages, viewModel.errorTitle).message : undefined)}
+    ${createErrorHtml(viewModel.errorMessage ? resolveConnectErrorDisplay(viewModel.errorMessage, wallet, viewModel.errorMessages, viewModel.errorTitle).message : undefined, "qr")}
     ${installRow}
   </div>`;
 }
@@ -252,8 +252,8 @@ function createAllWalletsTriggerLabel(label: string): string {
   return label === "All Wallets" ? "All wallets" : label;
 }
 
-function createErrorHtml(message?: string): string {
-  return message ? `<div class="twk-error" role="alert">${escapeHtml(message)}</div>` : "";
+function createErrorHtml(message?: string, scope?: "qr"): string {
+  return message ? `<div class="twk-error" ${scope ? `data-scope="${escapeAttribute(scope)}"` : ""} role="alert">${escapeHtml(message)}</div>` : "";
 }
 
 function resolveStatusErrorMessage(viewModel: ConnectModalViewModel): string | undefined {

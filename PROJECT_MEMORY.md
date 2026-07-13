@@ -4385,3 +4385,66 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Verification:
   - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot` passed with 43 tests.
+
+## 2026-07-13 Injected Strategy Decorator Helpers
+
+- Continued the remaining `WALLET_ADAPTER_ORG_SPEC.md` cleanup after the shared 6963 and UI fixes.
+- Added public composable injected strategy helpers in `packages/client/src/adapters/injected-strategy.ts`:
+  - `withRequestMethods`;
+  - `withEthRequest`;
+  - `withPreferInjectedAddress`;
+  - `withAddressPoll`;
+  - `withSignMode`;
+  - `withMarker`;
+  - `withEvents`;
+  - `withAcquireAddressDefaults`.
+- Exported the helpers through `packages/client/src/index.ts` for third-party wallet descriptors.
+- Refactored built-in wallet entries to use decorators:
+  - Bitget: request methods, address poll, prefer injected address;
+  - Gate: eth request, address poll, account-change events;
+  - SafePal: address poll and sign mode;
+  - Backpack and MathWallet: TRON request method.
+- Kept Gate off `withPreferInjectedAddress` because regression coverage expects request result to win when request and defaultAddress are both available.
+- Updated `Review/WALLET_ADAPTER_ORG_SPEC.md` so decorator helpers are no longer marked as not extracted.
+- Decided legacy flat injected config policy:
+  - keep fields for backward compatibility;
+  - mark flat quirk fields as deprecated in `packages/client/src/types.ts` and `packages/client/src/wallets/types.ts`;
+  - built-ins should continue using strategy/decorator composition instead of flat fields.
+- Decided TronLink 6963 ownership:
+  - keep TronLink 6963 discovery inside `@tron-wallet-kit/adapter-tronlink`;
+  - do not import client shared 6963 registry into the adapter package because that would create a dependency direction problem;
+  - client shared 6963 registry remains for injected descriptor strategies.
+- Remaining items:
+  - optional broader decorator migration for purely-standard entries;
+  - MathWallet live QA before recommendation.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed with 67 tests.
+
+## 2026-07-13 QR Panel Error/Footer Spacing
+
+- Adjusted WalletConnect/QR panel spacing:
+  - QR view now renders with `twk-qr-detail`;
+  - QR error uses `data-scope="qr"` so spacing can be tuned independently from other errors;
+  - QR error gets a larger top margin and top padding so it no longer touches the copy/retry buttons;
+  - QR detail gets extra bottom padding so WalletConnect QR loading/action footer feels less cramped.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot` passed with 43 tests.
+
+## 2026-07-13 WalletConnect Namespace Compatibility Fix
+
+- Checked `Review/WALLET_ADAPTER_ORG_SPEC.md` against current code and found the WalletConnect namespace fix was still open.
+- Updated `packages/adapters/walletconnect/src/index.ts`:
+  - default `requiredNamespaces.tron.methods` now includes only `tron_signTransaction`;
+  - `requiredNamespaces.tron.events` is empty by default;
+  - `optionalNamespaces.tron.methods` now carries `tron_signMessage`;
+  - `optionalNamespaces.tron.events` now carries `accountsChanged` and `chainChanged`;
+  - WalletConnect errors are no longer treated as user cancellation merely because the message contains `rejected`.
+- Added regression coverage in `packages/adapters/walletconnect/test/walletconnect.test.ts` for:
+  - minimal required namespace + optional capabilities;
+  - namespace-style proposal rejection not being mislabeled as `USER_REJECTED`.
+- Updated `Review/WALLET_ADAPTER_ORG_SPEC.md` follow-up status so reviewers see the WalletConnect namespace fix as done.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/adapter-walletconnect typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-walletconnect test -- --run --reporter=dot` passed with 9 tests.

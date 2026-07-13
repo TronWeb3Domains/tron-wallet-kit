@@ -1,4 +1,4 @@
-import { standardInjected } from "../../adapters/injected-strategy";
+import { standardInjected, withRequestMethods } from "../../adapters/injected-strategy";
 import { cloneInjectedProvider, isInjectedTronProvider, safeGetProperty } from "../../injected/detect";
 import type { InjectedTronProvider } from "../../types";
 import type { WalletDescriptor } from "../types";
@@ -28,6 +28,6 @@ export const backpack: WalletDescriptor = {
   group: "popular",
   providerPaths: ["backpack.tron", "backpack.tronLink"],
   conflictMarkers: ["backpack"],
-  injected: standardInjected({ provider: getBackpackInjectedProvider, rdns: ["app.backpack"], requestMethods: ["tron_requestAccounts"] }),
+  injected: withRequestMethods(standardInjected({ provider: getBackpackInjectedProvider, rdns: ["app.backpack"] }), ["tron_requestAccounts"]),
   detect: { providerPaths: ["backpack.tron", "backpack.tronLink"], provider: getBackpackInjectedProvider }
 };

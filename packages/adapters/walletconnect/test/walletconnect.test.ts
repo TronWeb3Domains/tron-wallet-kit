@@ -1,5 +1,32 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createWalletConnectAdapter, type WalletConnectWalletLike } from "../src/index";
+
+const walletConnectMock = vi.hoisted(() => ({
+  connectPayloads: [] as unknown[]
+}));
+
+vi.mock("@walletconnect/sign-client", () => ({
+  default: {
+    init: vi.fn(async () => ({
+      connect: vi.fn(async (payload: unknown) => {
+        walletConnectMock.connectPayloads.push(payload);
+        return {
+          uri: "wc:mock",
+          approval: async () => ({
+            topic: "topic",
+            namespaces: {
+              tron: { accounts: ["tron:0x2b6653dc:TWalletConnect"] }
+            }
+          })
+        };
+      }),
+      disconnect: vi.fn(),
+      on: vi.fn(),
+      request: vi.fn(),
+      session: { getAll: () => [] }
+    }))
+  }
+}));
 
 function createMockWallet(overrides: Partial<WalletConnectWalletLike> = {}) {
   const calls = {
@@ -32,6 +59,10 @@ function createMockWallet(overrides: Partial<WalletConnectWalletLike> = {}) {
 }
 
 describe("WalletConnectAdapter", () => {
+  beforeEach(() => {
+    walletConnectMock.connectPayloads.length = 0;
+  });
+
   it("requires projectId and exposes object capabilities", () => {
     const adapter = createWalletConnectAdapter();
 
@@ -74,6 +105,33 @@ describe("WalletConnectAdapter", () => {
     const uris: string[] = [];
     await adapter.connect({ onUri: (uri) => uris.push(uri) });
     expect(uris).toEqual(["wc:mock"]);
+  });
+
+  it("uses a minimal required namespace and keeps optional WalletConnect capabilities optional", async () => {
+    const adapter = createWalletConnectAdapter({
+      projectId: "project",
+      network: "mainnet"
+    });
+
+    await adapter.connect();
+
+    expect(walletConnectMock.connectPayloads).toHaveLength(1);
+    expect(walletConnectMock.connectPayloads[0]).toMatchObject({
+      requiredNamespaces: {
+        tron: {
+          methods: ["tron_signTransaction"],
+          chains: ["tron:0x2b6653dc"],
+          events: []
+        }
+      },
+      optionalNamespaces: {
+        tron: {
+          methods: ["tron_signMessage"],
+          chains: ["tron:0x2b6653dc"],
+          events: ["accountsChanged", "chainChanged"]
+        }
+      }
+    });
   });
 
   it("calls both configured and per-connect URI callbacks", async () => {
@@ -139,5 +197,20 @@ describe("WalletConnectAdapter", () => {
 
     await expect(adapter.connect()).rejects.toMatchObject({ code: "USER_REJECTED" });
     expect(wallet.calls.disconnect).toBe(1);
+  });
+
+  it("does not mislabel namespace proposal rejections as user cancellation", async () => {
+    const wallet = createMockWallet({
+      connect: async () => {
+        throw new Error("Proposal rejected because required namespaces are not supported");
+      }
+    });
+
+    const adapter = createWalletConnectAdapter({
+      projectId: "project",
+      walletFactory: () => wallet
+    });
+
+    await expect(adapter.connect()).rejects.toMatchObject({ code: "CONNECTION_FAILED" });
   });
 });

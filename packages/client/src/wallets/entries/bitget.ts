@@ -1,4 +1,4 @@
-import { standardInjected } from "../../adapters/injected-strategy";
+import { standardInjected, withAddressPoll, withPreferInjectedAddress, withRequestMethods } from "../../adapters/injected-strategy";
 import { cloneInjectedProvider, isInjectedTronProvider, safeGetProperty } from "../../injected/detect";
 import type { InjectedTronProvider } from "../../types";
 import type { WalletDescriptor } from "../types";
@@ -48,17 +48,16 @@ export const bitget: WalletDescriptor = {
   platforms: ["extension", "mobile"],
   group: "popular",
   featured: 4,
-  injected: standardInjected({
+  injected: withPreferInjectedAddress(withAddressPoll(withRequestMethods(standardInjected({
     providerPaths: ["bitkeep.tronLink", "bitkeep.tron"],
     provider: getBitgetInjectedProvider,
     rdns: ["com.bitget.web3"],
-    marker: hasBitgetInjectedMarker,
-    requestMethods: ["tron_requestAccounts", "eth_requestAccounts"],
-    addressSettleMs: 2500,
-    emptyAddressRetryDelayMs: 350,
-    emptyAddressRetryTimeoutMs: 3000,
-    preferInjectedAddress: true
-  }),
+    marker: hasBitgetInjectedMarker
+  }), ["tron_requestAccounts", "eth_requestAccounts"]), {
+    settleMs: 2500,
+    retryDelayMs: 350,
+    retryTimeoutMs: 3000
+  })),
   detect: {
     providerPaths: ["bitkeep.tronLink", "bitkeep.tron"],
     provider: getBitgetInjectedProvider,

@@ -44,17 +44,47 @@ export type InjectedWalletDescriptor = WalletDescriptorBase & {
   integration: "injected";
   detect?: InjectedDetect;
   injected?: InjectedStrategy;
+  /**
+   * @deprecated Put wallet connect quirks in `injected: standardInjected(...)`
+   * plus decorators such as `withRequestMethods(...)`.
+   */
   requestMethods?: readonly string[];
+  /**
+   * @deprecated Put signing quirks in `withSignMode(...)`.
+   */
   signMessageMode?: "signMessageV2" | "sign" | "request";
+  /**
+   * @deprecated Use wallet-local strategy composition instead of flat descriptor
+   * timing fields. Kept for backward compatibility with existing descriptors.
+   */
   availabilityTimeoutMs?: number;
+  /**
+   * @deprecated Use `withAddressPoll(...)` or a wallet-local strategy.
+   */
   addressTimeoutMs?: number;
+  /**
+   * @deprecated Use `withAddressPoll(...)`.
+   */
   addressSettleMs?: number;
+  /**
+   * @deprecated Use `withEvents(...)`.
+   */
   accountChangeEventNames?: readonly string[];
+  /**
+   * @deprecated Use `withAddressPoll(...)` / `withEvents(...)`.
+   */
   accountChangeTimeoutMs?: number;
+  /**
+   * @deprecated Use `withAddressPoll(...)`.
+   */
   emptyAddressRetryDelayMs?: number;
+  /**
+   * @deprecated Use `withAddressPoll(...)`.
+   */
   emptyAddressRetryTimeoutMs?: number;
-  // For wallets whose request() hangs/re-prompts when already exposing an account (e.g. Gate):
-  // use the already-injected tronWeb.defaultAddress.base58 first and only call request() if absent.
+  /**
+   * @deprecated Use `withPreferInjectedAddress(...)`.
+   */
   preferInjectedAddress?: boolean;
 };
 

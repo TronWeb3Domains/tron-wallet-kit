@@ -669,6 +669,9 @@ ${selector} .twk-connect-detail {
   text-align: center;
   width: 100%;
 }
+${selector} .twk-qr-detail {
+  padding-bottom: 12px;
+}
 ${selector} .twk-connect-detail .twk-title { line-height: 1.4; }
 ${selector} .twk-wallet-icon-large {
   align-items: center;
@@ -754,6 +757,9 @@ ${selector} .twk-detail-actions {
   gap: 10px;
   justify-content: center;
   margin-top: 16px;
+}
+${selector} .twk-qr-detail .twk-detail-actions {
+  margin-top: 18px;
 }
 ${selector} .twk-install-row {
   align-items: center;
@@ -962,6 +968,12 @@ ${selector} .twk-error {
   min-height: 48px;
   overflow-wrap: anywhere;
   padding: 12px 16px;
+}
+${selector} .twk-error[data-scope="qr"] {
+  border-top-color: color-mix(in srgb, var(--twk-danger) 18%, var(--twk-border));
+  margin-top: 18px;
+  padding-top: 14px;
+  width: min(100%, 360px);
 }
 ${selector} .twk-account-body {
   display: grid;

@@ -75,6 +75,7 @@ type WalletConnectSession = {
 };
 
 const DEFAULT_WALLETCONNECT_METHODS = ["tron_signMessage", "tron_signTransaction"] as const;
+const DEFAULT_WALLETCONNECT_REQUIRED_METHODS = ["tron_signTransaction"] as const;
 const DEFAULT_WALLETCONNECT_EVENTS = ["accountsChanged", "chainChanged"] as const;
 const DEFAULT_WALLETCONNECT_APPROVAL_TIMEOUT_MS = 180_000;
 
@@ -283,7 +284,14 @@ class LiteWalletConnectWallet implements WalletConnectWalletLike {
     const { uri, approval } = await client.connect({
       requiredNamespaces: {
         tron: {
-          methods: this.options.methods ?? [...DEFAULT_WALLETCONNECT_METHODS],
+          methods: this.options.methods ?? [...DEFAULT_WALLETCONNECT_REQUIRED_METHODS],
+          chains: [this.options.network],
+          events: []
+        }
+      },
+      optionalNamespaces: {
+        tron: {
+          methods: getOptionalWalletConnectMethods(this.options.methods),
           chains: [this.options.network],
           events: this.options.events ?? [...DEFAULT_WALLETCONNECT_EVENTS]
         }
@@ -446,6 +454,11 @@ function toWalletConnectChainId(network: WalletConnectNetworkName | string): str
   return network.startsWith("tron:") ? network : `tron:${network}`;
 }
 
+function getOptionalWalletConnectMethods(requiredMethods: readonly string[] | undefined): string[] {
+  const required = new Set(requiredMethods ?? DEFAULT_WALLETCONNECT_REQUIRED_METHODS);
+  return DEFAULT_WALLETCONNECT_METHODS.filter((method) => !required.has(method));
+}
+
 function resolveWalletConnectNetwork(network: WalletConnectNetworkName | string): WalletNetwork {
   const chainId = toWalletConnectChainId(network).replace(/^tron:/, "");
   if (chainId === "0x2b6653dc") return { ...TRON_MAINNET };
@@ -488,5 +501,5 @@ function isWalletConnectUserRejected(cause: unknown): boolean {
   if (!(typeof cause === "object" && cause !== null)) return false;
   const message = "message" in cause ? String((cause as { message?: unknown }).message) : "";
   const code = "code" in cause ? (cause as { code?: unknown }).code : undefined;
-  return code === 4001 || /user closed|user rejected|rejected/i.test(message);
+  return code === 4001 || /user closed|user rejected|user disconnected|user cancelled|user canceled/i.test(message);
 }

@@ -1,4 +1,4 @@
-import { standardInjected } from "../../adapters/injected-strategy";
+import { standardInjected, withAddressPoll, withSignMode } from "../../adapters/injected-strategy";
 import { extractInjectedAddress, getDefaultBase58Address, safeGetProperty } from "../../injected/detect";
 import type { InjectedTronProvider } from "../../types";
 import type { WalletDescriptor } from "../types";
@@ -83,14 +83,14 @@ export const safepal: WalletDescriptor = {
   platforms: ["extension", "mobile"],
   group: "popular",
   supportsWalletConnect: true,
-  injected: standardInjected({
+  injected: withSignMode(withAddressPoll(standardInjected({
     provider: getSafePalInjectedProvider,
     rdns: ["com.safepal"],
-    marker: hasSafePalInjectedMarker,
-    signMessageMode: "sign",
-    addressSettleMs: 2500,
-    emptyAddressRetryDelayMs: 300,
-    emptyAddressRetryTimeoutMs: 3000
-  }),
+    marker: hasSafePalInjectedMarker
+  }), {
+    settleMs: 2500,
+    retryDelayMs: 300,
+    retryTimeoutMs: 3000
+  }), "sign"),
   detect: { provider: getSafePalInjectedProvider, availabilityProbe: hasSafePalInjectedMarker }
 };

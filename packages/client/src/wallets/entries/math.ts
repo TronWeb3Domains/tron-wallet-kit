@@ -1,5 +1,5 @@
 import type { WalletDescriptor } from "../types";
-import { standardInjected } from "../../adapters/injected-strategy";
+import { standardInjected, withRequestMethods } from "../../adapters/injected-strategy";
 import { cloneInjectedProvider, isInjectedTronProvider, safeGetProperty } from "../../injected/detect";
 import type { InjectedTronProvider } from "../../types";
 
@@ -73,7 +73,7 @@ export const math: WalletDescriptor = {
   platforms: ["extension", "mobile"],
   group: "popular",
   supportsWalletConnect: true,
-  injected: standardInjected({ provider: getMathWalletInjectedProvider, requestMethods: ["tron_requestAccounts"] }),
+  injected: withRequestMethods(standardInjected({ provider: getMathWalletInjectedProvider }), ["tron_requestAccounts"]),
   detect: { provider: getMathWalletInjectedProvider },
   description: "TronWeb-compatible injected wallet with WalletConnect fallback."
 };

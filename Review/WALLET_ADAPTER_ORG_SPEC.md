@@ -722,9 +722,9 @@ This addendum supersedes the stale "TronLink checking -> not installed bug is NO
 
 #### Still open
 
-- **Shared 6963 registry is still not implemented for every wallet.** TronLink has focused race-proof 6963 handling; the generic injected layer still mostly relies on wallet-local markers / provider resolvers.
-- **Migration cleanup is still partially owed.** Built-in entry-level duplicate flat quirk declarations are reduced, but `InjectedTronAdapterConfig`, `InjectedWalletDescriptor` legacy fields, `strategyFromLegacyConfig`, and `toInjectedConfig` compatibility plumbing still remain until the public migration policy is decided.
-- **Decorator helpers are not extracted yet.** Behaviors are currently expressed through `standardInjected()` options and wallet-local resolvers rather than public composable helpers such as `withEthRequest`, `withPreferInjectedAddress`, and `withAddressPoll`.
+- **Shared 6963 registry is done for injected descriptor strategies.** TronLink intentionally keeps adapter-local 6963 discovery because `@tron-wallet-kit/adapter-tronlink` must not depend on `@tron-wallet-kit/client`.
+- **Legacy flat config fields are kept as deprecated compatibility shims.** New built-ins should use `strategy`, `standardInjected(...)`, and decorators; removing the flat fields would be a breaking change and is deferred.
+- **Decorator helpers are extracted and exported.** Key quirky built-ins use them; moving purely-standard entries to decorator form is optional cleanup, not a blocker.
 - **MathWallet remains QA-critical.** It is marker-gated and does not claim generic `tronLink`, but it still needs live extension QA before being promoted in any recommended/default featured list.
 
 #### Connect-correctness risks found live (2026-07-13)
@@ -765,12 +765,38 @@ detection — the badge can read INSTALLED while connect still fails or binds th
    address strictly from TronLink's `request` result; derive `tronWeb`/hex/network only from a
    TronLink-owned tronWeb, otherwise omit `hexAddress` and resolve the network via a neutral RPC.
 
+3. **WalletConnect — connect fails with "The request was cancelled in the wallet." even after the user
+   approves in the wallet.** ROOT CAUSE (traced in code — `packages/adapters/walletconnect/src/index.ts`):
+   - The proposal uses **only `requiredNamespaces`** and requires **both** methods + **both** events:
+     `tron: { methods: ["tron_signMessage","tron_signTransaction"], chains: [<caip2>], events: ["accountsChanged","chainChanged"] }`
+     (`DEFAULT_WALLETCONNECT_METHODS` / `DEFAULT_WALLETCONNECT_EVENTS`). Per the WalletConnect protocol a
+     wallet **must reject a proposal it cannot fully satisfy** — many TRON WC wallets do **not** implement
+     `tron_signMessage` over WC, or don't emit those events, so they decline the whole session even when
+     the user taps approve. There is **no `optionalNamespaces`** to soften this.
+   - The error mapping then **mislabels** the failure: `isWalletConnectUserRejected` returns true for any
+     message merely containing `/rejected/i` (not just code `4001`). A namespace/proposal-incompatibility
+     rejection reads like "…rejected", so it is normalized to `USER_REJECTED` → the exact string
+     "The request was cancelled in the wallet." — hiding the real cause.
+   - Also note `options.network ?? "nile"` defaults to **Nile testnet**; a mainnet-only wallet can reject a
+     required Nile chain.
+   FIX (mirrors the XRPL sibling's "required = only the sign method" design for broad compatibility):
+   put **only `tron_signTransaction` (+ chains) in `requiredNamespaces`**, and move `tron_signMessage` and
+   the `accountsChanged`/`chainChanged` events into **`optionalNamespaces`**. Tighten
+   `isWalletConnectUserRejected` to trigger only on code `4001` (or explicit "user rejected / user closed /
+   user disconnected"), so a genuine namespace mismatch surfaces as its real error instead of a fake
+   cancellation. Confirm the default network with the app (prefer mainnet unless testing).
+   - **Live confirmation (2026-07-13):** opening the **WalletConnect QR** and scanning it with **Bitget**
+     fails with "The request was cancelled in the wallet.", while scanning the **same QR with Klever
+     succeeds**. This is exactly the strict-`requiredNamespaces` incompatibility: Bitget's WC layer cannot
+     satisfy the full required set (both methods + both events) and rejects the proposal even though the user
+     approves; Klever happens to satisfy it. The per-wallet split (one wallet fails, another passes on the
+     identical proposal) is the signature of a required-namespace mismatch, not a user cancellation — and
+     confirms the fix below is required, not optional.
+
 #### Updated suggested order
 
-1. Decide whether to keep or break backward compatibility for legacy flat injected config fields.
-2. Extract decorator helpers after registry/flag cleanup.
-3. Consider whether TronLink should eventually reuse the shared client 6963 registry or keep its adapter-local 6963 flow.
-4. Run live QA for MathWallet before promoting it in any recommended/default featured list.
+1. **WalletConnect namespace fix** — minimal `requiredNamespaces` (only `tron_signTransaction`) + `optionalNamespaces` for the rest; stop mislabeling namespace rejects as user-cancel. **Confirmed live**: Bitget rejects the strict proposal, Klever accepts it.
+2. Run live QA for MathWallet before promoting it in any recommended/default featured list.
 
 #### Follow-up implementation status
 
@@ -787,3 +813,37 @@ detection — the badge can read INSTALLED while connect still fails or binds th
   - `standardInjected({ rdns })` checks the cached 6963 signal before marker/provider fallback.
   - RDNs are wired for OKX, Bitget, Gate, SafePal, OneKey, Bybit, Backpack, and Guarda.
   - Trust and Binance intentionally do not use rdns installed signals because their desktop announcements/namespaces are not sufficient proof of an injected TRON provider.
+- **Decorator helpers are now extracted and exported.**
+  - `packages/client/src/adapters/injected-strategy.ts` exports `withRequestMethods`, `withEthRequest`, `withPreferInjectedAddress`, `withAddressPoll`, `withSignMode`, `withMarker`, `withEvents`, and `withAcquireAddressDefaults`.
+  - `packages/client/src/index.ts` exports the injected strategy helpers for third-party wallet descriptors.
+  - Bitget, Gate, SafePal, Backpack, and MathWallet now compose quirks with decorators instead of embedding those behaviors directly in the `standardInjected()` options.
+  - Gate intentionally does **not** use `withPreferInjectedAddress` because existing regression coverage requires the request result to win when both request and defaultAddress are present.
+- **Legacy flat injected config policy is decided.**
+  - Flat config fields remain for backward compatibility and are still mapped through `strategyFromLegacyConfig`.
+  - `packages/client/src/types.ts` and `packages/client/src/wallets/types.ts` now mark flat quirk fields as deprecated and point integrators to `strategy`, `standardInjected(...)`, and decorators.
+  - Built-in descriptors should continue to use strategy/decorator composition, not flat fields.
+- **TronLink 6963 ownership is decided.**
+  - Keep TronLink's 6963 flow adapter-local in `@tron-wallet-kit/adapter-tronlink`.
+  - Reason: TronLink is a custom adapter package and must not depend on `@tron-wallet-kit/client`; importing the client shared registry from the adapter would create the wrong dependency direction.
+  - The client shared 6963 registry remains for injected descriptor strategies only.
+
+#### Follow-up implementation status - WalletConnect namespace fix
+
+- **WalletConnect strict namespace proposal is fixed.**
+  - `packages/adapters/walletconnect/src/index.ts` now puts only `tron_signTransaction` in `requiredNamespaces`.
+  - `tron_signMessage` and `accountsChanged` / `chainChanged` are now sent through `optionalNamespaces`.
+  - This keeps broad TRON WalletConnect compatibility: wallets that can sign transactions but do not support message signing or events no longer have to reject the whole session proposal.
+- **WalletConnect error normalization is tightened.**
+  - `isWalletConnectUserRejected` no longer maps every message containing `rejected` to `USER_REJECTED`.
+  - Only code `4001` or explicit user-close/user-reject/user-disconnect wording is treated as user cancellation.
+  - Namespace/proposal incompatibility can now surface as `CONNECTION_FAILED` instead of the misleading UI text "The request was cancelled in the wallet."
+- **Regression coverage added.**
+  - `packages/adapters/walletconnect/test/walletconnect.test.ts` asserts the required/optional namespace shape.
+  - It also asserts a namespace-style rejected proposal is not mislabeled as user cancellation.
+- **Verification.**
+  - `pnpm --filter @tron-wallet-kit/adapter-walletconnect typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-walletconnect test -- --run --reporter=dot` passed with 9 tests.
+
+#### Current remaining item
+
+- **MathWallet remains QA-critical.** It is marker-gated and does not claim generic `tronLink`, but it still needs live extension QA before being promoted in any recommended/default featured list.

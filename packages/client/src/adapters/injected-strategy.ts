@@ -55,6 +55,12 @@ export type InjectedStrategy = {
   subscribe?: (ctx: InjectedConnectContext, handlers: InjectedEventHandlers) => (() => void) | undefined;
 };
 
+export type InjectedAcquireAddressDefaults = NonNullable<Parameters<InjectedHelpers["acquireAddress"]>[0]>;
+
+export type InjectedEventDecoratorConfig = {
+  accountsChanged?: string | readonly string[];
+};
+
 export type StandardInjectedOptions = {
   providerPaths?: readonly string[];
   provider?: () => InjectedTronProvider | undefined;
@@ -96,6 +102,49 @@ export function standardInjected(opts: StandardInjectedOptions): InjectedStrateg
   return strategy;
 }
 
+export function withRequestMethods(strategy: InjectedStrategy, requestMethods: readonly string[]): InjectedStrategy {
+  return withAcquireAddressDefaults(strategy, { requestMethods });
+}
+
+export function withEthRequest(strategy: InjectedStrategy): InjectedStrategy {
+  return withRequestMethods(strategy, ["eth_requestAccounts"]);
+}
+
+export function withPreferInjectedAddress(strategy: InjectedStrategy): InjectedStrategy {
+  return withAcquireAddressDefaults(strategy, { preferInjectedAddress: true });
+}
+
+export function withAddressPoll(strategy: InjectedStrategy, settleMsOrOptions: number | InjectedAcquireAddressDefaults): InjectedStrategy {
+  const defaults = typeof settleMsOrOptions === "number" ? { settleMs: settleMsOrOptions } : settleMsOrOptions;
+  return withAcquireAddressDefaults(strategy, defaults);
+}
+
+export function withSignMode(strategy: InjectedStrategy, mode: NonNullable<StandardInjectedOptions["signMessageMode"]>): InjectedStrategy {
+  return {
+    ...strategy,
+    signMessage: (ctx, message) => defaultInjectedSignMessage(ctx, message, mode)
+  };
+}
+
+export function withMarker(strategy: InjectedStrategy, detect: () => boolean | Promise<boolean>): InjectedStrategy {
+  return {
+    ...strategy,
+    detect: async () => Boolean(await Promise.resolve(detect()).catch(() => false)) || Boolean(await Promise.resolve(strategy.detect()).catch(() => false))
+  };
+}
+
+export function withEvents(strategy: InjectedStrategy, names: InjectedEventDecoratorConfig): InjectedStrategy {
+  const accountsChanged = normalizeEventNames(names.accountsChanged);
+  return accountsChanged.length > 0 ? withAcquireAddressDefaults(strategy, { accountChangeEventNames: accountsChanged }) : strategy;
+}
+
+export function withAcquireAddressDefaults(strategy: InjectedStrategy, defaults: InjectedAcquireAddressDefaults): InjectedStrategy {
+  return {
+    ...strategy,
+    connect: (ctx) => strategy.connect(withAcquireDefaultsContext(ctx, defaults))
+  };
+}
+
 export function strategyFromLegacyConfig(config: InjectedTronAdapterConfig): InjectedStrategy {
   return standardInjected({
     providerPaths: config.providerPaths,
@@ -127,6 +176,21 @@ export function createInjectedContext(config: InjectedTronAdapterConfig, options
     }
   };
   return { options, ...(connectedNetwork ? { network: connectedNetwork } : {}), getProvider, helpers };
+}
+
+function withAcquireDefaultsContext(ctx: InjectedConnectContext, defaults: InjectedAcquireAddressDefaults): InjectedConnectContext {
+  return {
+    ...ctx,
+    helpers: {
+      ...ctx.helpers,
+      acquireAddress: (opts) => ctx.helpers.acquireAddress({ ...opts, ...defaults })
+    }
+  };
+}
+
+function normalizeEventNames(value: string | readonly string[] | undefined): readonly string[] {
+  if (!value) return [];
+  return typeof value === "string" ? [value] : value;
 }
 
 export async function defaultInjectedSignMessage(ctx: InjectedConnectContext, message: string, mode?: InjectedTronAdapterConfig["signMessageMode"]): Promise<string | undefined> {

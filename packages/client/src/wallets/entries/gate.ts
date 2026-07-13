@@ -1,4 +1,4 @@
-import { standardInjected } from "../../adapters/injected-strategy";
+import { standardInjected, withAddressPoll, withEthRequest, withEvents } from "../../adapters/injected-strategy";
 import { cloneInjectedProvider, isInjectedTronProvider, safeGetProperty } from "../../injected/detect";
 import type { InjectedTronProvider } from "../../types";
 import type { WalletDescriptor } from "../types";
@@ -40,17 +40,16 @@ export const gate: WalletDescriptor = {
   platforms: ["extension"],
   group: "popular",
   availabilityTimeoutMs: 5000,
-  injected: standardInjected({
+  injected: withEvents(withAddressPoll(withEthRequest(standardInjected({
     providerPaths: ["gatewallet.tron", "gatewallet.tronLink", "gatewallet.tronWeb"],
     provider: getGateInjectedProvider,
     rdns: ["io.gate.wallet"],
-    marker: hasGateInjectedMarker,
-    requestMethods: ["eth_requestAccounts"],
-    addressTimeoutMs: 15000,
-    addressSettleMs: 8000,
-    accountChangeEventNames: ["accountsChanged"],
+    marker: hasGateInjectedMarker
+  })), {
+    timeoutMs: 15000,
+    settleMs: 8000,
     accountChangeTimeoutMs: 5000
-  }),
+  }), { accountsChanged: "accountsChanged" }),
   detect: {
     providerPaths: ["gatewallet.tron", "gatewallet.tronLink", "gatewallet.tronWeb"],
     provider: getGateInjectedProvider,
