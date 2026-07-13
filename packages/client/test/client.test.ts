@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TRON_MAINNET, TRON_NILE, type WalletAdapter } from "@tron-wallet-kit/core";
-import { mergeWalletOptionsWithCatalog, type WalletOptionViewModel } from "@tron-wallet-kit/ui";
+import { mapAdapterToWalletOption, mergeWalletOptionsWithCatalog, type WalletOptionViewModel } from "@tron-wallet-kit/ui";
 import {
   BUILTIN_WALLET_DESCRIPTORS,
   buildCatalog,
@@ -715,6 +715,29 @@ describe("client entrypoints", () => {
     }
   });
 
+  it("hydrates descriptor catalog metadata onto wallet adapters for UI mapping", () => {
+    const wallets = createWalletClient({ walletConnectProjectId: "project" }).getWallets();
+    const trust = wallets.find((wallet) => wallet.metadata.id === "trust");
+    const binance = wallets.find((wallet) => wallet.metadata.id === "binance");
+    const walletConnect = wallets.find((wallet) => wallet.metadata.id === "walletconnect");
+
+    expect(trust?.metadata.catalog).toMatchObject({
+      providerPaths: ["trustwallet.tronLink", "trustwallet.tron"],
+      conflictMarkers: ["trustwallet"],
+      supportsWalletConnect: true
+    });
+    expect(binance?.metadata.catalog).toMatchObject({
+      providerPaths: ["binancew3w.tron"],
+      conflictMarkers: ["binancew3w"],
+      supportsWalletConnect: true
+    });
+    expect(walletConnect?.metadata.catalog).toMatchObject({ supportsWalletConnect: true });
+    expect(mapAdapterToWalletOption(trust as WalletAdapter, false)).toMatchObject({
+      providerPaths: ["trustwallet.tronLink", "trustwallet.tron"],
+      supportsWalletConnect: true
+    });
+  });
+
   it("keeps TronLink class adapter methods after icon metadata hydration", async () => {
     const manager = createWalletClient({
       wallets: ["tronlink"],
@@ -1328,6 +1351,51 @@ describe("client entrypoints", () => {
     await expect(Promise.resolve(manager.getWallets().find((wallet) => wallet.metadata.id === "gate")?.isAvailable?.())).resolves.toBe(false);
     await expect(Promise.resolve(manager.getWallets().find((wallet) => wallet.metadata.id === "onekey")?.isAvailable?.())).resolves.toBe(true);
   }, 8000);
+
+  it("does not mark Trust installed from namespace-only desktop globals", async () => {
+    (globalThis as typeof globalThis & { trustwallet?: unknown }).trustwallet = {
+      tron: {},
+      tronLink: {}
+    };
+    const manager = createWalletClient({ wallets: ["trust"] });
+
+    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(false);
+  });
+
+  it("marks Trust installed only when a usable TRON provider exists", async () => {
+    (globalThis as typeof globalThis & { trustwallet?: unknown }).trustwallet = {
+      tron: {
+        request: vi.fn(),
+        tronWeb: {
+          defaultAddress: { base58: "TgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" },
+          trx: {}
+        }
+      }
+    };
+    const manager = createWalletClient({ wallets: ["trust"] });
+
+    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
+  });
+
+  it("does not mark Binance installed from namespace-only globals", async () => {
+    (globalThis as typeof globalThis & { binancew3w?: unknown }).binancew3w = {
+      tron: {}
+    };
+    const manager = createWalletClient({ wallets: ["binance"] });
+
+    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(false);
+  });
+
+  it("marks Binance installed only when the TRON account API exists", async () => {
+    (globalThis as typeof globalThis & { binancew3w?: unknown }).binancew3w = {
+      tron: {
+        getAccount: vi.fn(async () => ({ address: "ThAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" }))
+      }
+    };
+    const manager = createWalletClient({ wallets: ["binance"] });
+
+    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
+  });
 
   it("waits briefly for late injected providers when configured", async () => {
     const manager = createWalletClient({

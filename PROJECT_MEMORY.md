@@ -4199,3 +4199,34 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/adapter-tronlink test -- --run --reporter=dot` passed with 28 tests.
   - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed with 58 tests.
+
+## 2026-07-13 Strategy-Derived Catalog Metadata + Trust/Binance Strict Detect
+
+- Implemented the next migration step from `Review/WALLET_ADAPTER_ORG_SPEC.md`.
+- Added `WalletMetadata.catalog` in core so UI-facing catalog metadata can travel with each adapter instead of relying on UI static catalog hardcode.
+- Added descriptor-derived catalog hydration in the client:
+  - `buildCatalogItem()` now builds a single catalog item from a wallet descriptor;
+  - `buildCatalog()` reuses `buildCatalogItem()`;
+  - `buildAdapters()` hydrates adapter metadata with descriptor-derived `catalog` metadata.
+- Updated UI wallet mapping:
+  - `mapAdapterToWalletOption()` now copies `featured`, `providerPaths`, `conflictMarkers`, `mobileDeepLink`, and `supportsWalletConnect` from `adapter.metadata.catalog`.
+- Added descriptor-level `providerPaths` and `conflictMarkers` fields for wallet metadata that may be independent from the actual connect strategy.
+- Tightened Trust Wallet detection:
+  - namespace-only `window.trustwallet` / empty `trustwallet.tron` no longer marks Trust as installed;
+  - Trust is installed only when a usable TRON provider exists.
+- Tightened Binance Web3 Wallet detection:
+  - namespace-only `window.binancew3w.tron` no longer marks Binance as installed;
+  - Binance is installed only when the TRON account API exists.
+- Added regression coverage for:
+  - descriptor catalog metadata hydration onto adapters;
+  - UI option mapping from `adapter.metadata.catalog`;
+  - Trust namespace-only false;
+  - Trust usable provider true;
+  - Binance namespace-only false;
+  - Binance usable account API true.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/core typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed with 63 tests.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot` passed with 43 tests.

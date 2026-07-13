@@ -63,6 +63,8 @@ export const binance: WalletDescriptor = {
   platforms: ["extension", "mobile"],
   group: "popular",
   supportsWalletConnect: true,
-  injected: standardInjected({ providerPaths: ["binancew3w.tron"], provider: getBinanceInjectedProvider }),
+  providerPaths: ["binancew3w.tron"],
+  conflictMarkers: ["binancew3w"],
+  injected: standardInjected({ provider: getBinanceInjectedProvider }),
   detect: { providerPaths: ["binancew3w.tron"], provider: getBinanceInjectedProvider }
 };

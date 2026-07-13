@@ -20,6 +20,8 @@ export type WalletDescriptorBase = {
     scheme: string;
     urlTemplate?: string;
   };
+  providerPaths?: readonly string[];
+  conflictMarkers?: readonly string[];
 };
 
 export type InjectedDetect = {

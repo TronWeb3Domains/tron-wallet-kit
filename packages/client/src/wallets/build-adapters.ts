@@ -3,6 +3,7 @@ import { createWalletConnectAdapter } from "@tron-wallet-kit/adapter-walletconne
 import { createDefaultTronwalletBridgeAdapter, type DefaultTronwalletBridgeWalletConfig } from "../adapters/bridge";
 import { createInjectedTronAdapter } from "../adapters/injected";
 import type { DefaultAdaptersConfig, InjectedTronAdapterConfig } from "../types";
+import { buildCatalogItem } from "./build-catalog";
 import { getWalletIcon } from "./icons.generated";
 import type { WalletDescriptor } from "./types";
 
@@ -97,11 +98,20 @@ function toInjectedConfig(wallet: Extract<WalletDescriptor, { integration: "inje
 
 function hydrateAdapterMetadata(wallet: WalletDescriptor, adapter: WalletAdapter): WalletAdapter {
   const icon = wallet.icon ?? getWalletIcon(wallet.id);
-  if (!icon && !wallet.availabilityMode) return adapter;
+  const catalog = buildCatalogItem(wallet);
+  const metadataCatalog = {
+    ...(catalog.enabled !== undefined ? { enabled: catalog.enabled } : {}),
+    ...(catalog.featured !== undefined ? { featured: catalog.featured } : {}),
+    ...(catalog.providerPaths ? { providerPaths: catalog.providerPaths } : {}),
+    ...(catalog.conflictMarkers ? { conflictMarkers: catalog.conflictMarkers } : {}),
+    ...(catalog.mobileDeepLink ? { mobileDeepLink: catalog.mobileDeepLink } : {}),
+    ...(catalog.supportsWalletConnect !== undefined ? { supportsWalletConnect: catalog.supportsWalletConnect } : {})
+  };
   (adapter as WalletAdapter & { metadata: WalletMetadata }).metadata = {
     ...adapter.metadata,
     ...(icon ? { icon } : {}),
-    ...(wallet.availabilityMode ? { availabilityMode: wallet.availabilityMode } : {})
+    ...(wallet.availabilityMode ? { availabilityMode: wallet.availabilityMode } : {}),
+    catalog: metadataCatalog
   };
   return adapter;
 }

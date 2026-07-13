@@ -64,6 +64,19 @@ export interface WalletMetadata {
   group?: string;
   platforms?: WalletPlatform[];
   availabilityMode?: "auto" | "on-demand";
+  catalog?: WalletCatalogMetadata;
+}
+
+export interface WalletCatalogMetadata {
+  enabled?: boolean;
+  featured?: number;
+  providerPaths?: readonly string[];
+  conflictMarkers?: readonly string[];
+  mobileDeepLink?: {
+    scheme: string;
+    urlTemplate?: string;
+  };
+  supportsWalletConnect?: boolean;
 }
 
 export interface WalletCapabilities {

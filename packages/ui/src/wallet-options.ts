@@ -25,6 +25,11 @@ export function mapAdapterToWalletOption(adapter: WalletAdapter, availability?: 
   if (adapter.metadata.group) option.group = adapter.metadata.group;
   if (adapter.metadata.type) option.transport = adapter.metadata.type;
   if (adapter.metadata.platforms) option.platforms = adapter.metadata.platforms;
+  if (adapter.metadata.catalog?.featured !== undefined) option.featured = adapter.metadata.catalog.featured;
+  if (adapter.metadata.catalog?.providerPaths) option.providerPaths = adapter.metadata.catalog.providerPaths;
+  if (adapter.metadata.catalog?.conflictMarkers) option.conflictMarkers = adapter.metadata.catalog.conflictMarkers;
+  if (adapter.metadata.catalog?.mobileDeepLink) option.mobileDeepLink = adapter.metadata.catalog.mobileDeepLink;
+  if (adapter.metadata.catalog?.supportsWalletConnect !== undefined) option.supportsWalletConnect = adapter.metadata.catalog.supportsWalletConnect;
   if (capabilities.length > 0) option.capabilities = capabilities;
   const badgeWallet = { id: adapter.metadata.id, capabilities, readyState };
   const badge = resolveWalletBadge(
