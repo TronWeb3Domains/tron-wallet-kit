@@ -1,3 +1,4 @@
+import { standardInjected } from "../../adapters/injected-strategy";
 import { getSafePalInjectedProvider, hasSafePalInjectedMarker } from "../../injected/detect";
 import type { WalletDescriptor } from "../types";
 
@@ -10,6 +11,17 @@ export const safepal: WalletDescriptor = {
   platforms: ["extension", "mobile"],
   group: "popular",
   supportsWalletConnect: true,
+  injected: standardInjected({
+    provider: getSafePalInjectedProvider,
+    marker: hasSafePalInjectedMarker,
+    signMessageMode: "sign",
+    addressSettleMs: 2500,
+    emptyAddressRetryDelayMs: 300,
+    emptyAddressRetryTimeoutMs: 3000
+  }),
   detect: { provider: getSafePalInjectedProvider, availabilityProbe: hasSafePalInjectedMarker },
+  addressSettleMs: 2500,
+  emptyAddressRetryDelayMs: 300,
+  emptyAddressRetryTimeoutMs: 3000,
   signMessageMode: "sign"
 };

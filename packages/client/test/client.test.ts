@@ -28,7 +28,7 @@ function createMockAdapter(id = "mock"): WalletAdapter {
       transferTrx: true
     },
     connect: async () => ({
-      account: { address: "TMockAddress", network: TRON_NILE },
+      account: { address: "T2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", network: TRON_NILE },
       network: TRON_NILE
     }),
     disconnect: async () => undefined,
@@ -132,10 +132,10 @@ describe("client entrypoints", () => {
     const manager = createWalletClient({ adapters: [createMockAdapter()] });
 
     await expect(manager.connect("mock")).resolves.toMatchObject({
-      account: { address: "TMockAddress" },
+      account: { address: "T2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" },
       network: { id: "nile" }
     });
-    expect(manager.getAccount()?.address).toBe("TMockAddress");
+    expect(manager.getAccount()?.address).toBe("T2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
   });
 
   it("creates a kit with TRON-native transaction helpers", async () => {
@@ -160,7 +160,7 @@ describe("client entrypoints", () => {
     await kit.manager.connect("mock");
     await expect(kit.signMessage("hello")).resolves.toMatchObject({ proof: "signed:hello" });
     await expect(kit.sendTransaction({ txID: "tx" })).resolves.toMatchObject({ hash: "tx" });
-    await expect(kit.transferTrx({ to: "TReceiver", amountSun: 1n })).resolves.toMatchObject({
+    await expect(kit.transferTrx({ to: "T3AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", amountSun: 1n })).resolves.toMatchObject({
       hash: "trx-built-hash"
     });
     expect(kit.manager.getTransactions()[0]?.methodHint).toBe("transferTrx");
@@ -194,7 +194,7 @@ describe("client entrypoints", () => {
     await kit.manager.connect("mock");
     await expect(
       kit.triggerSmartContract({
-        contractAddress: "TContract",
+        contractAddress: "T4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
         function: "buyDomain(string,string)",
         options: { feeLimit: 100_000_000 },
         parameter: [
@@ -206,14 +206,14 @@ describe("client entrypoints", () => {
     ).resolves.toMatchObject({ hash: "contract-hash" });
 
     expect(calls.triggerSmartContract[0]).toEqual([
-      "TContract",
+      "T4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
       "buyDomain(string,string)",
       { feeLimit: 100_000_000 },
       [
         { type: "string", value: "alice" },
         { type: "string", value: "trx" }
       ],
-      "TMockAddress"
+      "T2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
     ]);
     expect(kit.manager.getTransactions()[0]).toMatchObject({
       hash: "contract-hash",
@@ -256,7 +256,7 @@ describe("client entrypoints", () => {
     await kit.manager.connect("mock");
     await expect(
       kit.triggerSmartContract({
-        contractAddress: "TContract",
+        contractAddress: "T4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
         functionSelector: "buyDomain(string,string)",
         parameters: []
       })
@@ -299,7 +299,7 @@ describe("client entrypoints", () => {
     await kit.manager.connect("mock");
     await expect(kit.refreshIdentity()).resolves.toMatchObject({ domain: "alice.trx" });
     expect(kit.manager.getSession()?.account).toMatchObject({
-      address: "TMockAddress",
+      address: "T2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
       domain: "alice.trx",
       displayName: "alice.trx",
       avatar: "https://trxdomains.xyz/avatar.png"
@@ -415,7 +415,7 @@ describe("client entrypoints", () => {
     (globalThis as Record<string, unknown>).__tronWalletKitTronWebForTest = tronWeb;
     const resolver = createTronDomainIdentityResolver({ metadataKeys: ["avatar"] });
 
-    const identity = await resolver({ address: "TMockAddress" }, { network: TRON_MAINNET, walletId: "mock" });
+    const identity = await resolver({ address: "T2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" }, { network: TRON_MAINNET, walletId: "mock" });
 
     expect(identity?.domain).toBe("bob.sun");
     expect(identity?.displayName).toBe("bob.sun");
@@ -427,7 +427,7 @@ describe("client entrypoints", () => {
     (globalThis as Record<string, unknown>).__tronWalletKitTronWebForTest = tronWeb;
     const resolver = createTronDomainIdentityResolver({ metadataKeys: [] });
 
-    await expect(resolver({ address: "TMockAddress" }, { network: TRON_NILE, walletId: "mock" })).resolves.toBeUndefined();
+    await expect(resolver({ address: "T2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" }, { network: TRON_NILE, walletId: "mock" })).resolves.toBeUndefined();
     expect(calls.at).toEqual([]);
     expect(calls.reverseOf).toEqual([]);
   });
@@ -437,7 +437,7 @@ describe("client entrypoints", () => {
     (globalThis as Record<string, unknown>).__tronWalletKitTronWebForTest = tronWeb;
     const resolver = createTronDomainIdentityResolver({ metadataKeys: [], timeoutMs: 5 });
 
-    await expect(resolver({ address: "TMockAddress" }, { network: TRON_MAINNET, walletId: "mock" })).resolves.toBeUndefined();
+    await expect(resolver({ address: "T2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" }, { network: TRON_MAINNET, walletId: "mock" })).resolves.toBeUndefined();
   });
 
   it("includes extension wallets by default and WalletConnect only when a projectId is configured", () => {
@@ -558,7 +558,7 @@ describe("client entrypoints", () => {
       tronLink: {
         request: async () => ({ code: 200 }),
         tronWeb: {
-          defaultAddress: { base58: "TMathWallet", hex: "41math" },
+          defaultAddress: { base58: "T5AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", hex: "41math" },
           trx: {
             getBlockByNumber: async () => ({ blockID: "000000000000000000000000000000000000000000000000000000002b6653dc" }),
             signMessageV2: async (message: string) => `math:${message}`,
@@ -580,7 +580,7 @@ describe("client entrypoints", () => {
       icon: WALLET_ICONS.math
     });
     await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
-    await expect(manager.connect("math")).resolves.toMatchObject({ account: { address: "TMathWallet", hexAddress: "41math" } });
+    await expect(manager.connect("math")).resolves.toMatchObject({ account: { address: "T5AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", hexAddress: "41math" } });
     await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "math:hello" });
   });
 
@@ -588,7 +588,7 @@ describe("client entrypoints", () => {
     (globalThis as Record<string, unknown>).tronLink = {
       request: async () => ({ code: 200 }),
       tronWeb: {
-        defaultAddress: { base58: "TTronLink", hex: "41tronlink" },
+        defaultAddress: { base58: "T6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", hex: "41tronlink" },
         trx: {
           getBlockByNumber: async () => ({ blockID: "000000000000000000000000000000000000000000000000000000002b6653dc" }),
           signMessageV2: async (message: string) => `tronlink:${message}`,
@@ -668,7 +668,7 @@ describe("client entrypoints", () => {
         provider: () => ({
           request: async () => ({ code: 200 }),
           tronWeb: {
-            defaultAddress: { base58: "TSafePalRuntime" },
+            defaultAddress: { base58: "T7AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" },
             trx: {
               sign: async (payload: string) => `signed:${payload}`
             }
@@ -682,7 +682,7 @@ describe("client entrypoints", () => {
 
     expect(manager.getWallets().map((adapter) => adapter.metadata.id)).toEqual(["safepal-test"]);
     expect(catalog).toMatchObject([{ id: "safepal-test", icon, featured: 1 }]);
-    await expect(manager.connect("safepal-test")).resolves.toMatchObject({ account: { address: "TSafePalRuntime" } });
+    await expect(manager.connect("safepal-test")).resolves.toMatchObject({ account: { address: "T7AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } });
     await expect(manager.signMessage("hello")).resolves.toMatchObject({ signature: "signed:hello" });
   });
 
@@ -726,7 +726,7 @@ describe("client entrypoints", () => {
             ready: true,
             tronWeb: {
               ready: true,
-              defaultAddress: { base58: "TTronLinkAddress", hex: "41tronlink" },
+              defaultAddress: { base58: "T8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", hex: "41tronlink" },
               trx: {
                 getBlockByNumber: async () => ({ blockID: "000000000000000000000000000000000000000000000000000000002b6653dc" }),
                 sign: async <TTransaction,>(transaction: TTransaction) => transaction,
@@ -742,13 +742,13 @@ describe("client entrypoints", () => {
 
     expect(wallet?.metadata.icon).toMatch(/^data:image\/svg\+xml;base64,/);
     expect(typeof wallet?.connect).toBe("function");
-    await expect(manager.connect("tronlink")).resolves.toMatchObject({ account: { address: "TTronLinkAddress" } });
+    await expect(manager.connect("tronlink")).resolves.toMatchObject({ account: { address: "T8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } });
   });
 
   it("connects an injected extension adapter through a wallet-specific provider", async () => {
     const provider = {
       tronWeb: {
-        defaultAddress: { base58: "TTokenPocket", hex: "41token" },
+        defaultAddress: { base58: "T9AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", hex: "41token" },
         trx: {
           getBlockByNumber: async () => ({ blockID: "00000000000000000000000000000000000000000000000000000000cd8690dc" }),
           signMessageV2: async (message: string) => `tp:${message}`,
@@ -772,7 +772,7 @@ describe("client entrypoints", () => {
     });
 
     await expect(manager.connect("tokenpocket")).resolves.toMatchObject({
-      account: { address: "TTokenPocket" },
+      account: { address: "T9AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" },
       network: { id: "nile" }
     });
     await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "tp:hello" });
@@ -781,7 +781,7 @@ describe("client entrypoints", () => {
   it("falls back from tron_requestAccounts to eth_requestAccounts for injected extension providers", async () => {
     const request = vi.fn(async ({ method }: { method: string }) => {
       if (method === "tron_requestAccounts") throw new Error("method not supported");
-      if (method === "eth_requestAccounts") return ["TLegacyInjected"];
+      if (method === "eth_requestAccounts") return ["TAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"];
       return undefined;
     });
     const manager = createWalletClient({
@@ -794,7 +794,7 @@ describe("client entrypoints", () => {
           provider: () => ({
             request,
             tronWeb: {
-              defaultAddress: { base58: "TDefaultShouldNotWin" },
+              defaultAddress: { base58: "TBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" },
               trx: {
                 getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" })
               }
@@ -805,7 +805,7 @@ describe("client entrypoints", () => {
     });
 
     await expect(manager.connect("legacy-injected")).resolves.toMatchObject({
-      account: { address: "TLegacyInjected" }
+      account: { address: "TAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" }
     });
     expect(request).toHaveBeenNthCalledWith(1, { method: "tron_requestAccounts" });
     expect(request).toHaveBeenNthCalledWith(2, { method: "eth_requestAccounts" });
@@ -813,7 +813,7 @@ describe("client entrypoints", () => {
 
   it("does not use generic tronWeb when an injected descriptor declares only wallet-specific roots", async () => {
     (globalThis as Record<string, unknown>).tronWeb = {
-      defaultAddress: { base58: "TGenericShouldNotWin" },
+      defaultAddress: { base58: "TCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" },
       trx: {
         getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" })
       }
@@ -849,9 +849,9 @@ describe("client entrypoints", () => {
       },
       request: async () => ({ code: 200 })
     });
-    const tokenPocketProvider = makeProvider("TTokenPocket");
-    const okxProvider = makeProvider("TOKX");
-    const bitgetProvider = makeProvider("TBitget");
+    const tokenPocketProvider = makeProvider("T9AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+    const okxProvider = makeProvider("TDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+    const bitgetProvider = makeProvider("TEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
     (globalThis as typeof globalThis & { tokenpocket?: unknown }).tokenpocket = { tron: tokenPocketProvider };
     (globalThis as typeof globalThis & { okxwallet?: unknown }).okxwallet = { tronLink: okxProvider };
     (globalThis as typeof globalThis & { bitkeep?: unknown }).bitkeep = { tronLink: bitgetProvider };
@@ -861,9 +861,9 @@ describe("client entrypoints", () => {
     await expect(Promise.resolve(manager.getWallets().find((wallet) => wallet.metadata.id === "tokenpocket")?.isAvailable?.())).resolves.toBe(true);
     await expect(Promise.resolve(manager.getWallets().find((wallet) => wallet.metadata.id === "okx")?.isAvailable?.())).resolves.toBe(true);
     await expect(Promise.resolve(manager.getWallets().find((wallet) => wallet.metadata.id === "bitget")?.isAvailable?.())).resolves.toBe(true);
-    await expect(manager.connect("okx")).resolves.toMatchObject({ account: { address: "TOKX" } });
+    await expect(manager.connect("okx")).resolves.toMatchObject({ account: { address: "TDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } });
     await manager.disconnect();
-    await expect(manager.connect("bitget")).resolves.toMatchObject({ account: { address: "TBitget" } });
+    await expect(manager.connect("bitget")).resolves.toMatchObject({ account: { address: "TEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } });
   });
 
   it("reads Bitget addresses from parent tronWeb after a successful request", async () => {
@@ -871,7 +871,7 @@ describe("client entrypoints", () => {
     (globalThis as typeof globalThis & { bitkeep?: unknown }).bitkeep = {
       tronLink: { request },
       tronWeb: {
-        defaultAddress: { base58: "TBitgetParent", hex: "41bitget" },
+        defaultAddress: { base58: "TFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", hex: "41bitget" },
         trx: {
           getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" }),
           getBalance: async () => "123000000"
@@ -882,7 +882,7 @@ describe("client entrypoints", () => {
     const kit = createWalletKit({ wallets: ["bitget"] });
 
     await expect(kit.manager.connect("bitget")).resolves.toMatchObject({
-      account: { address: "TBitgetParent", hexAddress: "41bitget" }
+      account: { address: "TFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", hexAddress: "41bitget" }
     });
     await expect(kit.refreshBalance()).resolves.toMatchObject({ formatted: "123", symbol: "TRX" });
     expect(request).not.toHaveBeenCalled();
@@ -899,7 +899,7 @@ describe("client entrypoints", () => {
   });
 
   it("accepts Bitget eth_requestAccounts when the extension returns the TRON address there", async () => {
-    const request = vi.fn(async ({ method }: { method: string }) => (method === "eth_requestAccounts" ? ["TBitgetEth"] : undefined));
+    const request = vi.fn(async ({ method }: { method: string }) => (method === "eth_requestAccounts" ? ["TGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"] : undefined));
     (globalThis as typeof globalThis & { bitkeep?: unknown }).bitkeep = {
       tronLink: {
         request,
@@ -913,7 +913,7 @@ describe("client entrypoints", () => {
 
     const manager = createWalletClient({ wallets: ["bitget"] });
 
-    await expect(manager.connect("bitget")).resolves.toMatchObject({ account: { address: "TBitgetEth" } });
+    await expect(manager.connect("bitget")).resolves.toMatchObject({ account: { address: "TGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } });
     expect(request).toHaveBeenCalledWith({ method: "eth_requestAccounts" });
   });
 
@@ -923,7 +923,7 @@ describe("client entrypoints", () => {
       isBitKeep: true,
       tronLink: { request },
       tronWeb: {
-        defaultAddress: { base58: "TBitgetGlobal" },
+        defaultAddress: { base58: "THAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" },
         trx: {
           getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" })
         }
@@ -933,14 +933,14 @@ describe("client entrypoints", () => {
     const manager = createWalletClient({ wallets: ["bitget"] });
 
     await expect(Promise.resolve(manager.getWallets().find((wallet) => wallet.metadata.id === "bitget")?.isAvailable?.())).resolves.toBe(true);
-    await expect(manager.connect("bitget")).resolves.toMatchObject({ account: { address: "TBitgetGlobal" } });
+    await expect(manager.connect("bitget")).resolves.toMatchObject({ account: { address: "THAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } });
   });
 
   it("does not crash Bitget availability when injected extension getters throw", async () => {
     const bitgetLikeProvider = {
       request: vi.fn(async () => ({ code: 200 })),
       tronWeb: {
-        defaultAddress: { base58: "TBitgetSafe" },
+        defaultAddress: { base58: "TJAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" },
         trx: {
           getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" })
         }
@@ -957,7 +957,7 @@ describe("client entrypoints", () => {
     const manager = createWalletClient({ wallets: ["bitget"] });
 
     await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
-    await expect(manager.connect("bitget")).resolves.toMatchObject({ account: { address: "TBitgetSafe" } });
+    await expect(manager.connect("bitget")).resolves.toMatchObject({ account: { address: "TJAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } });
   });
 
   it("keeps Bitget injected request bound to the original provider object", async () => {
@@ -972,7 +972,7 @@ describe("client entrypoints", () => {
       },
       async request(this: { logger?: { debug?: (message: string) => void }; tronWeb?: { defaultAddress?: { base58: string } } }, { method }: { method: string }) {
         this.logger?.debug?.(method);
-        this.tronWeb = { ...this.tronWeb, defaultAddress: { base58: "TBitgetBound" } };
+        this.tronWeb = { ...this.tronWeb, defaultAddress: { base58: "TKAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } };
         return { code: 200 };
       }
     };
@@ -980,15 +980,15 @@ describe("client entrypoints", () => {
 
     const manager = createWalletClient({ wallets: ["bitget"] });
 
-    await expect(manager.connect("bitget")).resolves.toMatchObject({ account: { address: "TBitgetBound" } });
+    await expect(manager.connect("bitget")).resolves.toMatchObject({ account: { address: "TKAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } });
     expect(bitgetLikeProvider.logger.debug).toHaveBeenCalledWith("eth_requestAccounts");
   });
 
   it("uses the Trust-specific injected provider instead of shared TronLink globals", async () => {
     const trustProvider = {
-      request: async () => ({ address: "TTrustAddress" }),
+      request: async () => ({ address: "TLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" }),
       tronWeb: {
-        defaultAddress: { base58: "TTrustAddress" },
+        defaultAddress: { base58: "TLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" },
         trx: {
           getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" })
         }
@@ -998,7 +998,7 @@ describe("client entrypoints", () => {
       isTronLink: true,
       request: async () => ({ code: 200, message: "ok" }),
       tronWeb: {
-        defaultAddress: { base58: "TTronLinkAddress" },
+        defaultAddress: { base58: "T8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" },
         trx: {
           getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" })
         }
@@ -1011,19 +1011,19 @@ describe("client entrypoints", () => {
     const manager = createWalletClient({ wallets: ["trust"] });
 
     await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
-    await expect(manager.connect("trust")).resolves.toMatchObject({ account: { address: "TTrustAddress" } });
+    await expect(manager.connect("trust")).resolves.toMatchObject({ account: { address: "TLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } });
   });
 
   it("uses Guarda tron request with parent tronWeb to resolve an address", async () => {
     const guardaTronWeb = {
-      defaultAddress: { base58: "TGuardaDefault" },
+      defaultAddress: { base58: "TMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" },
       trx: {
         getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" })
       }
     };
     (globalThis as Record<string, unknown>).guarda = {
       tron: {
-        request: async ({ method }: { method: string }) => (method === "eth_requestAccounts" ? ["TGuardaAddress"] : [])
+        request: async ({ method }: { method: string }) => (method === "eth_requestAccounts" ? ["TNAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"] : [])
       },
       tronWeb: guardaTronWeb
     };
@@ -1031,7 +1031,7 @@ describe("client entrypoints", () => {
     const manager = createWalletClient({ wallets: ["guarda"] });
 
     await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
-    await expect(manager.connect("guarda")).resolves.toMatchObject({ account: { address: "TGuardaAddress" } });
+    await expect(manager.connect("guarda")).resolves.toMatchObject({ account: { address: "TNAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } });
   });
 
   it("connects FoxWallet through its wallet-specific injected provider", async () => {
@@ -1039,7 +1039,7 @@ describe("client entrypoints", () => {
       tronLink: {
         request: async () => ({ code: 200 }),
         tronWeb: {
-          defaultAddress: { base58: "TFoxWallet" },
+          defaultAddress: { base58: "TPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" },
           trx: {
             getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" }),
             signMessageV2: async (message: string) => `fox:${message}`,
@@ -1052,7 +1052,7 @@ describe("client entrypoints", () => {
     const manager = createWalletClient({ wallets: ["foxwallet"] });
 
     await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
-    await expect(manager.connect("foxwallet")).resolves.toMatchObject({ account: { address: "TFoxWallet" } });
+    await expect(manager.connect("foxwallet")).resolves.toMatchObject({ account: { address: "TPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } });
     await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "fox:hello" });
   });
 
@@ -1062,7 +1062,7 @@ describe("client entrypoints", () => {
       request,
       tronLink: {},
       tronWeb: {
-        defaultAddress: { base58: "TFoxWalletParent" },
+        defaultAddress: { base58: "TQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" },
         trx: {
           getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" }),
           signMessageV2: async (message: string) => `fox-parent:${message}`
@@ -1073,7 +1073,7 @@ describe("client entrypoints", () => {
     const manager = createWalletClient({ wallets: ["foxwallet"] });
 
     await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
-    await expect(manager.connect("foxwallet")).resolves.toMatchObject({ account: { address: "TFoxWalletParent" } });
+    await expect(manager.connect("foxwallet")).resolves.toMatchObject({ account: { address: "TQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } });
     await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "fox-parent:hello" });
     expect(request).toHaveBeenCalledWith({ method: "tron_requestAccounts" });
   });
@@ -1082,7 +1082,7 @@ describe("client entrypoints", () => {
     const request = vi.fn(async () => ({ code: 200 }));
     (globalThis as Record<string, unknown>).SafePalHook = {
       request,
-      defaultAddress: { base58: "TSafePalHook", hex: "41safepal" }
+      defaultAddress: { base58: "TRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", hex: "41safepal" }
     };
     (globalThis as Record<string, unknown>).tronWeb = {
       trx: {
@@ -1094,7 +1094,7 @@ describe("client entrypoints", () => {
     const manager = createWalletClient({ wallets: ["safepal"] });
 
     await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
-    await expect(manager.connect("safepal")).resolves.toMatchObject({ account: { address: "TSafePalHook" } });
+    await expect(manager.connect("safepal")).resolves.toMatchObject({ account: { address: "TRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } });
     await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "safepal:hello" });
     expect(request).toHaveBeenCalledWith({ method: "tron_requestAccounts" });
   });
@@ -1102,7 +1102,7 @@ describe("client entrypoints", () => {
   it("marks SafePal installed from SafePalHook even before tronWeb is ready", async () => {
     (globalThis as Record<string, unknown>).SafePalHook = {
       request: vi.fn(async () => ({ code: 200 })),
-      defaultAddress: { base58: "TSafePalHookOnly" }
+      defaultAddress: { base58: "TSAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" }
     };
 
     const manager = createWalletClient({ wallets: ["safepal"] });
@@ -1115,7 +1115,7 @@ describe("client entrypoints", () => {
   it("connects SafePal when defaultAddress is populated after approval", async () => {
     const safePalHook: Record<string, unknown> = {};
     const request = vi.fn(async () => {
-      safePalHook.defaultAddress = { base58: "TSafePalAfterApproval", hex: "41after" };
+      safePalHook.defaultAddress = { base58: "TTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", hex: "41after" };
       return { code: 200 };
     });
     safePalHook.request = request;
@@ -1130,14 +1130,14 @@ describe("client entrypoints", () => {
     const manager = createWalletClient({ wallets: ["safepal"] });
 
     await expect(manager.connect("safepal")).resolves.toMatchObject({
-      account: { address: "TSafePalAfterApproval", hexAddress: "41after" }
+      account: { address: "TTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", hexAddress: "41after" }
     });
     await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "safepal-late:hello" });
   });
 
   it("connects SafePal in-app when address is already available and no request method is exposed", async () => {
     (globalThis as Record<string, unknown>).SafePalHook = {
-      defaultAddress: { base58: "TSafePalInApp", hex: "41inapp" }
+      defaultAddress: { base58: "TUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", hex: "41inapp" }
     };
     (globalThis as Record<string, unknown>).sfpPlatform = "iOS";
     (globalThis as Record<string, unknown>).tronWeb = {
@@ -1151,7 +1151,7 @@ describe("client entrypoints", () => {
 
     await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
     await expect(manager.connect("safepal")).resolves.toMatchObject({
-      account: { address: "TSafePalInApp", hexAddress: "41inapp" }
+      account: { address: "TUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", hexAddress: "41inapp" }
     });
     await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "safepal-app:hello" });
   });
@@ -1168,22 +1168,22 @@ describe("client entrypoints", () => {
       request: async () => ({ code: 200 })
     });
     const gateProvider = {
-      ...makeProvider("TGate"),
+      ...makeProvider("TVAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
       request: vi.fn(async ({ method }: { method: string }) => (
-        method === "eth_requestAccounts" ? ["TGate"] : undefined
+        method === "eth_requestAccounts" ? ["TVAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"] : undefined
       )),
       on: vi.fn(),
       off: vi.fn()
     };
-    const bybitProvider = makeProvider("TBybit");
+    const bybitProvider = makeProvider("TWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
     const binanceProvider = {
-      getAccount: vi.fn(async () => ({ address: "TBinance" })),
+      getAccount: vi.fn(async () => ({ address: "TXAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" })),
       getChainId: vi.fn(() => "0x2b6653dc"),
       signMessageV2: vi.fn(async (message: string) => `TBinance:${message}`),
       signTransaction: vi.fn(async <TTransaction,>(transaction: TTransaction) => transaction)
     };
-    const oneKeyProvider = makeProvider("TOneKey");
-    const backpackProvider = makeProvider("TBackpack");
+    const oneKeyProvider = makeProvider("TYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+    const backpackProvider = makeProvider("TZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
     (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = { tronLink: {}, tron: gateProvider };
     (globalThis as typeof globalThis & { bybitWallet?: unknown }).bybitWallet = { tronLink: bybitProvider };
     (globalThis as typeof globalThis & { binancew3w?: unknown }).binancew3w = { tron: binanceProvider };
@@ -1197,13 +1197,13 @@ describe("client entrypoints", () => {
     await expect(Promise.resolve(manager.getWallets().find((wallet) => wallet.metadata.id === "binance")?.isAvailable?.())).resolves.toBe(true);
     await expect(Promise.resolve(manager.getWallets().find((wallet) => wallet.metadata.id === "onekey")?.isAvailable?.())).resolves.toBe(true);
     await expect(Promise.resolve(manager.getWallets().find((wallet) => wallet.metadata.id === "backpack")?.isAvailable?.())).resolves.toBe(true);
-    await expect(manager.connect("gate")).resolves.toMatchObject({ account: { address: "TGate" } });
+    await expect(manager.connect("gate")).resolves.toMatchObject({ account: { address: "TVAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } });
     await manager.disconnect();
-    await expect(manager.connect("bybit")).resolves.toMatchObject({ account: { address: "TBybit" } });
+    await expect(manager.connect("bybit")).resolves.toMatchObject({ account: { address: "TWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } });
     await manager.disconnect();
-    await expect(manager.connect("binance")).resolves.toMatchObject({ account: { address: "TBinance" } });
+    await expect(manager.connect("binance")).resolves.toMatchObject({ account: { address: "TXAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } });
     await manager.disconnect();
-    await expect(manager.connect("backpack")).resolves.toMatchObject({ account: { address: "TBackpack" } });
+    await expect(manager.connect("backpack")).resolves.toMatchObject({ account: { address: "TZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } });
   });
 
   it("marks Gate available from its upstream installed marker before provider is connect-ready", async () => {
@@ -1218,7 +1218,7 @@ describe("client entrypoints", () => {
 
   it("connects Gate through the lightweight injected extension shape", async () => {
     const request = vi.fn(async ({ method }: { method: string }) => (
-      method === "eth_requestAccounts" ? ["TGateOfficial"] : undefined
+      method === "eth_requestAccounts" ? ["TaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"] : undefined
     ));
     (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = {
       tronLink: {},
@@ -1242,14 +1242,14 @@ describe("client entrypoints", () => {
 
     await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
     await expect(manager.connect("gate")).resolves.toMatchObject({
-      account: { address: "TGateOfficial" }
+      account: { address: "TaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" }
     });
     expect(request).toHaveBeenCalledWith({ method: "eth_requestAccounts" });
     await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "gate-injected:hello" });
   });
 
   it("uses Gate injected request result when both request and defaultAddress are present", async () => {
-    const request = vi.fn(async () => ["TGateRequested"]);
+    const request = vi.fn(async () => ["TbAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"]);
     (globalThis as typeof globalThis & { gatewallet?: unknown }).gatewallet = {
       tronLink: {},
       tron: {
@@ -1257,7 +1257,7 @@ describe("client entrypoints", () => {
         on: vi.fn(),
         off: vi.fn(),
         tronWeb: {
-          defaultAddress: { base58: "TGateConnected" },
+          defaultAddress: { base58: "TcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" },
           trx: {
             signMessageV2: async (message: string) => `gate-connected:${message}`,
             sign: async <TTransaction,>(transaction: TTransaction) => transaction
@@ -1269,7 +1269,7 @@ describe("client entrypoints", () => {
     const manager = createWalletClient({ wallets: ["gate"] });
 
     await expect(manager.connect("gate")).resolves.toMatchObject({
-      account: { address: "TGateRequested" }
+      account: { address: "TbAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" }
     });
     expect(request).toHaveBeenCalledWith({ method: "eth_requestAccounts" });
     await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "gate-connected:hello" });
@@ -1280,7 +1280,7 @@ describe("client entrypoints", () => {
       request: vi.fn(async ({ method }: { method: string }) => {
         if (method !== "eth_requestAccounts") return undefined;
         setTimeout(() => {
-          gateTron.tronWeb.defaultAddress = { base58: "TGateHydrated" };
+          gateTron.tronWeb.defaultAddress = { base58: "TdAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" };
         }, 10);
         return { code: 200 };
       }),
@@ -1302,7 +1302,7 @@ describe("client entrypoints", () => {
     const manager = createWalletClient({ wallets: ["gate"] });
 
     await expect(manager.connect("gate")).resolves.toMatchObject({
-      account: { address: "TGateHydrated" }
+      account: { address: "TdAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" }
     });
     expect(gateTron.request).toHaveBeenCalledWith({ method: "eth_requestAccounts" });
   });
@@ -1311,7 +1311,7 @@ describe("client entrypoints", () => {
     (globalThis as typeof globalThis & { $onekey?: unknown }).$onekey = {
       tron: {
         request: vi.fn(),
-        tronWeb: { defaultAddress: { base58: "TOneKey" } }
+        tronWeb: { defaultAddress: { base58: "TYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } }
       }
     };
     (globalThis as typeof globalThis & { ethereum?: unknown }).ethereum = {
@@ -1344,7 +1344,7 @@ describe("client entrypoints", () => {
     setTimeout(() => {
       (globalThis as Record<string, unknown>).lateWallet = {
         tron: {
-          tronWeb: { defaultAddress: { base58: "TLateInjected" } }
+          tronWeb: { defaultAddress: { base58: "TeAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } }
         }
       };
     }, 10);
@@ -1371,7 +1371,7 @@ describe("client entrypoints", () => {
       address: null as string | null,
       connected: false,
       connect: async () => {
-        tronweb3Adapter.address = "TOKXAddress";
+        tronweb3Adapter.address = "TfAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
         tronweb3Adapter.connected = true;
       },
       disconnect: async () => {
@@ -1390,7 +1390,7 @@ describe("client entrypoints", () => {
     const manager = createWalletClient({ wallets: [], adapters: [adapter] });
 
     await expect(manager.connect("okx")).resolves.toMatchObject({
-      account: { address: "TOKXAddress" }
+      account: { address: "TfAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" }
     });
     await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "okx:hello" });
     expect(manager.getWallets()[0]?.metadata.platforms).toEqual(["extension", "mobile"]);
@@ -1428,7 +1428,7 @@ describe("client entrypoints", () => {
       tronLink: {
         tronWeb: {
           trx: {
-            getBalance: async (address: string) => (address === "TMockAddress" ? "42500000" : "0")
+            getBalance: async (address: string) => (address === "T2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" ? "42500000" : "0")
           }
         }
       }
@@ -1453,7 +1453,7 @@ describe("client entrypoints", () => {
   it("falls back to shared RPC TronWeb when injected balance provider is not ready", async () => {
     (globalThis as Record<string, unknown>).__tronWalletKitTronWebForTest = {
       trx: {
-        getBalance: async (address: string) => (address === "TMockAddress" ? "99000000" : "0")
+        getBalance: async (address: string) => (address === "T2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" ? "99000000" : "0")
       },
       setAddress: () => undefined,
       contract: () => ({ at: async () => ({}) })

@@ -1,3 +1,4 @@
+import { standardInjected } from "../../adapters/injected-strategy";
 import type { WalletDescriptor } from "../types";
 
 export const okx: WalletDescriptor = {
@@ -8,5 +9,6 @@ export const okx: WalletDescriptor = {
   platforms: ["extension", "mobile"],
   group: "popular",
   featured: 3,
+  injected: standardInjected({ providerPaths: ["okxwallet.tronLink"] }),
   detect: { providerPaths: ["okxwallet.tronLink"] }
 };

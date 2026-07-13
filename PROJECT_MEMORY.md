@@ -4106,3 +4106,44 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/adapter-tronlink typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/adapter-tronlink test -- --run` passed with 26 tests.
   - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 58 tests.
+
+## 2026-07-13 Injected Strategy Migration Start
+
+- Read `Review/WALLET_ADAPTER_ORG_SPEC.md` and aligned the implementation direction:
+  - common injected wallets stay kit-owned/direct;
+  - `@tronweb3` bridge is reserved for complex transports like Ledger and MetaMask TRON;
+  - WalletConnect remains the local lite implementation;
+  - detect must stay cheap/side-effect-free and connect quirks must live in wallet strategy code.
+- Preserved the previous `tronweb3-bridge-experiment` branch with commit `fd63419` for size comparison only.
+- Created migration branch `codex/injected-strategy-migration` from checkpoint `109d17c`.
+- Added the first strategy layer:
+  - `InjectedStrategy`
+  - `InjectedConnectContext`
+  - `InjectedHelpers`
+  - `standardInjected()`
+  - legacy config -> strategy shim
+- Converted `createInjectedTronAdapter` from a monolithic flag-driven adapter into a thin strategy orchestrator while keeping backward compatibility for old descriptors.
+- Converted initial wallet entries to `injected: standardInjected(...)`:
+  - OKX Wallet
+  - TokenPocket
+  - OneKey
+  - Gate Wallet
+  - SafePal
+  - Bitget Wallet
+- Moved first-connect tuning into wallet strategy options:
+  - SafePal: wider address settle window and retry;
+  - Bitget: TRON-first request order, wider settle window, strict TRON address filtering;
+  - Gate: eth request + long address poll settings remain scoped to Gate strategy.
+- Updated client test fixtures to use TRON-shaped 34-character base58 addresses so strict TRON address filtering can be tested realistically.
+- Removed the explicit Gate special-case from UI modal auto-retry logic; Gate behavior now belongs to its adapter strategy.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed with 58 tests.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot` passed with 43 tests.
+- Remaining migration work:
+  - move per-wallet provider getters/markers out of `injected/detect.ts` into each `entries/<id>.ts`;
+  - convert remaining injected wallets to strategy descriptors;
+  - replace `detect` catalog shim with explicit strategy/catalog metadata;
+  - implement EIP-6963/rDNS detect priority for TronLink and other wallets;
+  - update Trust/Binance desktop behavior per spec so namespace-only objects do not show as TRON installed.

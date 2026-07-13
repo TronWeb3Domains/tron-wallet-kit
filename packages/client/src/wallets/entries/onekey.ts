@@ -1,3 +1,4 @@
+import { standardInjected } from "../../adapters/injected-strategy";
 import type { WalletDescriptor } from "../types";
 
 export const onekey: WalletDescriptor = {
@@ -8,5 +9,6 @@ export const onekey: WalletDescriptor = {
   platforms: ["extension"],
   group: "popular",
   availabilityMode: "on-demand",
+  injected: standardInjected({ providerPaths: ["$onekey.tron", "$onekey.tronLink"] }),
   detect: { providerPaths: ["$onekey.tron", "$onekey.tronLink"] }
 };

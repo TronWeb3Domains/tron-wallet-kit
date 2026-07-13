@@ -22,7 +22,7 @@ export function buildCatalog(wallets: readonly WalletDescriptor[]): TronWalletCa
         ...(wallet.supportsWalletConnect ? { supportsWalletConnect: wallet.supportsWalletConnect } : {})
       };
       if (wallet.integration === "injected") {
-        if (wallet.detect.providerPaths) item.providerPaths = wallet.detect.providerPaths;
+      if (wallet.detect?.providerPaths) item.providerPaths = wallet.detect.providerPaths;
       }
       if (wallet.integration === "tronweb3-bridge") {
         if (wallet.injectedFallback?.providerPaths) item.providerPaths = wallet.injectedFallback.providerPaths;

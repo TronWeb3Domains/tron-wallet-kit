@@ -1,5 +1,6 @@
 import type { TronWalletGroup, WalletAdapter, WalletPlatform } from "@tron-wallet-kit/core";
 import type { TronwalletBridgeInnerAdapter } from "@tron-wallet-kit/adapter-tronwallet-bridge";
+import type { InjectedStrategy } from "../adapters/injected-strategy";
 import type { DefaultAdaptersConfig, InjectedTronAdapterConfig } from "../types";
 
 export type WalletDescriptorBase = {
@@ -39,7 +40,8 @@ export type Tronweb3BridgeWalletDescriptor = WalletDescriptorBase & {
 
 export type InjectedWalletDescriptor = WalletDescriptorBase & {
   integration: "injected";
-  detect: InjectedDetect;
+  detect?: InjectedDetect;
+  injected?: InjectedStrategy;
   requestMethods?: readonly string[];
   signMessageMode?: "signMessageV2" | "sign" | "request";
   availabilityTimeoutMs?: number;

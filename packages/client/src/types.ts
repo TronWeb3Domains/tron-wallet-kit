@@ -23,6 +23,7 @@ import type {
 } from "@tron-wallet-kit/core";
 import type { ResolvedWalletUiConfig, ThemeConfig, WalletButton, WalletModal, WalletToast, WalletUiConfig } from "@tron-wallet-kit/ui";
 import type { TronWalletCatalogItem } from "@tron-wallet-kit/ui";
+import type { InjectedStrategy } from "./adapters/injected-strategy";
 import type { WalletDescriptor } from "./wallets/types";
 
 export type { WalletConnectAdapterOptions, WalletConnectNetworkName };
@@ -103,6 +104,7 @@ export type InjectedTronAdapterConfig = {
   id: string;
   name: string;
   providerPaths: readonly string[];
+  strategy?: InjectedStrategy;
   icon?: string;
   homepage?: string;
   downloadUrl?: string;

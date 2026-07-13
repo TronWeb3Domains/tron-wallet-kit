@@ -73,9 +73,10 @@ function toInjectedConfig(wallet: Extract<WalletDescriptor, { integration: "inje
   return {
     id: wallet.id,
     name: wallet.name,
-    providerPaths: wallet.detect.providerPaths ?? [],
-    ...(wallet.detect.provider ? { provider: wallet.detect.provider } : {}),
-    ...(wallet.detect.availabilityProbe ? { availabilityProbe: wallet.detect.availabilityProbe } : {}),
+    providerPaths: wallet.detect?.providerPaths ?? [],
+    ...(wallet.injected ? { strategy: wallet.injected } : {}),
+    ...(wallet.detect?.provider ? { provider: wallet.detect.provider } : {}),
+    ...(wallet.detect?.availabilityProbe ? { availabilityProbe: wallet.detect.availabilityProbe } : {}),
     ...(icon ? { icon } : {}),
     homepage: wallet.homepage,
     downloadUrl: wallet.downloadUrl ?? wallet.homepage,
