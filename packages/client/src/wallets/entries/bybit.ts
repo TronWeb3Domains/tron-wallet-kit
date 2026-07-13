@@ -1,3 +1,4 @@
+import { standardInjected } from "../../adapters/injected-strategy";
 import type { WalletDescriptor } from "../types";
 
 export const bybit: WalletDescriptor = {
@@ -7,5 +8,6 @@ export const bybit: WalletDescriptor = {
   homepage: "https://www.bybit.com/web3",
   platforms: ["extension", "mobile"],
   group: "popular",
+  injected: standardInjected({ providerPaths: ["bybitWallet.tronLink", "bybitWallet.tron"] }),
   detect: { providerPaths: ["bybitWallet.tronLink", "bybitWallet.tron"] }
 };

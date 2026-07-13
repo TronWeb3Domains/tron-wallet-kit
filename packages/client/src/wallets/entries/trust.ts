@@ -1,3 +1,4 @@
+import { standardInjected } from "../../adapters/injected-strategy";
 import type { WalletDescriptor } from "../types";
 
 export const trust: WalletDescriptor = {
@@ -8,5 +9,6 @@ export const trust: WalletDescriptor = {
   platforms: ["extension", "mobile"],
   group: "popular",
   supportsWalletConnect: true,
+  injected: standardInjected({ providerPaths: ["trustwallet.tronLink", "trustwallet.tron"] }),
   detect: { providerPaths: ["trustwallet.tronLink", "trustwallet.tron"] }
 };

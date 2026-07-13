@@ -4147,3 +4147,35 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - replace `detect` catalog shim with explicit strategy/catalog metadata;
   - implement EIP-6963/rDNS detect priority for TronLink and other wallets;
   - update Trust/Binance desktop behavior per spec so namespace-only objects do not show as TRON installed.
+
+## 2026-07-13 Injected Strategy Migration Follow-Up
+
+- Continued the `Review/WALLET_ADAPTER_ORG_SPEC.md` migration on branch `codex/injected-strategy-migration`.
+- Moved wallet-specific injected provider composers and detect markers out of `packages/client/src/injected/detect.ts` into their own wallet entry files:
+  - Bitget Wallet
+  - Gate Wallet
+  - SafePal
+  - Guarda
+  - FoxWallet
+  - Binance Web3 Wallet
+  - MathWallet
+- Converted remaining simple injected entries to explicit `standardInjected(...)` descriptors:
+  - Bybit Wallet
+  - Backpack
+  - Trust Wallet
+- `packages/client/src/injected/detect.ts` is now limited to generic injected helpers and MetaMask probing. This reduces hidden wallet-specific hardcode in shared detect code and keeps per-wallet quirks closer to metadata/strategy.
+- Tightened TronLink TIP-6963 discovery:
+  - accepts `rdns: "org.tronlink.www"` as the authoritative TronLink provider signal;
+  - keeps name fallback only when `rdns` is absent;
+  - ignores providers that announce `name: "TronLink"` with a different `rdns`.
+- Added TronLink regression coverage for non-TronLink `rdns` announcements.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink test -- --run --reporter=dot` passed with 27 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed with 58 tests.
+- Remaining migration work:
+  - replace the UI/client detect catalog shim with strategy-derived catalog metadata;
+  - update Trust/Binance desktop semantics so namespace-only globals do not imply usable TRON injection;
+  - decide whether TronLink needs broader EIP-6963 cache/listener support beyond on-demand discovery;
+  - continue reducing duplicate metadata between core registry, UI catalog, and client descriptors.

@@ -8,212 +8,6 @@ export function hasMetaMaskEthereumProvider(): boolean {
   return Boolean(ethereum.providers?.some((provider) => provider.isMetaMask));
 }
 
-export function getGuardaInjectedProvider(): InjectedTronProvider | undefined {
-  const guarda = safeGetProperty(globalThis as unknown as Record<string, unknown>, "guarda");
-  if (!guarda || typeof guarda !== "object") return undefined;
-  const wallet = guarda as Record<string, unknown>;
-  const walletTronWeb = safeGetProperty(wallet, "tronWeb") as InjectedTronProvider["tronWeb"] | undefined;
-  const tron = safeGetProperty(wallet, "tron");
-  if (isInjectedTronProvider(tron)) {
-    const provider = cloneInjectedProvider(tron);
-    if (!provider.tronWeb && walletTronWeb) provider.tronWeb = walletTronWeb;
-    return provider;
-  }
-  if (isInjectedTronProvider(wallet)) return cloneInjectedProvider(wallet);
-  return undefined;
-}
-
-export function getBitgetInjectedProvider(): InjectedTronProvider | undefined {
-  const globals = globalThis as unknown as Record<string, unknown>;
-  const bitkeep = safeGetProperty(globals, "bitkeep");
-  if (bitkeep && typeof bitkeep === "object") {
-    const wallet = bitkeep as Record<string, unknown>;
-    const walletTronWeb = safeGetProperty(wallet, "tronWeb") as InjectedTronProvider["tronWeb"] | undefined;
-    const provider = mergeParentTronWeb(safeGetProperty(wallet, "tronLink")) ?? mergeParentTronWeb(safeGetProperty(wallet, "tron")) ?? mergeParentTronWeb(wallet);
-    if (provider) return provider;
-
-    function mergeParentTronWeb(value: unknown): InjectedTronProvider | undefined {
-      if (!isInjectedTronProvider(value)) return undefined;
-      const provider = cloneInjectedProvider(value);
-      if (!provider.tronWeb && walletTronWeb) provider.tronWeb = walletTronWeb;
-      return provider;
-    }
-  }
-  const globalTronLink = safeGetProperty(globals, "tronLink");
-  if (safeGetProperty(globals, "isBitKeep") && isInjectedTronProvider(globalTronLink)) {
-    const provider = cloneInjectedProvider(globalTronLink);
-    const globalTronWeb = safeGetProperty(globals, "tronWeb") as InjectedTronProvider["tronWeb"] | undefined;
-    if (!provider.tronWeb && globalTronWeb) provider.tronWeb = globalTronWeb;
-    return provider;
-  }
-  return undefined;
-}
-
-export function hasBitgetInjectedMarker(): boolean {
-  const globals = globalThis as unknown as Record<string, unknown>;
-  return Boolean(
-    safeGetProperty(globals, "bitkeep") ||
-      safeGetProperty(globals, "bitget") ||
-      safeGetProperty(globals, "bitgetWallet") ||
-      safeGetProperty(globals, "BitgetWallet") ||
-      safeGetProperty(globals, "isBitKeep")
-  );
-}
-
-export function getBinanceInjectedProvider(): InjectedTronProvider | undefined {
-  const globals = globalThis as unknown as Record<string, unknown>;
-  const binancew3w = safeGetProperty(globals, "binancew3w");
-  if (!binancew3w || typeof binancew3w !== "object") return undefined;
-  const wallet = binancew3w as Record<string, unknown>;
-  const tron = safeGetProperty(wallet, "tron");
-  if (!tron || typeof tron !== "object") return undefined;
-
-  const provider = tron as Record<string, unknown>;
-  const getAccount = safeGetProperty(provider, "getAccount");
-  const getChainId = safeGetProperty(provider, "getChainId");
-  const signMessageV2 = safeGetProperty(provider, "signMessageV2");
-  const signTransaction = safeGetProperty(provider, "signTransaction");
-  if (typeof getAccount !== "function") return undefined;
-  const trx: NonNullable<NonNullable<InjectedTronProvider["tronWeb"]>["trx"]> = {};
-  if (typeof getChainId === "function") {
-    trx.getBlockByNumber = async () => {
-      const chainId = String(await getChainId.call(provider));
-      const suffix = chainId.startsWith("0x") ? chainId.slice(2).slice(-8) : "";
-      return { blockID: `${"0".repeat(56)}${suffix}` };
-    };
-  }
-  if (typeof signMessageV2 === "function") {
-    trx.signMessageV2 = (message: string) => signMessageV2.call(provider, message);
-  }
-  if (typeof signTransaction === "function") {
-    trx.sign = (transaction: unknown) => signTransaction.call(provider, transaction);
-  }
-
-  return {
-    request: async ({ method, params }) => {
-      if (method === "tron_requestAccounts" || method === "eth_requestAccounts") {
-        const account = await getAccount.call(provider);
-        const address = extractInjectedAddress(account);
-        return address ? [address] : account;
-      }
-      if (method === "tron_signMessage" && typeof signMessageV2 === "function") {
-        const message = typeof params === "object" && params !== null && "message" in params ? (params as { message?: unknown }).message : params;
-        return signMessageV2.call(provider, String(message ?? ""));
-      }
-      if (method === "tron_signTransaction" && typeof signTransaction === "function") {
-        const transaction = typeof params === "object" && params !== null && "transaction" in params ? (params as { transaction?: unknown }).transaction : params;
-        return signTransaction.call(provider, transaction);
-      }
-      return undefined;
-    },
-    tronWeb: {
-      trx
-    }
-  };
-}
-
-export function getSafePalInjectedProvider(): InjectedTronProvider | undefined {
-  const globals = globalThis as unknown as Record<string, unknown>;
-  const safePalHook = safeGetProperty(globals, "SafePalHook");
-  const tronWeb = safeGetProperty(globals, "tronWeb");
-  if (!safePalHook || typeof safePalHook !== "object") return undefined;
-  if (!tronWeb || typeof tronWeb !== "object") return undefined;
-  const hook = safePalHook as Record<string, unknown>;
-  const request = safeGetProperty(hook, "request");
-  const provider: InjectedTronProvider = {
-    tronWeb: createSafePalTronWeb(tronWeb, hook)
-  };
-
-  if (typeof request === "function") {
-    provider.request = async (args) => {
-      const result = await request.call(hook, args);
-      provider.tronWeb = createSafePalTronWeb(tronWeb, hook);
-      if (args.method === "tron_requestAccounts" || args.method === "eth_requestAccounts") {
-        const address = extractInjectedAddress(result) ?? getDefaultBase58Address(safeGetProperty(hook, "defaultAddress"));
-        return typeof address === "string" ? [address] : result;
-      }
-      return result;
-    };
-  }
-
-  return provider;
-}
-
-export function hasSafePalInjectedMarker(): boolean {
-  const globals = globalThis as unknown as Record<string, unknown>;
-  return Boolean(safeGetProperty(globals, "SafePalHook") || safeGetProperty(globals, "sfpPlatform"));
-}
-
-export function getFoxWalletInjectedProvider(): InjectedTronProvider | undefined {
-  const foxwallet = safeGetProperty(globalThis as unknown as Record<string, unknown>, "foxwallet");
-  if (!foxwallet || typeof foxwallet !== "object") return undefined;
-  const wallet = foxwallet as Record<string, unknown>;
-  const walletRequest = safeGetProperty(wallet, "request");
-  const walletTronWeb = safeGetProperty(wallet, "tronWeb") as InjectedTronProvider["tronWeb"] | undefined;
-  return mergeFoxWalletProvider(safeGetProperty(wallet, "tronLink")) ?? mergeFoxWalletProvider(safeGetProperty(wallet, "tron")) ?? mergeFoxWalletProvider(wallet);
-
-  function mergeFoxWalletProvider(value: unknown): InjectedTronProvider | undefined {
-    if (!value || typeof value !== "object") return undefined;
-    const source = value as Record<string, unknown>;
-    const sourceRequest = safeGetProperty(source, "request");
-    const sourceTronWeb = safeGetProperty(source, "tronWeb") as InjectedTronProvider["tronWeb"] | undefined;
-    const provider: InjectedTronProvider = {};
-    if (typeof sourceRequest === "function") {
-      provider.request = sourceRequest.bind(source) as (args: { method: string; params?: unknown }) => Promise<unknown>;
-    } else if (typeof walletRequest === "function") {
-      provider.request = walletRequest.bind(wallet) as (args: { method: string; params?: unknown }) => Promise<unknown>;
-    }
-    if (typeof sourceTronWeb === "object" && sourceTronWeb !== null) {
-      provider.tronWeb = sourceTronWeb;
-    } else if (typeof walletTronWeb === "object" && walletTronWeb !== null) {
-      provider.tronWeb = walletTronWeb;
-    }
-    return provider.request || provider.tronWeb ? provider : undefined;
-  }
-}
-
-export function getGateInjectedProvider(): InjectedTronProvider | undefined {
-  const gatewallet = safeGetProperty(globalThis as unknown as Record<string, unknown>, "gatewallet");
-  if (!gatewallet || typeof gatewallet !== "object") return undefined;
-  const wallet = gatewallet as Record<string, unknown>;
-  const walletRequest = safeGetProperty(wallet, "request");
-  const walletTronWeb = safeGetProperty(wallet, "tronWeb") as InjectedTronProvider["tronWeb"] | undefined;
-  const tronLink = safeGetProperty(wallet, "tronLink");
-  const provider = mergeGateProvider(safeGetProperty(wallet, "tron")) ?? mergeGateProvider(tronLink) ?? mergeGateProvider(wallet);
-  if (provider) return provider;
-  if (tronLink && typeof tronLink === "object" && walletTronWeb) return { tronWeb: walletTronWeb };
-  return undefined;
-
-  function mergeGateProvider(value: unknown): InjectedTronProvider | undefined {
-    if (!isInjectedTronProvider(value)) return undefined;
-    const provider = cloneInjectedProvider(value);
-    if (!provider.request && typeof walletRequest === "function") {
-      provider.request = walletRequest.bind(wallet) as (args: { method: string; params?: unknown }) => Promise<unknown>;
-    }
-    if (!provider.tronWeb && walletTronWeb) provider.tronWeb = walletTronWeb;
-    return provider;
-  }
-}
-
-export function getMathWalletInjectedProvider(): InjectedTronProvider | undefined {
-  const globals = globalThis as unknown as Record<string, unknown>;
-  const namespacedProvider =
-    mergeMathWalletProvider(safeGetProperty(globals, "mathwallet"), true) ??
-    mergeMathWalletProvider(safeGetProperty(globals, "mathWallet"), true) ??
-    mergeMathWalletProvider(safeGetProperty(globals, "MathWallet"), true);
-  if (namespacedProvider) return namespacedProvider;
-
-  return mergeMathWalletProvider(safeGetProperty(globals, "tronLink"), false) ??
-    mergeMathWalletProvider(safeGetProperty(globals, "tron"), false) ??
-    createMathWalletProviderFromTronWeb(safeGetProperty(globals, "tronWeb"), false);
-}
-
-export async function hasGateInjectedMarker(): Promise<boolean> {
-  const gatewallet = safeGetProperty(globalThis as unknown as Record<string, unknown>, "gatewallet");
-  if (!gatewallet || typeof gatewallet !== "object") return false;
-  return Boolean(safeGetProperty(gatewallet as Record<string, unknown>, "tronLink"));
-}
-
 export function getInjectedTronProvider(paths: readonly string[]): InjectedTronProvider | undefined {
   for (const path of paths) {
     const provider = getPathValue(globalThis as unknown as Record<string, unknown>, path);
@@ -285,13 +79,13 @@ function getPathValue(source: Record<string, unknown>, path: string): unknown {
   }, source);
 }
 
-function isInjectedTronProvider(value: unknown): value is InjectedTronProvider {
+export function isInjectedTronProvider(value: unknown): value is InjectedTronProvider {
   if (typeof value !== "object" || value === null) return false;
   const provider = value as unknown as Record<string, unknown>;
   return typeof safeGetProperty(provider, "request") === "function" || typeof safeGetProperty(provider, "tronWeb") === "object";
 }
 
-function cloneInjectedProvider(value: unknown): InjectedTronProvider {
+export function cloneInjectedProvider(value: unknown): InjectedTronProvider {
   const source = value as unknown as Record<string, unknown>;
   const request = safeGetProperty(source, "request");
   const on = safeGetProperty(source, "on");
@@ -317,55 +111,7 @@ function cloneInjectedProvider(value: unknown): InjectedTronProvider {
   return provider;
 }
 
-function mergeMathWalletProvider(value: unknown, namespaced: boolean): InjectedTronProvider | undefined {
-  if (!value || typeof value !== "object") return undefined;
-  const wallet = value as Record<string, unknown>;
-  if (!namespaced && !hasMathWalletMarker(wallet)) return undefined;
-
-  const walletRequest = safeGetProperty(wallet, "request");
-  const walletTronWeb = safeGetProperty(wallet, "tronWeb") as InjectedTronProvider["tronWeb"] | undefined;
-  const provider =
-    createMathWalletProviderFromBranch(safeGetProperty(wallet, "tron"), wallet, walletTronWeb) ??
-    createMathWalletProviderFromBranch(safeGetProperty(wallet, "tronLink"), wallet, walletTronWeb) ??
-    createMathWalletProviderFromBranch(wallet, wallet, walletTronWeb) ??
-    createMathWalletProviderFromTronWeb(walletTronWeb, true);
-  if (!provider) return undefined;
-
-  if (!provider.request && typeof walletRequest === "function") {
-    provider.request = walletRequest.bind(wallet) as (args: { method: string; params?: unknown }) => Promise<unknown>;
-  }
-  return provider;
-}
-
-function createMathWalletProviderFromBranch(value: unknown, wallet: Record<string, unknown>, parentTronWeb?: InjectedTronProvider["tronWeb"]): InjectedTronProvider | undefined {
-  if (isInjectedTronProvider(value)) {
-    const provider = cloneInjectedProvider(value);
-    if (!provider.tronWeb && parentTronWeb) provider.tronWeb = parentTronWeb;
-    return provider;
-  }
-  const provider = createMathWalletProviderFromTronWeb(value, value === parentTronWeb || hasMathWalletMarker(wallet));
-  if (provider && parentTronWeb && !provider.tronWeb) provider.tronWeb = parentTronWeb;
-  return provider;
-}
-
-function createMathWalletProviderFromTronWeb(value: unknown, allowNamespace: boolean): InjectedTronProvider | undefined {
-  if (!value || typeof value !== "object") return undefined;
-  const tronWeb = value as InjectedTronProvider["tronWeb"] & Record<string, unknown>;
-  if (!allowNamespace && !hasMathWalletMarker(tronWeb)) return undefined;
-  if (typeof tronWeb.trx !== "object" || tronWeb.trx === null) return undefined;
-  return { tronWeb };
-}
-
-function hasMathWalletMarker(value: unknown): boolean {
-  if (!value || typeof value !== "object") return false;
-  const source = value as Record<string, unknown>;
-  const markerKeys = ["isMathWallet", "isMath", "isMathWalletProvider", "_isMathWallet"];
-  if (markerKeys.some((key) => safeGetProperty(source, key) === true)) return true;
-  const name = safeGetProperty(source, "name") ?? safeGetProperty(source, "walletName") ?? safeGetProperty(source, "providerName");
-  return typeof name === "string" && /math\s*wallet|mathwallet/i.test(name);
-}
-
-function safeGetProperty(source: Record<string, unknown>, key: string): unknown {
+export function safeGetProperty(source: Record<string, unknown>, key: string): unknown {
   try {
     return source[key];
   } catch {
@@ -387,13 +133,13 @@ function createSafePalTronWeb(tronWeb: unknown, hook: Record<string, unknown>): 
   return normalized;
 }
 
-function getDefaultBase58Address(defaultAddress: unknown): string | undefined {
+export function getDefaultBase58Address(defaultAddress: unknown): string | undefined {
   if (typeof defaultAddress !== "object" || defaultAddress === null) return undefined;
   const base58 = safeGetProperty(defaultAddress as Record<string, unknown>, "base58");
   return typeof base58 === "string" ? base58 : undefined;
 }
 
-function extractInjectedAddress(result: unknown): string | undefined {
+export function extractInjectedAddress(result: unknown): string | undefined {
   if (Array.isArray(result) && typeof result[0] === "string") return result[0];
   if (typeof result === "string") return result;
   if (typeof result !== "object" || result === null) return undefined;

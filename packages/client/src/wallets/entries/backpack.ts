@@ -1,3 +1,4 @@
+import { standardInjected } from "../../adapters/injected-strategy";
 import type { WalletDescriptor } from "../types";
 
 export const backpack: WalletDescriptor = {
@@ -7,5 +8,6 @@ export const backpack: WalletDescriptor = {
   homepage: "https://backpack.app/",
   platforms: ["extension"],
   group: "popular",
+  injected: standardInjected({ providerPaths: ["backpack.tron", "backpack.tronLink"] }),
   detect: { providerPaths: ["backpack.tron", "backpack.tronLink"] }
 };

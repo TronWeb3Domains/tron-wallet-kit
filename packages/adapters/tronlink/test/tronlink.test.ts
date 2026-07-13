@@ -416,7 +416,7 @@ describe("TronLinkAdapter", () => {
           originalDispatchEvent(
             new CustomEvent("TIP6963:announceProvider", {
               detail: {
-                info: { name: "TronLink" },
+                info: { name: "TronLink", rdns: "org.tronlink.www" },
                 provider
               }
             })
@@ -434,6 +434,46 @@ describe("TronLinkAdapter", () => {
         account: { address: "TMockAddress" },
         network: { id: "mainnet" }
       });
+    } finally {
+      (globalThis as unknown as Record<string, unknown>).window = previousWindow;
+    }
+  });
+
+  it("ignores TIP-6963 TronLink-name announcements from a different rdns", async () => {
+    const previousWindow = (globalThis as typeof globalThis & { window?: unknown }).window;
+    const eventTarget = new EventTarget() as EventTarget & {
+      tron?: unknown;
+      tronLink?: unknown;
+      tronWeb?: unknown;
+      dispatchEvent(event: Event): boolean;
+    };
+    const provider = {
+      isTronLink: true,
+      tronWeb: createTronWeb(),
+      request: async () => ["TMockAddress"]
+    };
+    const originalDispatchEvent = eventTarget.dispatchEvent.bind(eventTarget);
+    eventTarget.dispatchEvent = (event: Event) => {
+      const result = originalDispatchEvent(event);
+      if (event.type === "TIP6963:requestProvider") {
+        setTimeout(() => {
+          originalDispatchEvent(
+            new CustomEvent("TIP6963:announceProvider", {
+              detail: {
+                info: { name: "TronLink", rdns: "com.example.wallet" },
+                provider
+              }
+            })
+          );
+        }, 0);
+      }
+      return result;
+    };
+    (globalThis as unknown as Record<string, unknown>).window = eventTarget;
+
+    try {
+      const adapter = createTronLinkAdapter({ checkTimeoutMs: 30, checkIntervalMs: 10 });
+      await expect(adapter.isAvailable()).resolves.toBe(false);
     } finally {
       (globalThis as unknown as Record<string, unknown>).window = previousWindow;
     }

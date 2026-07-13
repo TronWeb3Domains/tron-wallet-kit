@@ -66,6 +66,7 @@ export { TRONLINK_ICON };
 const TIP6963_ANNOUNCE_PROVIDER_EVENT = "TIP6963:announceProvider";
 const TIP6963_REQUEST_PROVIDER_EVENT = "TIP6963:requestProvider";
 const TRONLINK_TIP6963_NAME = "TronLink";
+const TRONLINK_TIP6963_RDNS = "org.tronlink.www";
 
 export type TronLinkAdapterOptions = {
   metadata?: Partial<WalletMetadata>;
@@ -350,7 +351,7 @@ async function discoverTip6963TronLinkProvider(timeoutMs: number): Promise<TronL
     };
     const onAnnounce = (event: Event) => {
       const detail = (event as CustomEvent<{ info?: { name?: string; rdns?: string }; provider?: unknown }>).detail;
-      if (!detail || detail.info?.name !== TRONLINK_TIP6963_NAME || !isTip1193TronProvider(detail.provider)) return;
+      if (!detail || !isTronLinkTip6963Info(detail.info) || !isTip1193TronProvider(detail.provider)) return;
       finish({ kind: "tip1193", provider: detail.provider });
     };
     const timer = globalThis.setTimeout(() => finish(), timeoutMs);
@@ -358,6 +359,12 @@ async function discoverTip6963TronLinkProvider(timeoutMs: number): Promise<TronL
     window.addEventListener(TIP6963_ANNOUNCE_PROVIDER_EVENT, onAnnounce as EventListener);
     window.dispatchEvent(new Event(TIP6963_REQUEST_PROVIDER_EVENT));
   });
+}
+
+function isTronLinkTip6963Info(info: { name?: string; rdns?: string } | undefined): boolean {
+  if (!info) return false;
+  if (info.rdns) return info.rdns === TRONLINK_TIP6963_RDNS;
+  return info.name === TRONLINK_TIP6963_NAME;
 }
 
 function isTip1193TronProvider(value: unknown): value is Tip1193TronProvider {
