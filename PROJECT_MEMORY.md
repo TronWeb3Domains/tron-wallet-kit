@@ -585,7 +585,7 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 ## 2026-07-05 Spec Execution Discipline Added
 
 - User asked to tighten discipline around `Review/REOWN_UI_SPEC_FOR_TRON.md` and stop completing one small item while letting other spec items drift.
-- Added section `0. Execution Discipline / Plan Tuần Tự` directly into `Review/REOWN_UI_SPEC_FOR_TRON.md`.
+- Added section `0. Execution Discipline / Sequential Plan` directly into `Review/REOWN_UI_SPEC_FOR_TRON.md`.
 - The spec now has a phase board P0-P9:
   - P0 tracker/discipline
   - P1 modal Reown basics
@@ -603,7 +603,7 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 
 ## 2026-07-05 P1 Modal Reown Basics Completed
 
-- Completed P1 from `Review/REOWN_UI_SPEC_FOR_TRON.md` section `0. Execution Discipline / Plan Tuần Tự`.
+- Completed P1 from `Review/REOWN_UI_SPEC_FOR_TRON.md` section `0. Execution Discipline / Sequential Plan`.
 - Removed QR tabs from `createQrHtml()` and deleted the `.twk-qr-tabs` CSS block. Tests now assert QR markup does not contain tabs and the title appears before the QR slot.
 - Compacted modal spacing per 1B(a2):
   - `.twk-header` now uses `min-height:44px`
@@ -628,7 +628,7 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 
 ## 2026-07-05 P2 QR Foundation Completed
 
-- Completed P2 from `Review/REOWN_UI_SPEC_FOR_TRON.md` section `0. Execution Discipline / Plan Tuần Tự`.
+- Completed P2 from `Review/REOWN_UI_SPEC_FOR_TRON.md` section `0. Execution Discipline / Sequential Plan`.
 - Added `qr-code-styling` to `@tron-wallet-kit/ui`.
 - Reworked `packages/ui/src/qr.ts`:
   - kept `createQrDataUrl()` as the `qrcode` fallback
@@ -659,7 +659,7 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 
 ## 2026-07-06 P3 Account Panel Flow Completed
 
-- Completed P3 from `Review/REOWN_UI_SPEC_FOR_TRON.md` section `0. Execution Discipline / Plan Tuần Tự`.
+- Completed P3 from `Review/REOWN_UI_SPEC_FOR_TRON.md` section `0. Execution Discipline / Sequential Plan`.
 - Added an account-panel `address-qr` sub-view:
   - account view opens address QR without closing the panel
   - Back returns to account view
@@ -678,7 +678,7 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 
 ## 2026-07-06 P4 Loading/Skeleton Completed
 
-- Completed P4 from `Review/REOWN_UI_SPEC_FOR_TRON.md` section `0. Execution Discipline / Plan Tuần Tự`.
+- Completed P4 from `Review/REOWN_UI_SPEC_FOR_TRON.md` section `0. Execution Discipline / Sequential Plan`.
 - Added stable loading placeholders for wallet availability:
   - wallet icon skeleton
   - wallet name skeleton
@@ -698,7 +698,7 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 
 ## 2026-07-06 P5 Inline Status + Toast Controller Completed
 
-- Completed P5 from `Review/REOWN_UI_SPEC_FOR_TRON.md` section `0. Execution Discipline / Plan Tuần Tự`.
+- Completed P5 from `Review/REOWN_UI_SPEC_FOR_TRON.md` section `0. Execution Discipline / Sequential Plan`.
 - Added `.twk-status` below featured/all-wallets list views so status/error text has reserved space and does not shift the modal.
 - `.twk-status` uses `aria-live="polite"` and switches to `role="alert"` with danger tone when showing errors.
 - Upgraded `createWalletToast()`:
@@ -718,7 +718,7 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 
 ## 2026-07-06 P6 Network Badge + WalletInline Completed
 
-- Completed P6 from `Review/REOWN_UI_SPEC_FOR_TRON.md` section `0. Execution Discipline / Plan Tuần Tự`.
+- Completed P6 from `Review/REOWN_UI_SPEC_FOR_TRON.md` section `0. Execution Discipline / Sequential Plan`.
 - Added `networkName` and `networkType` to `ConnectModalViewModel`.
 - Featured and all-wallets views render `.twk-network-badge` when network info is supplied.
 - Added `createWalletInlineHtml()` and `createWalletInline()`:
@@ -754,7 +754,7 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 
 ## 2026-07-06 P8 Theme Runtime Completed
 
-- Completed P8 from `Review/REOWN_UI_SPEC_FOR_TRON.md` section `0. Execution Discipline / Plan Tuần Tự`.
+- Completed P8 from `Review/REOWN_UI_SPEC_FOR_TRON.md` section `0. Execution Discipline / Sequential Plan`.
 - Added `setTheme(config)` to UI surface interfaces and implementations:
   - `WalletModal`
   - `WalletButton`
@@ -921,7 +921,7 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 
 ## 2026-07-06 Action Button Standardization
 
-- Read the new `Review/REOWN_UI_SPEC_FOR_TRON.md` section `4F. Chuẩn nút action (button system)`.
+- Read the new `Review/REOWN_UI_SPEC_FOR_TRON.md` section `4F. Action button standard (button system)`.
 - Added `packages/ui/src/actions.ts` with `createActionContentHtml(icon, label, state)` so action buttons consistently render:
   - `.twk-action-icon`
   - `.twk-action-label`
@@ -1886,7 +1886,7 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 
 - Continued the `IMPLEMENTATION_HANDOFF.md` work order after P0.
 - Implemented P1 UI i18n/config in `@tron-wallet-kit/ui`:
-  - added built-in `en` and `vi` label packs plus app-level `labels` overrides
+  - added built-in `en` labels and a backward-compatible `vi` alias plus app-level `labels` overrides
   - plumbed labels into modal, wallet badges, account panel, wallet button, and transaction toast
   - added modal behavior/branding config (`showCloseButton`, `closeOnBackdropClick`, `closeOnSelect`, `disableAnimations`, powered-by text/toggle)
   - added resolved QR config (`size`, `addressSize`, `margin`, `includeWalletLogo`, `errorCorrectionLevel`) and used it in connect QR rendering
@@ -3518,3 +3518,591 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 51 tests.
   - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 42 tests.
   - `pnpm --filter @tron-wallet-kit/react test -- --run` passed with 3 tests.
+
+## 2026-07-11 Codebase English Text Cleanup
+
+- User clarified the English-only cleanup should apply to the codebase/runtime surface only, not Review/docs material.
+- Converted the backward-compatible `vi` UI locale pack to English fallback labels so runtime UI no longer emits Vietnamese copy.
+- Updated UI locale tests to assert English output for `locale: "vi"` compatibility mode.
+- Rebuilt the browser package and refreshed the example public IIFE snapshots.
+- Restored tracked Review documentation changes; Review/docs files may remain Vietnamese by design.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 42 tests.
+  - `pnpm --filter @tron-wallet-kit/browser build` passed.
+
+## 2026-07-11 UI/UX Pro Theming Checklist Review
+
+- Re-read `Review/UI_UX_PRO_THEMING_CHECKLIST.md` against the current UI source.
+- Findings:
+  - Already covered: token-driven portal-safe theme variables, polished light/dark defaults, TRON accent on `tron`, production theme contrast tests, focus rings, touch target minimums, reduced-motion handling, QR skeleton/scan-safe QR background, view-enter animation, no hover shadow, and modular UI source split.
+  - Still worth closing: auto theme mode does not listen to live `prefers-color-scheme` changes; contrast tests only cover production presets and do not cover playground presets such as `glass`; some extended presets still use older raw accent values; custom scrollbar polish is not implemented; success/error micro-feedback animation remains basic.
+- No code changes were made from this review pass beyond documenting the findings.
+
+## 2026-07-11 All-Zones Skeleton UX Checklist Review
+
+- Read `docs/ALL_ZONES_SKELETON_UX_CHECKLIST.md` and mapped it against current TRON Wallet Kit UI zones.
+- Applicability:
+  - The primitive idea applies well, but the namespace should stay `twk-*`, not `xwk-*`.
+  - Already covered: wallet button identity/balance skeletons, wallet picker loading rows/cards, badge loading reserve, QR frame skeleton, account panel identity/balance skeletons, reduced-motion skeleton disabling.
+  - Partially covered: recent transactions have rows but no dedicated fetching skeleton state; QR skeleton exists but does not implement the laser scanline effect; connecting screen uses the approved Reown-style spinner around wallet logo instead of the two-node connection bridge.
+  - Not applicable now: transaction preview/confirmation skeleton until the kit owns a transaction preview panel.
+- Recommendation: extract reusable `twk-skeleton-*` primitive classes only where they reduce duplication, then close gaps for recent transaction fetching and optional QR scanline polish.
+
+## 2026-07-11 All-Zones Skeleton UX Implementation
+
+- Implemented the low-risk parts of `docs/ALL_ZONES_SKELETON_UX_CHECKLIST.md` in `@tron-wallet-kit/ui`.
+- Added reusable skeleton primitive classes under the existing namespace:
+  - `twk-skeleton-circle`
+  - `twk-skeleton-line`
+  - `twk-skeleton-pill`
+  - `twk-skeleton-card`
+  - `twk-skeleton-button`
+  - `twk-skeleton-row`
+  - `twk-skeleton-qr`
+- Refactored existing wallet button, wallet picker, QR, account identity, and balance loading markup to use the primitive classes while preserving existing sizes and behavior.
+- Added `AccountPanelViewModel.transactionsLoading` and recent transaction skeleton rows for account panel/history loading states.
+- Kept the approved Reown-style connecting spinner; did not implement the two-node connection bridge.
+- Rebuilt and synced browser IIFE snapshots into `examples/public/vendor`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 43 tests.
+  - `pnpm --filter @tron-wallet-kit/browser build` timed out after building non-min IIFE, then `pnpm --filter @tron-wallet-kit/browser build:iife:min` passed.
+
+## 2026-07-11 TRON Transaction Pipeline Phase 1
+
+- Added `Review/TRON_TRANSACTION_PIPELINE_SPEC.md` before coding to make the transaction architecture easy to review later.
+- Decision:
+  - Match TronWeb/tronweb3 naming where practical: `transactionBuilder.sendTrx`, `transactionBuilder.triggerSmartContract`, `signTransaction`, `sendRawTransaction`, `signAndSendTransaction`, `triggerSmartContract`.
+  - Keep transaction building in the client/helper layer.
+  - Keep wallet-specific signing in adapters:
+    - injected wallets sign with injected `tronWeb.trx.sign` / provider request fallback,
+    - WalletConnect signs with `tron_signTransaction`,
+    - Ledger signs `txID` + `raw_data_hex` and attaches `signature`.
+  - Broadcast through shared TronWeb/RPC using `trx.sendRawTransaction`.
+- Implemented client transaction runtime:
+  - `kit.transactionBuilder.sendTrx(...)`
+  - `kit.transactionBuilder.triggerSmartContract(...)`
+  - `kit.getTronWeb()`
+  - `kit.sendRawTransaction(...)`
+  - `kit.signAndSendTransaction(...)`
+  - real `kit.triggerSmartContract(...)` build -> sign -> broadcast pipeline
+  - `kit.transferTrx(...)` now builds, signs, and broadcasts instead of depending on adapter-specific submit support.
+- Updated `react-basic` with a Transactions panel for:
+  - building a TRX transfer transaction,
+  - signing/sending TRX,
+  - building a smart contract transaction,
+  - signing/executing a smart contract transaction.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 52 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/examples build` passed.
+  - `pnpm --filter @tron-wallet-kit/client build` passed.
+  - `pnpm --filter @tron-wallet-kit/browser typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser build` passed and refreshed the example public IIFE bundles.
+
+## 2026-07-11 TRON Transaction Pipeline Review Addendum
+
+- Re-read `Review/TRON_TRANSACTION_PIPELINE_SPEC.md` after the reviewer addendum.
+- Closed the Phase 1 gaps that affect the canonical client path:
+  - `signTransaction` + kit-side `sendRawTransaction` remains the canonical path for `transferTrx`, `transferTrc20`, and `triggerSmartContract`.
+  - Added build-late execution through `signAndSendBuiltTransaction()` so kit-built transactions are created immediately before signing.
+  - Added rebuild -> re-sign -> re-broadcast once when broadcast fails with `TRANSACTION_EXPIRATION_ERROR` or an expired-message result.
+  - Added broadcast failure detection for `result: false`; failed broadcasts now reject instead of falling back to the unsigned transaction `txID`.
+  - Added default contract `feeLimit` of `100_000_000` SUN when omitted, while preserving caller override.
+  - Added shared TronWeb configuration via `config.tronWeb.fullHost`, `config.tronWeb.apiKey`, and `config.tronWeb.headers`.
+  - `transferTrc20()` now builds via `triggerSmartContract("transfer(address,uint256)")` instead of sending a raw method-hint payload to adapters.
+- Remaining scope:
+  - Legacy resource/governance helpers still need a Stake 2.0 builder phase before they should be exposed in the playground.
+  - `adapter.submitTransaction()` remains available for direct adapter/legacy use, but the kit transaction helpers no longer use it for the main path.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 54 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client build` passed.
+  - `pnpm --filter @tron-wallet-kit/examples build` passed.
+  - `pnpm --filter @tron-wallet-kit/browser build` passed.
+
+## 2026-07-11 Core Error Codes And UI Error Localization
+
+- Added a professional shared error system in `@tron-wallet-kit/core`:
+  - canonical error code definitions with category, severity, retryability, title, and message metadata;
+  - expanded wallet/signing/transaction/network/configuration codes including `SIGN_TRANSACTION_FAILED`, `INVALID_TRANSACTION`, `SEND_TRANSACTION_FAILED`, `TRANSACTION_EXPIRATION_ERROR`, `OUT_OF_ENERGY`, `INSUFFICIENT_BALANCE`, `NETWORK_ERROR`, `RATE_LIMITED`, and `CONFIGURATION_ERROR`;
+  - `formatWalletError()` for short user-facing UI messages and optional sanitized details;
+  - safer `normalizeWalletError()` detection for user rejection, unavailable wallets, dynamic import failures, expired transactions, energy/balance failures, rate limits, and network/RPC failures.
+- Added UI language management for errors:
+  - `WalletKitLabelPack.errors` / `WalletUiLabels.errors`;
+  - deep merge for per-code locale overrides;
+  - English runtime catalog for both `en` and compatibility `vi` locale packs.
+- Updated connect modal error rendering:
+  - controller formats adapter errors before storing UI state;
+  - detail panels and featured/all-wallet status render safe formatted messages;
+  - dynamic adapter import failures no longer expose Vite module paths or long URLs in the modal.
+- Updated `Review/TRON_TRANSACTION_PIPELINE_SPEC.md` with the canonical error/language management section and error code table.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/core typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/core test -- --run` passed with 20 tests.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 43 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 54 tests.
+  - `pnpm --filter @tron-wallet-kit/core build` passed.
+  - `pnpm --filter @tron-wallet-kit/ui build` passed.
+  - `pnpm --filter @tron-wallet-kit/client build` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/examples build` passed.
+  - `pnpm --filter @tron-wallet-kit/browser build` passed.
+  - Source runtime scan `rg -n "[À-ỹ]" packages examples scripts --glob "!**/dist/**" --glob "!**/node_modules/**" --glob "!examples/public/vendor/**"` returned no matches.
+
+## 2026-07-11 React Basic Strict No-Auto-Reconnect Guard
+
+- Investigated intermittent Bitget auto-connect reports in `react-basic` while `autoReconnect={false}` was set.
+- Confirmed `react-basic` disables `autoReconnect`, but still uses browser storage with `storageKey="react-basic-session-v2"`, so stale sessions can remain in localStorage.
+- Hardened React provider behavior:
+  - `TronWalletProvider` now calls `manager.autoReconnect()` only when `kit.manager.config.autoReconnect` is enabled.
+  - Added optional `clearStoredSessionOnAutoReconnectDisabled` provider prop for demos/apps that want strict no-autoconnect behavior while still using browser storage.
+  - Enabled `clearStoredSessionOnAutoReconnectDisabled` in `examples/react-basic`.
+- Added `WalletManager.clearStoredSession()` for explicit cached-session cleanup without disconnecting a current wallet provider.
+- Added core regression coverage proving `autoReconnect=false` does not restore and `clearStoredSession()` removes cached sessions.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/core typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/core test -- --run` passed with 21 tests.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+
+## 2026-07-12 Browser WalletConnect Packaging Split Phase 1
+
+- Audited WalletConnect packaging:
+  - `@tron-wallet-kit/adapter-walletconnect` is a TRON Wallet Kit wrapper, but its default factory imports `@tronweb3/walletconnect-tron`.
+  - `@tronweb3/walletconnect-tron` pulls `@reown/appkit`, `@walletconnect/sign-client`, `@walletconnect/universal-provider`, and related utilities.
+  - The old browser IIFE bundled WalletConnect into the core file because `@tron-wallet-kit/client` statically imported `@tron-wallet-kit/adapter-walletconnect` and `@tron-wallet-kit/browser` re-exported it.
+- Implemented Phase 1 split:
+  - Added `packages/client/src/adapters/walletconnect-lazy.ts`.
+  - `createWalletClient({ walletConnectProjectId })` still registers a WalletConnect-capable adapter, but it is now a lightweight lazy proxy.
+  - The lazy proxy first uses `globalThis.TronWalletKitWalletConnect.createWalletConnectAdapter` for CDN/addon usage, then falls back to a dynamic package import for module builds.
+  - Removed runtime static WalletConnect import from `packages/client/src/wallets/build-adapters.ts`.
+  - Moved `@tron-wallet-kit/adapter-walletconnect` from client dependencies to optional peer dependency.
+  - Removed WalletConnect runtime export from the default browser entry.
+  - Added `packages/browser/src/walletconnect.ts` as a separate addon entry.
+  - Added browser addon build scripts:
+    - `tron-wallet-kit.walletconnect.iife.js`
+    - `tron-wallet-kit.walletconnect.iife.min.js`
+  - Updated HTML/CDN example to include the WalletConnect addon after the core IIFE.
+  - Updated Vite example middleware to serve the addon files.
+- Browser size result:
+  - Core `tron-wallet-kit.iife.min.js` is now `1,277,255` bytes.
+  - WalletConnect addon `tron-wallet-kit.walletconnect.iife.min.js` is `2,613,077` bytes.
+  - Previous core IIFE min was about `3.89 MB`, so extension-only/browser-core users no longer pay the WalletConnect/Reown cost.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 55 tests.
+  - `pnpm --filter @tron-wallet-kit/browser typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser build` passed and generated core + WalletConnect addon IIFE bundles.
+  - `pnpm install --lockfile-only` passed.
+  - `pnpm --filter @tron-wallet-kit/client build` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/examples build` passed.
+
+## 2026-07-12 Browser WalletConnect Single IIFE Lite Pivot
+
+- Superseded the previous WalletConnect addon split after product decision:
+  - keep the easy CDN developer experience with one `tron-wallet-kit.iife.js` / `tron-wallet-kit.iife.min.js` file;
+  - avoid the large `@tronweb3/walletconnect-tron` dependency instead of shipping a separate addon.
+- Reworked `@tron-wallet-kit/adapter-walletconnect`:
+  - removed `@tronweb3/walletconnect-tron`;
+  - added direct `@walletconnect/sign-client` usage;
+  - implemented a lightweight WalletConnect TRON session wrapper for `connect`, `disconnect`, `checkConnectStatus`, `tron_signMessage`, and `tron_signTransaction`;
+  - preserved existing public config fields such as `projectId`, `network`, `relayUrl`, `metadata`, `appMetadata`, `onUri`, and compatibility no-op `allWallets`.
+- Reverted browser/client packaging to one bundle:
+  - client statically imports `createWalletConnectAdapter` again;
+  - browser exports WalletConnect adapter from the default entry;
+  - removed `packages/browser/src/walletconnect.ts` and separate WalletConnect IIFE build scripts;
+  - removed HTML/CDN addon script tag and Vite addon middleware.
+- Browser size result after lite pivot:
+  - `packages/browser/dist/tron-wallet-kit.iife.js`: `3,437,478` bytes.
+  - `packages/browser/dist/tron-wallet-kit.iife.min.js`: `1,729,753` bytes.
+  - This keeps one-file CDN usage while avoiding the previous combined core + WalletConnect addon size.
+- Verification:
+  - `pnpm install` passed after lockfile dependency update.
+  - `pnpm --filter @tron-wallet-kit/adapter-walletconnect typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-walletconnect test -- --run` passed with 7 tests.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 54 tests.
+  - `pnpm --filter @tron-wallet-kit/browser build` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+
+## 2026-07-12 WalletConnect SignClient Vite Dev Resolution Fix
+
+- Fixed Vite dev import-analysis resolution for the source-alias examples setup:
+  - `examples/vite.config.ts` aliases `@tron-wallet-kit/adapter-walletconnect` directly to `packages/adapters/walletconnect/src/index.ts`;
+  - Vite resolves bare imports from the example app context, so `@walletconnect/sign-client` also needs to be declared in `examples/package.json`.
+- Added `@walletconnect/sign-client` to `examples` dependencies and ran `pnpm install` to create the `examples/node_modules/@walletconnect/sign-client` junction.
+- Verification:
+  - `pnpm install --lockfile-only` passed.
+  - `pnpm install` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/examples build` passed.
+
+## 2026-07-12 React Basic HTTPS Blank Screen Check
+
+- Investigated `https://127.0.0.1:5174/react-basic/` blank screen after WalletConnect SignClient changes.
+- Found the dev server on port `5174` was an old Node process started on `2026-07-10`, before the dependency/link update.
+- Restarted the examples HTTPS dev server on port `5174`.
+- Verified server responses:
+  - `https://127.0.0.1:5174/react-basic/` returns `200 OK`.
+  - WalletConnect source now resolves `@walletconnect/sign-client` through Vite prebundle `/node_modules/.vite/deps/@walletconnect_sign-client.js`.
+- In-app browser automation cannot open the HTTPS page because the local certificate is self-signed and reports `ERR_CERT_AUTHORITY_INVALID`.
+- Verified with Chrome headless plus `--ignore-certificate-errors` that the React app renders successfully:
+  - root contains the `React Basic` workspace;
+  - wallet button shows `Connect Wallet`;
+  - configuration and log panels render;
+  - initial log shows `Ready.`.
+
+## 2026-07-12 TronLink First Load Availability Stabilization
+
+- Investigated intermittent TronLink `NOT INSTALLED` on first page load.
+- Root cause found in client wallet descriptor:
+  - `packages/client/src/wallets/entries/tronlink.ts` overrode the adapter default `checkTimeoutMs` from `5000ms` down to `800ms`;
+  - TronLink extension injection can arrive after 800ms on cold page load, so the UI could mark it `notFound` before the provider was injected.
+- Fixed descriptor to use `createTronLinkAdapter(config.tronlink)`, preserving adapter default timeout and allowing integrators to override when needed.
+- Added TronLink adapter regression test for delayed provider injection shortly after page load.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink test -- --run` passed with 18 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 54 tests.
+
+## 2026-07-12 MathWallet Catalog Addition
+
+- Added MathWallet to the built-in wallet registry with id `math`.
+- Used existing `packages/client/src/wallets/icons/math.png`; regenerated `icons.generated.ts`.
+- Integration mode is `walletconnect` for now:
+  - Math Wallet is shown in catalog/all-wallet UI and routes through the shared WalletConnect adapter when `walletConnectProjectId` is configured;
+  - no dedicated injected adapter is enabled yet because Math Wallet TRON extension provider paths still need live QA to avoid generic `tronLink`/`tron` conflicts.
+- Updated client tests:
+  - built-in descriptor list includes `math`;
+  - MathWallet catalog entry has icon metadata and `supportsWalletConnect`;
+  - MathWallet does not create a duplicate adapter and resolves to the shared `walletconnect` adapter in UI merge.
+- Verification:
+  - `pnpm icons:wallets` generated 19 wallet icons.
+  - `pnpm wallets:validate` passed with 19 wallet descriptors and 19 icons.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 55 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser build` passed and vendor IIFE files were refreshed.
+
+## 2026-07-12 MathWallet Injected Integration Update
+
+- Re-read `Review/NEW_WALLETS_INTEGRATION_SPEC.md`.
+- Updated MathWallet from WalletConnect-routed catalog-only entry to injected integration per spec:
+  - `integration: "injected"`;
+  - `detect.providerPaths: ["tronLink", "tron"]`;
+  - `requestMethods: ["tron_requestAccounts"]`;
+  - kept `supportsWalletConnect: true` so UI can still use QR fallback when extension is not detected and WalletConnect is configured.
+- Updated client tests:
+  - MathWallet is included in the default adapter list without requiring `walletConnectProjectId`;
+  - descriptor asserts injected config and request method;
+  - added MathWallet connect/signMessage coverage through a TronWeb-compatible injected provider.
+- Verification:
+  - `pnpm wallets:validate` passed with 19 descriptors and 19 icons.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 55 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser build` passed and vendor IIFE files were refreshed.
+
+## 2026-07-12 MathWallet Injected Detection Hardening
+
+- Read MathWallet TRON docs and the `mathwallet/math-trxjs` samples:
+  - official samples use a TronWeb-compatible `window.tronWeb` surface;
+  - they do not document a unique extension namespace that can safely distinguish MathWallet from TronLink-family wallets.
+- Fixed the built-in MathWallet descriptor to avoid generic `tronLink` / `tron` provider paths.
+- Added `getMathWalletInjectedProvider()`:
+  - accepts explicit Math namespaces such as `mathwallet`, `mathWallet`, or `MathWallet`;
+  - accepts generic `tronLink`, `tron`, or `tronWeb` only when a Math-specific marker/name is present;
+  - avoids marking MathWallet installed from another wallet's injected provider.
+- Added Math roots to TronLink's known non-TronLink conflict guard so MathWallet-linked providers are not treated as TronLink.
+- Updated tests:
+  - MathWallet connect/sign coverage now uses a Math namespace instead of generic `tronLink`;
+  - added regression coverage proving generic `tronLink` does not make MathWallet available;
+  - added TronLink regression coverage for MathWallet-linked `tronLink` globals.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 56 tests.
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink test -- --run` passed with 19 tests.
+  - `pnpm wallets:validate` passed with 19 descriptors and 19 icons.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+
+## 2026-07-12 TronLink Availability Fast Path
+
+- Investigated slow TronLink loading after first-load stabilization.
+- Root cause:
+  - `TronLinkAdapter.waitForProvider()` waited for TIP-6963 discovery to finish before polling legacy globals;
+  - when TronLink injects through legacy `window.tronLink`, UI availability could wait up to `checkTimeoutMs` even though the provider was already present or appeared shortly after page load.
+- Fixed `waitForProvider()` to run TIP-6963 discovery and legacy polling in parallel:
+  - immediate provider still returns synchronously;
+  - legacy provider resolves as soon as polling sees it;
+  - TIP-6963 provider still works when announced first;
+  - timeout behavior remains intact for first-load stability.
+- Added regression coverage proving legacy availability does not wait for the TIP-6963 timeout.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink test -- --run` passed with 20 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 56 tests.
+
+## 2026-07-12 Featured Wallet Loading Row Hardening
+
+- Investigated a featured-list visual issue where the first TronLink row rendered as a blank skeleton bar while availability was still loading.
+- Updated featured list row rendering so a loading wallet remains identifiable:
+  - shows the real wallet icon/name;
+  - shows a muted `Checking` badge;
+  - avoids full-row blank skeletons in the recommended wallet list.
+- Kept skeleton rendering available for card/loading surfaces where explicit skeleton blocks are expected.
+- Updated UI regression coverage to assert loading featured wallets remain visible instead of blank.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 43 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+
+## 2026-07-13 Passive Modal Availability And WalletConnect Return Hardening
+
+- Investigated page-load reports where Bitget/SafePal could be touched before the user opened the connect modal.
+- Root cause:
+  - `createWalletKit()` mounts the modal root immediately;
+  - `createWalletController.mount()` called `refreshAvailability()` even when the modal was hidden;
+  - this probed all injected adapters on page load instead of waiting for explicit user interaction.
+- Fixed modal mount behavior:
+  - hidden modal roots no longer refresh wallet availability on page load;
+  - availability refresh still runs when the modal is opened;
+  - inline picker mode still refreshes on mount because it is visible UI.
+- Hardened pending QR/connect cleanup:
+  - `cancelConnectionFlow()` now asks the manager to cancel the pending adapter request;
+  - WalletConnect adapter implements `cancelPendingConnection()`.
+- Hardened the lightweight WalletConnect adapter:
+  - after QR URI emission, `connect()` races `approval()` with polling the SignClient session store;
+  - this covers wallets that show scan/approval success while the approval promise is delayed or missed;
+  - session address extraction now scans all namespaces, not only `namespaces.tron`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/adapter-walletconnect typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-walletconnect test -- --run` passed with 7 tests.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 43 tests.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 56 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+
+## 2026-07-13 Connect First-Click And WalletConnect Cancel Hotfix
+
+- User reported three live issues still present after the previous passive availability change:
+  - first connect click could still open Bitget;
+  - TronLink stayed `Checking` and then became `NOT INSTALLED` even though it is the primary wallet;
+  - WalletConnect approved successfully in the wallet but dapp showed `The request was cancelled in the wallet.`
+- Fixed featured modal availability behavior:
+  - deferred featured-view availability probes for Bitget and SafePal;
+  - these wallets no longer get touched during first open/recommended-list refresh;
+  - All wallets can still probe them when the user explicitly enters the full wallet list.
+- Fixed TronLink priority detection:
+  - removed the overly broad rule that rejected legacy `window.tronLink` just because other TRON wallets were also installed;
+  - retained nested/linked-provider conflict guards so TokenPocket/Trust/Math-linked `tronLink` providers are still rejected.
+- Fixed WalletConnect false cancellation:
+  - removed the adapter-level `connectAttemptId` mismatch rejection after `wallet.connect()` resolves;
+  - manager-level pending-flow checks still prevent stale sessions from being accepted after user cancellation.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-walletconnect typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink test -- --run` passed with 20 tests.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 43 tests.
+  - `pnpm --filter @tron-wallet-kit/adapter-walletconnect test -- --run` passed with 7 tests.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 56 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+
+## 2026-07-13 Bitget And SafePal Passive Installed Markers
+
+- User reported Bitget/SafePal should not remain in `Checking`, and Bitget connect could show `Connection failed`.
+- Added side-effect-free installed marker probes:
+  - Bitget: checks clear Bitget/BitKeep globals without calling wallet request APIs;
+  - SafePal: checks `SafePalHook` / `sfpPlatform` without requiring a ready `tronWeb` surface.
+- Updated Bitget descriptor behavior:
+  - availability can resolve from marker globals;
+  - connect prefers already-injected addresses when present;
+  - request order tries `eth_requestAccounts` before `tron_requestAccounts`;
+  - delayed/empty address handling has a longer settle window and one retry.
+- Updated featured modal availability:
+  - Bitget/SafePal no longer stay as `loading` in the recommended list;
+  - the UI uses passive marker checks there instead of calling adapter availability probes.
+- Added regression coverage for:
+  - Bitget marker-only installed detection;
+  - Bitget `eth_requestAccounts` address return;
+  - SafePal marker-only installed detection.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 43 tests.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 58 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+
+## 2026-07-13 TronLink Installed Marker Hardening
+
+- User reported TronLink regressed back to `Checking` and then `Not Installed`.
+- Root cause:
+  - featured modal still depended on `TronLinkAdapter.isAvailable()`;
+  - `isAvailable()` waited for a fully resolved provider, so slow TronLink injection could settle false even though the extension marker existed.
+- Updated TronLink adapter:
+  - `isAvailable()` now first checks side-effect-free installed markers;
+  - marker check accepts explicit `isTronLink` providers and ready legacy `tronLink`/`tronWeb` surfaces;
+  - existing guards still reject TokenPocket/Trust/Math-linked providers so TronLink does not claim another wallet.
+- Added regression coverage proving a ready legacy marker resolves availability immediately.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink test -- --run` passed with 21 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 58 tests.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 43 tests.
+
+## 2026-07-13 TronLink Request-Only Legacy Detection Fix
+
+- User reported TronLink still showed `Not Installed`; the previous marker hardening remained too strict.
+- Root cause:
+  - the adapter required `ready` / usable `tronWeb` for unmarked legacy `window.tronLink`;
+  - real TronLink can expose `window.tronLink.request` first and hydrate `window.tronWeb` only after `tron_requestAccounts`.
+- Fixed TronLink detection:
+  - unmarked `window.tronLink.request` is now accepted as TronLink when it is not nested/linked to a known non-TronLink wallet namespace;
+  - generic `window.tron` that is explicitly not TronLink still blocks false positives;
+  - legacy provider hydrates `tronWeb` from `globalThis.tronWeb` again after request approval.
+- Added regression coverage for request-only legacy TronLink install/connect.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink test -- --run` passed with 22 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 58 tests.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 43 tests.
+
+## 2026-07-13 Wallet Detection And Connect-Ready Separation
+
+- User requested a structural fix because wallet-specific patches were causing regressions across other wallets.
+- Established the adapter contract:
+  - `detect()` is side-effect-free and only drives UI list installed/detected state;
+  - `connect()` is the on-demand phase that may call wallet request APIs and handle provider/address timing;
+  - `isAvailable()` is retained for restore/legacy compatibility but is no longer the UI list source of truth.
+- Updated core:
+  - added optional `WalletAdapter.detect()`;
+  - `WalletManager.connect()` no longer preflights `adapter.isAvailable()` before explicit user connect.
+- Updated adapters/UI:
+  - injected adapters expose `detect()` from provider paths / marker probes without request calls;
+  - TronLink, WalletConnect, bridge, probe, and fallback adapters expose/forward `detect()`;
+  - connect modal availability refresh prefers `detect()` and only falls back to `isAvailable()` for legacy adapters.
+- Added regression coverage:
+  - manager does not call `isAvailable()` before connect;
+  - marker-only Bitget/SafePal detection remains separate from connect-ready provider availability;
+  - existing TronLink conflict and request-only tests remain locked.
+- Updated `Review/ADAPTER_BEHAVIOR_NOTES.md` with the detection vs connect-ready rule.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/core typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-walletconnect typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-tronwallet-bridge typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/core test -- --run` passed with 22 tests.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 58 tests.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 43 tests.
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink test -- --run` passed with 22 tests.
+
+## 2026-07-13 Wallet Detect Context Binding Hotfix
+
+- User reported all wallets showed `Checking` and installed wallets were not detected after the detect/connect separation.
+- Root cause:
+  - the connect modal extracted `adapter.detect` / `adapter.isAvailable` into a standalone function and called it without the adapter context;
+  - class adapters such as TronLink rely on `this`, so detached method calls throw and UI availability falls back to failed/loading states.
+- Fixed modal availability refresh:
+  - calls `detectWallet.call(adapter)` so both class methods and closure-based adapters work.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 43 tests.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 58 tests.
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink test -- --run` passed with 22 tests.
+
+## 2026-07-13 Wallet Detection Stability Window
+
+- User reported installed state still flickered: TronLink/Trust could show QR/not installed first and then switch to installed.
+- Root cause:
+  - wallet globals can hydrate after the modal's first render;
+  - a first false detection could trigger WalletConnect QR fallback for wallets that support QR, then a later detection changed the same wallet to installed.
+- Updated modal detection behavior:
+  - first false detection is not accepted immediately;
+  - the modal polls briefly before marking a wallet not found;
+  - once a wallet is detected as found in the current modal session, it is not downgraded to not found/QR by later transient false results.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 43 tests.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 58 tests.
+
+## 2026-07-13 TronLink Loose UI Detect Marker
+
+- User reported TronLink still went from `Checking` to `Not Installed`.
+- Updated TronLink's `detect()` only:
+  - UI detection now accepts a bare `window.tronLink` object as installed when it is not nested/linked to a known non-TronLink wallet namespace;
+  - this covers TronLink extension states where `request`, `ready`, or `tronWeb` are hydrated later;
+  - connect/provider resolution remains separate and still requires the real request/provider path when the user clicks.
+- Added regression coverage for `window.tronLink = {}` returning `adapter.detect() === true`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink test -- --run` passed with 23 tests.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 43 tests.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 58 tests.
+
+## 2026-07-13 Modal Availability Cache Reset On Open
+
+- User reported TronLink still showed `Checking` then `Not Installed`.
+- Additional root cause:
+  - modal availability state could cache a previous `false`;
+  - reopening the modal then skipped the first-detect grace path because the wallet was no longer considered first-time detection.
+- Updated modal open behavior:
+  - `refreshAvailability({ resetTransient: true })` runs when opening the modal;
+  - prior `false` / `loading` states are reset to `loading` and rechecked with the grace window;
+  - prior `true` states remain sticky and are not downgraded.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run` passed with 43 tests.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 58 tests.
+
+## 2026-07-13 TronLink TronWeb-Only Detect Marker
+
+- User reported TronLink still showed `Checking` then `Not Installed` after cache reset and loose `tronLink` detection.
+- Added another TronLink UI detect marker:
+  - if `window.tronWeb` is usable and not linked to a known non-TronLink wallet namespace, `TronLinkAdapter.detect()` returns true;
+  - this covers TronLink environments that expose `tronWeb` before `tronLink` or before `tronLink.request`.
+- Added regression coverage for:
+  - global `tronWeb`-only detection;
+  - Trust-linked global `tronWeb` not being claimed as TronLink.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink test -- --run` passed with 25 tests.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 58 tests.
+
+## 2026-07-13 TronLink Bybit Global Conflict Fix
+
+- User provided browser console evidence that Bybit injects provider code around the same time TronLink reports it will overwrite the current TronWeb instance.
+- Root cause:
+  - TronLink detect/provider rules rejected TronLink if `window.tron` existed and was not marked `isTronLink`;
+  - Bybit can own generic `window.tron` while TronLink still owns a separate `window.tronLink`.
+- Fixed TronLink rules:
+  - a separate `window.tronLink` object is accepted if it is not nested/linked to a known non-TronLink wallet namespace;
+  - non-TronLink `window.tron` only blocks the fallback case where TronLink is inferred from `window.tronWeb` alone.
+- Added regression coverage for Bybit generic `window.tron` not hiding a separate TronLink provider.
+- Updated `Review/ADAPTER_BEHAVIOR_NOTES.md` with the Bybit conflict rule.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-tronlink test -- --run` passed with 26 tests.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run` passed with 58 tests.

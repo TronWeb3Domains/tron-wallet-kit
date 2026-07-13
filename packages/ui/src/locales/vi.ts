@@ -2,58 +2,128 @@ import type { WalletKitLabelPack } from "../types";
 
 export const vi: WalletKitLabelPack = {
   connectModal: {
-    title: "Ket noi vi",
+    title: "Connect wallet",
     subtitle: "",
-    allWallets: "Tat ca vi",
-    back: "Quay lai",
-    close: "Dong",
-    connecting: "Dang ket noi",
-    continueInWallet: "Tiep tuc trong",
-    acceptRequest: "Chap nhan yeu cau ket noi trong vi",
-    tryAgain: "Thu lai",
-    getWallet: "Cai dat",
-    searchWallet: "Tim vi",
-    searchPlaceholder: "Tim vi",
-    noWalletsFound: "Khong tim thay vi TRON",
-    poweredBy: "Cung cap boi TRON Wallet Kit",
-    unavailable: "Khong kha dung",
-    ready: "San sang",
-    installed: "Da cai",
-    notInstalled: "Chua cai",
-    qrCode: "Ma QR",
+    allWallets: "All wallets",
+    back: "Back",
+    close: "Close",
+    connecting: "Connecting",
+    continueInWallet: "Continue in",
+    acceptRequest: "Accept the connection request in your wallet",
+    tryAgain: "Try again",
+    getWallet: "Get",
+    searchWallet: "Search wallet",
+    searchPlaceholder: "Search wallet",
+    noWalletsFound: "No TRON wallets found",
+    poweredBy: "Powered by TRON Wallet Kit",
+    unavailable: "Unavailable",
+    ready: "Ready",
+    installed: "Installed",
+    notInstalled: "Not installed",
+    qrCode: "QR CODE",
     tron: "TRON",
-    scanQr: "Quet ma QR bang dien thoai cua ban",
-    dontHave: "Chua co",
-    checking: "Dang kiem tra",
-    connectionDeclined: "Ket noi bi tu choi",
-    copyLink: "Sao chep lien ket",
-    qrRenderFailed: "Khong the hien ma QR. Thu lai."
+    scanQr: "Scan this QR Code with your phone",
+    dontHave: "Don't have",
+    checking: "Checking",
+    connectionDeclined: "Connection declined",
+    copyLink: "Copy link",
+    qrRenderFailed: "Could not render the QR code. Try again."
   },
   accountPanel: {
-    title: "Da ket noi",
-    addressTitle: "Dia chi",
-    back: "Quay lai",
-    close: "Dong",
-    copy: "Sao chep dia chi",
-    copied: "Da sao chep",
-    disconnect: "Ngat ket noi",
-    explorer: "Trinh duyet",
+    title: "Connected",
+    addressTitle: "Address",
+    back: "Back",
+    close: "Close",
+    copy: "Copy address",
+    copied: "Copied",
+    disconnect: "Disconnect",
+    explorer: "Explorer",
     showQr: "QR",
-    lightQr: "QR sang",
-    noTransactions: "Chua co giao dich gan day",
-    recentTransactions: "Giao dich gan day",
-    qrAlt: "Ma QR dia chi TRON"
+    lightQr: "Light QR",
+    noTransactions: "No recent transactions",
+    recentTransactions: "Recent transactions",
+    qrAlt: "TRON address QR code"
   },
   walletButton: {
-    connect: "Ket noi vi",
-    connecting: "Dang ket noi",
-    openAccount: "Mo tai khoan"
+    connect: "Connect wallet",
+    connecting: "Connecting",
+    openAccount: "Open account"
   },
   toast: {
-    txSubmitted: "Da gui giao dich",
-    txConfirmed: "Giao dich thanh cong",
-    txFailed: "Giao dich that bai",
-    viewOnExplorer: "Xem",
-    dismiss: "Dong thong bao"
+    txSubmitted: "Transaction submitted",
+    txConfirmed: "Transaction confirmed",
+    txFailed: "Transaction failed",
+    viewOnExplorer: "View",
+    dismiss: "Dismiss"
+  },
+  errors: {
+    fallbackTitle: "Request failed",
+    fallbackMessage: "The wallet request failed. Try again.",
+    codes: {
+      WALLET_NOT_FOUND: {
+        title: "Wallet not found",
+        message: "This wallet is not registered in the current wallet kit configuration."
+      },
+      WALLET_UNAVAILABLE: {
+        title: "Wallet unavailable",
+        message: "This wallet is not available in the current browser."
+      },
+      CONNECTION_FAILED: {
+        title: "Connection failed",
+        message: "The wallet connection failed. Try again."
+      },
+      USER_REJECTED: {
+        title: "Connection declined",
+        message: "The request was cancelled in the wallet."
+      },
+      REQUEST_TIMEOUT: {
+        title: "Request timed out",
+        message: "The wallet did not respond in time. Try again."
+      },
+      CONFIGURATION_ERROR: {
+        title: "Configuration error",
+        message: "The wallet adapter could not be loaded. Refresh the page and try again."
+      },
+      NETWORK_ERROR: {
+        title: "Network error",
+        message: "The TRON network request failed. Check the RPC endpoint and try again."
+      },
+      RATE_LIMITED: {
+        title: "Rate limited",
+        message: "The TRON RPC endpoint is rate limiting requests. Try again shortly."
+      },
+      TRANSACTION_EXPIRATION_ERROR: {
+        title: "Transaction expired",
+        message: "The transaction expired before broadcast. Rebuild and sign it again."
+      },
+      OUT_OF_ENERGY: {
+        title: "Not enough energy",
+        message: "The account does not have enough TRON energy for this transaction."
+      },
+      INSUFFICIENT_BALANCE: {
+        title: "Insufficient balance",
+        message: "The account balance is not enough for this transaction."
+      },
+      SEND_TRANSACTION_FAILED: {
+        title: "Transaction failed",
+        message: "The transaction could not be broadcast to the TRON network."
+      },
+      SIGN_MESSAGE_FAILED: {
+        title: "Signing failed",
+        message: "The wallet could not sign the message."
+      },
+      SIGN_TRANSACTION_FAILED: {
+        title: "Transaction signing failed",
+        message: "The wallet could not sign the transaction."
+      },
+      UNSUPPORTED: {
+        title: "Unsupported action",
+        message: "This wallet does not support the requested action."
+      },
+      NO_SESSION: {
+        title: "Wallet not connected",
+        message: "Connect a TRON wallet before continuing."
+      }
+    }
   }
 };

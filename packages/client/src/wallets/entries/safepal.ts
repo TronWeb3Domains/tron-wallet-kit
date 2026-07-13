@@ -1,4 +1,4 @@
-import { getSafePalInjectedProvider } from "../../injected/detect";
+import { getSafePalInjectedProvider, hasSafePalInjectedMarker } from "../../injected/detect";
 import type { WalletDescriptor } from "../types";
 
 export const safepal: WalletDescriptor = {
@@ -10,6 +10,6 @@ export const safepal: WalletDescriptor = {
   platforms: ["extension", "mobile"],
   group: "popular",
   supportsWalletConnect: true,
-  detect: { provider: getSafePalInjectedProvider },
+  detect: { provider: getSafePalInjectedProvider, availabilityProbe: hasSafePalInjectedMarker },
   signMessageMode: "sign"
 };

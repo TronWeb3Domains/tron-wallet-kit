@@ -5,6 +5,10 @@ export function createAvailabilityProbeWalletAdapter(primary: WalletAdapter, pro
     ...(primary.adapterApiVersion ? { adapterApiVersion: primary.adapterApiVersion } : {}),
     metadata: primary.metadata,
     capabilities: primary.capabilities,
+    detect: async () => {
+      if (await Promise.resolve(probe()).catch(() => false)) return true;
+      return Boolean(await Promise.resolve(primary.detect?.()).catch(() => false));
+    },
     isAvailable: async () => {
       if (await Promise.resolve(probe()).catch(() => false)) return true;
       return Boolean(await Promise.resolve(primary.isAvailable?.()).catch(() => false));
@@ -36,6 +40,10 @@ export function createFallbackWalletAdapter(primary: WalletAdapter, fallback: Wa
     capabilities: {
       ...fallback.capabilities,
       ...primary.capabilities
+    },
+    detect: async () => {
+      if (await Promise.resolve(fallback.detect?.()).catch(() => false)) return true;
+      return Boolean(await Promise.resolve(primary.detect?.()).catch(() => false));
     },
     isAvailable: async () => {
       if (await Promise.resolve(fallback.isAvailable?.()).catch(() => false)) return true;

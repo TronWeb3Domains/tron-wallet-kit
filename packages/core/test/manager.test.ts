@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { MemoryWalletStorage, TRON_MAINNET, WALLET_STORAGE_VERSION, WalletKitError, WalletManager, normalizeWalletError, type WalletAdapter, type WalletSession } from "../src/index";
+import { MemoryWalletStorage, TRON_MAINNET, WALLET_STORAGE_VERSION, WalletKitError, WalletManager, formatWalletError, normalizeWalletError, type WalletAdapter, type WalletSession } from "../src/index";
 
 function createAdapter(): WalletAdapter {
   return {
@@ -61,6 +61,23 @@ describe("WalletManager", () => {
     expect(session.account.address).toBe("TMockAddress");
     expect(session.account.network?.id).toBe("mainnet");
     expect(manager.getSession()?.walletName).toBe("Mock Wallet");
+  });
+
+  it("does not preflight isAvailable before an explicit user connect", async () => {
+    const isAvailable = vi.fn(async () => false);
+    const connect = vi.fn(createAdapter().connect);
+    const adapter: WalletAdapter = {
+      ...createAdapter(),
+      isAvailable,
+      connect
+    };
+    const manager = new WalletManager({ adapters: [adapter] });
+
+    await expect(manager.connect("mock", { network: TRON_MAINNET })).resolves.toMatchObject({
+      account: { address: "TMockAddress" }
+    });
+    expect(isAvailable).not.toHaveBeenCalled();
+    expect(connect).toHaveBeenCalledOnce();
   });
 
   it("carries connect metadata into the active session", async () => {
@@ -130,6 +147,20 @@ describe("WalletManager", () => {
     await second.autoReconnect();
 
     expect(events).toEqual(["session_restored", "connected"]);
+  });
+
+  it("can clear cached sessions when auto reconnect is disabled by the host app", async () => {
+    const storage = new MemoryWalletStorage();
+    const first = new WalletManager({ adapters: [createAdapter()], storage });
+    await first.connect("mock", { network: TRON_MAINNET });
+    expect(await storage.getItem("session")).toContain("TMockAddress");
+
+    const second = new WalletManager({ adapters: [createAdapter()], storage, autoReconnect: false });
+    await expect(second.autoReconnect()).resolves.toBeNull();
+    expect(second.getSession()).toBeNull();
+
+    await second.clearStoredSession();
+    expect(await storage.getItem("session")).toBeNull();
   });
 
   it("normalizes signing and transaction lifecycle events", async () => {
@@ -381,6 +412,21 @@ describe("WalletManager", () => {
     expect(normalizeWalletError(new Error("User rejected request"))).toMatchObject({ code: "USER_REJECTED" });
     expect(normalizeWalletError(new Error("request timed out"))).toMatchObject({ code: "REQUEST_TIMEOUT" });
     expect(normalizeWalletError(new Error("wallet not installed"))).toMatchObject({ code: "WALLET_UNAVAILABLE" });
+    expect(normalizeWalletError(new Error("OUT_OF_ENERGY"))).toMatchObject({ code: "OUT_OF_ENERGY" });
+    expect(normalizeWalletError(new Error("Failed to fetch dynamically imported module: http://127.0.0.1/module.js"))).toMatchObject({ code: "CONFIGURATION_ERROR" });
     expect(normalizeWalletError(new WalletKitError("CUSTOM", "Custom"))).toMatchObject({ code: "CUSTOM" });
+  });
+
+  it("formats wallet errors for user-facing UI", () => {
+    expect(formatWalletError(new Error("User rejected request"))).toMatchObject({
+      code: "USER_REJECTED",
+      title: "Connection declined",
+      message: "The request was cancelled in the wallet."
+    });
+    expect(formatWalletError(new Error("Failed to fetch dynamically imported module: http://127.0.0.1/module.js"), { includeDetails: true }).details).not.toContain("127.0.0.1");
+    expect(formatWalletError(new WalletKitError("OUT_OF_ENERGY", "OUT_OF_ENERGY"))).toMatchObject({
+      title: "Not enough energy",
+      retryable: false
+    });
   });
 });

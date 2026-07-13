@@ -3,12 +3,30 @@ import { TRON_MAINNET, WalletKitError, type TronNetwork, type WalletManager } fr
 export type BalanceTronWeb = {
   trx?: {
     getBalance?(address: string): Promise<unknown> | unknown;
+    sendRawTransaction?(transaction: Record<string, unknown>): Promise<unknown>;
   };
 };
 
 export type TronDomainTronWeb = BalanceTronWeb & {
   setAddress?(address: string): void;
   contract(): { at(address: string): Promise<unknown> };
+  toSun?(value: string | number): number | string;
+  transactionBuilder?: {
+    sendTrx?(to: string, amountSun: number, from?: string): Promise<Record<string, unknown>>;
+    triggerSmartContract?(
+      contractAddress: string,
+      functionSelector: string,
+      options?: Record<string, unknown>,
+      parameters?: unknown[],
+      issuerAddress?: string
+    ): Promise<Record<string, unknown>>;
+  };
+};
+
+export type SharedTronWebConfig = {
+  fullHost?: string;
+  apiKey?: string;
+  headers?: Record<string, string>;
 };
 
 const balanceTronWebPathsByWallet: Record<string, readonly string[]> = {
@@ -29,6 +47,11 @@ const balanceTronWebPathsByWallet: Record<string, readonly string[]> = {
 };
 
 const sharedTronWebByHost = new Map<string, TronDomainTronWeb>();
+let sharedTronWebConfig: SharedTronWebConfig = {};
+
+export function configureSharedTronWeb(config: SharedTronWebConfig | undefined): void {
+  sharedTronWebConfig = config ?? {};
+}
 
 export function resolveBalanceTronWeb(walletId: string | undefined): BalanceTronWeb | undefined {
   const paths = walletId ? balanceTronWebPathsByWallet[walletId] : undefined;
@@ -43,12 +66,17 @@ export async function getSharedTronWeb(manager: WalletManager | undefined, netwo
   const testTronWeb = (globalThis as { __tronWalletKitTronWebForTest?: TronDomainTronWeb }).__tronWalletKitTronWebForTest;
   if (testTronWeb) return testTronWeb;
   const resolvedNetwork = network ?? manager?.getNetwork() ?? TRON_MAINNET;
-  const fullHost = resolvedNetwork.fullHost ?? resolvedNetwork.httpRpcUrl ?? resolvedNetwork.rpcUrl;
-  const cached = sharedTronWebByHost.get(fullHost);
+  const fullHost = sharedTronWebConfig.fullHost ?? resolvedNetwork.fullHost ?? resolvedNetwork.httpRpcUrl ?? resolvedNetwork.rpcUrl;
+  const headers = {
+    ...(sharedTronWebConfig.headers ?? {}),
+    ...(sharedTronWebConfig.apiKey ? { "TRON-PRO-API-KEY": sharedTronWebConfig.apiKey } : {})
+  };
+  const cacheKey = `${fullHost}:${JSON.stringify(headers)}`;
+  const cached = sharedTronWebByHost.get(cacheKey);
   if (cached) return cached;
   const TronWeb = await loadTronWebConstructor();
-  const tronWeb = new TronWeb({ fullHost });
-  sharedTronWebByHost.set(fullHost, tronWeb);
+  const tronWeb = new TronWeb({ fullHost, ...(Object.keys(headers).length > 0 ? { headers } : {}) });
+  sharedTronWebByHost.set(cacheKey, tronWeb);
   return tronWeb;
 }
 
@@ -73,4 +101,4 @@ function getPathValue(source: Record<string, unknown>, path: string): unknown {
   }, source);
 }
 
-type TronWebConstructor = new (options: { fullHost: string }) => TronDomainTronWeb;
+type TronWebConstructor = new (options: { fullHost: string; headers?: Record<string, string> }) => TronDomainTronWeb;

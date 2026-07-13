@@ -259,6 +259,11 @@ describe("wallet kit surfaces", () => {
     expect(styles).toContain("opacity: 0.58");
     expect(styles).toContain(".twk-skeleton-name");
     expect(styles).toContain(".twk-skeleton-balance");
+    expect(styles).toContain(".twk-skeleton-circle");
+    expect(styles).toContain(".twk-skeleton-line");
+    expect(styles).toContain(".twk-skeleton-pill");
+    expect(styles).toContain(".twk-skeleton-qr");
+    expect(styles).toContain(".twk-tx-skeleton-row");
     expect(styles).toContain(".twk-connecting-ring");
     expect(styles).toContain(".twk-connecting-ring-accent");
     expect(styles).toContain("height: 110px");
@@ -310,12 +315,13 @@ describe("wallet kit surfaces", () => {
     expect(html).toContain("Connecting");
     expect(html).toContain("QR CODE");
     expect(html).toContain("twk-badge");
-    expect(html).toContain("User rejected the request");
+    expect(html).toContain("The request was cancelled in the wallet.");
+    expect(html).not.toContain("User rejected the request");
     expect(html).toContain("twk-status");
     expect(html).toContain('data-tone="danger"');
   });
 
-  it("reserves wallet card icon and name space while readiness is loading", () => {
+  it("keeps featured loading wallets identifiable instead of rendering a blank row", () => {
     const html = createConnectModalHtml({
       wallets: [
         {
@@ -326,10 +332,10 @@ describe("wallet kit surfaces", () => {
       ],
     });
 
-    expect(html).toContain('class="twk-wallet-icon" data-loading="true"');
-    expect(html).toContain('class="twk-wallet-name" data-loading="true"');
-    expect(html).toContain('data-loading="true"');
+    expect(html).toContain('data-twk-wallet-id="tronlink"');
     expect(html).toContain("TronLink");
+    expect(html).toContain("Checking");
+    expect(html).not.toContain('class="twk-wallet-icon twk-skeleton-circle" data-loading="true"');
   });
 
   it("creates a token-driven wallet button in disconnected and connected states", () => {
@@ -953,7 +959,7 @@ describe("wallet kit surfaces", () => {
       ],
     });
 
-    expect(html).toContain("Connection declined");
+    expect(html).toContain("Configuration error");
     expect(html).not.toContain("node_modules/.vite/deps");
     expect(html).toContain("MetaMask could not be loaded. Refresh the page and try again.");
   });
@@ -1098,9 +1104,27 @@ describe("wallet kit surfaces", () => {
       balanceLoading: true,
     });
 
-    expect(html).toContain('class="twk-domain" data-loading="true"');
-    expect(html).toContain('class="twk-pill-balance" data-loading="true"');
+    expect(html).toContain('class="twk-domain twk-skeleton-line" data-loading="true"');
+    expect(html).toContain('class="twk-pill-balance twk-skeleton-pill" data-loading="true"');
     expect(html).toContain("twk-skeleton");
+  });
+
+  it("renders recent transaction fetching skeleton rows", () => {
+    const html = createAccountPanelHtml({
+      account: {
+        address: "TXYZabcdefghijklmnopqrstuvwxyz123456789",
+      },
+      transactionsLoading: true,
+      maxVisibleTransactions: 3,
+    });
+
+    expect(html).toContain('data-has-recent="true"');
+    expect(html).toContain("twk-tx-skeleton-row");
+    expect(html).toContain("twk-skeleton-row");
+    expect(html).toContain("twk-skeleton-circle");
+    expect(html).toContain("twk-skeleton-line");
+    expect(html).toContain("twk-skeleton-button");
+    expect(html).toContain("Loading transactions");
   });
 
   it("hides balance when missing instead of rendering a dash", () => {
@@ -1238,21 +1262,21 @@ describe("wallet kit surfaces", () => {
 
   it("resolves built-in locales and app label overrides", () => {
     const viConfig = resolveWalletUiConfig({ locale: "vi" });
-    expect(viConfig.labels.connectModal.title).toBe("Ket noi vi");
-    expect(viConfig.modal.title).toBe("Ket noi vi");
+    expect(viConfig.labels.connectModal.title).toBe("Connect wallet");
+    expect(viConfig.modal.title).toBe("Connect wallet");
 
     const overridden = resolveWalletUiConfig({
       locale: "vi",
-      modal: { title: "Ket noi TRON" },
+      modal: { title: "Connect TRON" },
       labels: {
         connectModal: {
-          tryAgain: "Lam lai"
+          tryAgain: "Retry"
         }
       }
     });
-    expect(overridden.modal.title).toBe("Ket noi TRON");
-    expect(overridden.labels.connectModal.tryAgain).toBe("Lam lai");
-    expect(overridden.labels.connectModal.qrCode).toBe("Ma QR");
+    expect(overridden.modal.title).toBe("Connect TRON");
+    expect(overridden.labels.connectModal.tryAgain).toBe("Retry");
+    expect(overridden.labels.connectModal.qrCode).toBe("QR CODE");
 
     const html = createConnectModalHtml({
       labels: overridden.labels.connectModal,
@@ -1265,9 +1289,9 @@ describe("wallet kit surfaces", () => {
         },
       ],
     });
-    expect(html).toContain("Ket noi vi");
-    expect(html).toContain("Tat ca vi");
-    expect(html).toContain("MA QR");
+    expect(html).toContain("Connect wallet");
+    expect(html).toContain("All wallets");
+    expect(html).toContain("QR CODE");
   });
 
   it("creates accessible transaction toasts with explorer and dismiss actions", () => {

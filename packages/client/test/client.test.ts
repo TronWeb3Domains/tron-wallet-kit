@@ -101,6 +101,9 @@ describe("client entrypoints", () => {
     delete (globalThis as Record<string, unknown>).tokenpocket;
     delete (globalThis as Record<string, unknown>).okxwallet;
     delete (globalThis as Record<string, unknown>).bitkeep;
+    delete (globalThis as Record<string, unknown>).bitget;
+    delete (globalThis as Record<string, unknown>).bitgetWallet;
+    delete (globalThis as Record<string, unknown>).BitgetWallet;
     delete (globalThis as Record<string, unknown>).ethereum;
     delete (globalThis as Record<string, unknown>).gatewallet;
     delete (globalThis as Record<string, unknown>).gateWallet;
@@ -117,6 +120,9 @@ describe("client entrypoints", () => {
     delete (globalThis as Record<string, unknown>).lateWallet;
     delete (globalThis as Record<string, unknown>).tronWeb;
     delete (globalThis as Record<string, unknown>).tronLink;
+    delete (globalThis as Record<string, unknown>).mathwallet;
+    delete (globalThis as Record<string, unknown>).mathWallet;
+    delete (globalThis as Record<string, unknown>).MathWallet;
     delete (globalThis as Record<string, unknown>).isBitKeep;
     delete (globalThis as Record<string, unknown>).__tronWalletKitTronWebForTest;
     delete (globalThis as Record<string, unknown>).window;
@@ -133,15 +139,148 @@ describe("client entrypoints", () => {
   });
 
   it("creates a kit with TRON-native transaction helpers", async () => {
+    (globalThis as Record<string, unknown>).__tronWalletKitTronWebForTest = {
+      trx: {
+        sendRawTransaction: async (transaction: Record<string, unknown>) => ({ txid: transaction.txID ?? "broadcast-hash" })
+      },
+      transactionBuilder: {
+        sendTrx: async (to: string, amountSun: number, from?: string) => ({
+          txID: "trx-built-hash",
+          raw_data_hex: "raw",
+          to,
+          amountSun,
+          from
+        })
+      },
+      setAddress: () => undefined,
+      contract: () => ({ at: async () => ({}) })
+    };
     const kit = createWalletKit({ adapters: [createMockAdapter()] });
 
     await kit.manager.connect("mock");
     await expect(kit.signMessage("hello")).resolves.toMatchObject({ proof: "signed:hello" });
-    await expect(kit.sendTransaction({ txID: "tx" })).resolves.toMatchObject({ hash: "generic-hash" });
+    await expect(kit.sendTransaction({ txID: "tx" })).resolves.toMatchObject({ hash: "tx" });
     await expect(kit.transferTrx({ to: "TReceiver", amountSun: 1n })).resolves.toMatchObject({
-      hash: "trx-hash"
+      hash: "trx-built-hash"
     });
     expect(kit.manager.getTransactions()[0]?.methodHint).toBe("transferTrx");
+  });
+
+  it("builds, signs, and broadcasts triggerSmartContract transactions", async () => {
+    const calls = {
+      triggerSmartContract: [] as unknown[][]
+    };
+    (globalThis as Record<string, unknown>).__tronWalletKitTronWebForTest = {
+      trx: {
+        sendRawTransaction: async (transaction: Record<string, unknown>) => ({ txID: transaction.txID })
+      },
+      transactionBuilder: {
+        triggerSmartContract: async (...args: unknown[]) => {
+          calls.triggerSmartContract.push(args);
+          return {
+            result: { result: true },
+            transaction: {
+              txID: "contract-hash",
+              raw_data_hex: "raw-contract"
+            }
+          };
+        }
+      },
+      setAddress: () => undefined,
+      contract: () => ({ at: async () => ({}) })
+    };
+    const kit = createWalletKit({ adapters: [createMockAdapter()] });
+
+    await kit.manager.connect("mock");
+    await expect(
+      kit.triggerSmartContract({
+        contractAddress: "TContract",
+        function: "buyDomain(string,string)",
+        options: { feeLimit: 100_000_000 },
+        parameter: [
+          { type: "string", value: "alice" },
+          { type: "string", value: "trx" }
+        ],
+        description: "Buy alice.trx"
+      })
+    ).resolves.toMatchObject({ hash: "contract-hash" });
+
+    expect(calls.triggerSmartContract[0]).toEqual([
+      "TContract",
+      "buyDomain(string,string)",
+      { feeLimit: 100_000_000 },
+      [
+        { type: "string", value: "alice" },
+        { type: "string", value: "trx" }
+      ],
+      "TMockAddress"
+    ]);
+    expect(kit.manager.getTransactions()[0]).toMatchObject({
+      hash: "contract-hash",
+      methodHint: "triggerSmartContract"
+    });
+  });
+
+  it("applies a default feeLimit and retries once when a built transaction expires", async () => {
+    const calls = {
+      triggerSmartContract: [] as unknown[][],
+      sendRawTransaction: [] as Array<Record<string, unknown>>
+    };
+    (globalThis as Record<string, unknown>).__tronWalletKitTronWebForTest = {
+      trx: {
+        sendRawTransaction: async (transaction: Record<string, unknown>) => {
+          calls.sendRawTransaction.push(transaction);
+          if (calls.sendRawTransaction.length === 1) {
+            return { result: false, code: "TRANSACTION_EXPIRATION_ERROR", message: "Transaction expired" };
+          }
+          return { result: true, txid: transaction.txID };
+        }
+      },
+      transactionBuilder: {
+        triggerSmartContract: async (...args: unknown[]) => {
+          calls.triggerSmartContract.push(args);
+          return {
+            result: { result: true },
+            transaction: {
+              txID: `contract-hash-${calls.triggerSmartContract.length}`,
+              raw_data_hex: "raw-contract"
+            }
+          };
+        }
+      },
+      setAddress: () => undefined,
+      contract: () => ({ at: async () => ({}) })
+    };
+    const kit = createWalletKit({ adapters: [createMockAdapter()] });
+
+    await kit.manager.connect("mock");
+    await expect(
+      kit.triggerSmartContract({
+        contractAddress: "TContract",
+        functionSelector: "buyDomain(string,string)",
+        parameters: []
+      })
+    ).resolves.toMatchObject({ hash: "contract-hash-2" });
+
+    expect(calls.triggerSmartContract).toHaveLength(2);
+    expect(calls.triggerSmartContract[0]?.[2]).toEqual({ feeLimit: 100_000_000 });
+    expect(calls.sendRawTransaction).toHaveLength(2);
+  });
+
+  it("rejects failed broadcast results without treating the unsigned txID as success", async () => {
+    (globalThis as Record<string, unknown>).__tronWalletKitTronWebForTest = {
+      trx: {
+        sendRawTransaction: async () => ({ result: false, code: "OUT_OF_ENERGY", message: "OUT_OF_ENERGY" })
+      },
+      setAddress: () => undefined,
+      contract: () => ({ at: async () => ({}) })
+    };
+    const kit = createWalletKit({ adapters: [createMockAdapter()] });
+
+    await kit.manager.connect("mock");
+    await expect(kit.sendRawTransaction({ txID: "unsigned-fallback" })).rejects.toMatchObject({
+      code: "OUT_OF_ENERGY"
+    });
   });
 
   it("refreshes identity and enriches the connected account", async () => {
@@ -313,6 +452,7 @@ describe("client entrypoints", () => {
       "foxwallet",
       "bybit",
       "imtoken",
+      "math",
       "binance",
       "safepal",
       "guarda",
@@ -331,6 +471,7 @@ describe("client entrypoints", () => {
       "foxwallet",
       "bybit",
       "imtoken",
+      "math",
       "binance",
       "safepal",
       "guarda",
@@ -357,6 +498,7 @@ describe("client entrypoints", () => {
       "bybit",
       "imtoken",
       "klever",
+      "math",
       "binance",
       "safepal",
       "guarda",
@@ -367,6 +509,11 @@ describe("client entrypoints", () => {
     ]);
     expect(BUILTIN_WALLET_DESCRIPTORS.every((wallet) => wallet.homepage && wallet.platforms.length > 0)).toBe(true);
     expect(BUILTIN_WALLET_DESCRIPTORS.find((wallet) => wallet.id === "klever")).toMatchObject({ integration: "walletconnect", supportsWalletConnect: true });
+    expect(BUILTIN_WALLET_DESCRIPTORS.find((wallet) => wallet.id === "math")).toMatchObject({
+      integration: "injected",
+      supportsWalletConnect: true,
+      requestMethods: ["tron_requestAccounts"]
+    });
   });
 
   it("enables Klever as a WalletConnect-routed catalog wallet without a duplicate adapter", () => {
@@ -403,6 +550,56 @@ describe("client entrypoints", () => {
       available: true,
       badge: { label: "QR CODE", tone: "qr" }
     });
+  });
+
+  it("enables MathWallet as a TronWeb-compatible injected wallet", async () => {
+    (globalThis as Record<string, unknown>).mathwallet = {
+      isMathWallet: true,
+      tronLink: {
+        request: async () => ({ code: 200 }),
+        tronWeb: {
+          defaultAddress: { base58: "TMathWallet", hex: "41math" },
+          trx: {
+            getBlockByNumber: async () => ({ blockID: "000000000000000000000000000000000000000000000000000000002b6653dc" }),
+            signMessageV2: async (message: string) => `math:${message}`,
+            sign: async <TTransaction,>(transaction: TTransaction) => transaction
+          }
+        }
+      }
+    };
+    const manager = createWalletClient({ wallets: ["math"], walletConnectProjectId: "project" });
+    const adapterIds = manager.getWallets().map((wallet) => wallet.metadata.id);
+    const catalog = buildCatalog(BUILTIN_WALLET_DESCRIPTORS);
+
+    expect(adapterIds).toEqual(["math"]);
+    expect(catalog.find((wallet) => wallet.id === "math")).toMatchObject({
+      id: "math",
+      name: "MathWallet",
+      transport: "extension",
+      supportsWalletConnect: true,
+      icon: WALLET_ICONS.math
+    });
+    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
+    await expect(manager.connect("math")).resolves.toMatchObject({ account: { address: "TMathWallet", hexAddress: "41math" } });
+    await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "math:hello" });
+  });
+
+  it("does not mark MathWallet installed from generic tronLink globals", async () => {
+    (globalThis as Record<string, unknown>).tronLink = {
+      request: async () => ({ code: 200 }),
+      tronWeb: {
+        defaultAddress: { base58: "TTronLink", hex: "41tronlink" },
+        trx: {
+          getBlockByNumber: async () => ({ blockID: "000000000000000000000000000000000000000000000000000000002b6653dc" }),
+          signMessageV2: async (message: string) => `tronlink:${message}`,
+          sign: async <TTransaction,>(transaction: TTransaction) => transaction
+        }
+      }
+    };
+
+    const manager = createWalletClient({ wallets: ["math"] });
+
+    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(false);
   });
 
   it("ships Ledger as a default hardware bridge descriptor", async () => {
@@ -500,6 +697,7 @@ describe("client entrypoints", () => {
       "foxwallet",
       "bybit",
       "imtoken",
+      "math",
       "binance",
       "safepal",
       "onekey",
@@ -633,9 +831,10 @@ describe("client entrypoints", () => {
       ]
     });
 
+    await expect(Promise.resolve(manager.getWallets()[0]?.detect?.())).resolves.toBe(false);
     await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(false);
     await expect(manager.connect("strict-injected")).rejects.toMatchObject({
-      code: "WALLET_UNAVAILABLE"
+      code: "WALLET_NOT_FOUND"
     });
   });
 
@@ -686,7 +885,36 @@ describe("client entrypoints", () => {
       account: { address: "TBitgetParent", hexAddress: "41bitget" }
     });
     await expect(kit.refreshBalance()).resolves.toMatchObject({ formatted: "123", symbol: "TRX" });
-    expect(request).toHaveBeenCalledWith({ method: "tron_requestAccounts" });
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it("uses Bitget installed markers without a connect-ready provider", async () => {
+    (globalThis as Record<string, unknown>).bitkeep = {};
+
+    const manager = createWalletClient({ wallets: ["bitget"] });
+
+    await expect(Promise.resolve(manager.getWallets()[0]?.detect?.())).resolves.toBe(true);
+    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
+    await expect(manager.connect("bitget")).rejects.toMatchObject({ code: "WALLET_NOT_FOUND" });
+  });
+
+  it("accepts Bitget eth_requestAccounts when the extension returns the TRON address there", async () => {
+    const request = vi.fn(async ({ method }: { method: string }) => (method === "eth_requestAccounts" ? ["TBitgetEth"] : undefined));
+    (globalThis as typeof globalThis & { bitkeep?: unknown }).bitkeep = {
+      tronLink: {
+        request,
+        tronWeb: {
+          trx: {
+            getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" })
+          }
+        }
+      }
+    };
+
+    const manager = createWalletClient({ wallets: ["bitget"] });
+
+    await expect(manager.connect("bitget")).resolves.toMatchObject({ account: { address: "TBitgetEth" } });
+    expect(request).toHaveBeenCalledWith({ method: "eth_requestAccounts" });
   });
 
   it("uses global Bitget markers when the extension exposes TronLink-shaped globals", async () => {
@@ -738,13 +966,13 @@ describe("client entrypoints", () => {
         debug: vi.fn()
       },
       tronWeb: {
-        defaultAddress: { base58: "TBitgetBound" },
         trx: {
           getBlockByNumber: async () => ({ blockID: "0".repeat(56) + "2b6653dc" })
         }
       },
-      async request(this: { logger?: { debug?: (message: string) => void } }, { method }: { method: string }) {
+      async request(this: { logger?: { debug?: (message: string) => void }; tronWeb?: { defaultAddress?: { base58: string } } }, { method }: { method: string }) {
         this.logger?.debug?.(method);
+        this.tronWeb = { ...this.tronWeb, defaultAddress: { base58: "TBitgetBound" } };
         return { code: 200 };
       }
     };
@@ -753,7 +981,7 @@ describe("client entrypoints", () => {
     const manager = createWalletClient({ wallets: ["bitget"] });
 
     await expect(manager.connect("bitget")).resolves.toMatchObject({ account: { address: "TBitgetBound" } });
-    expect(bitgetLikeProvider.logger.debug).toHaveBeenCalledWith("tron_requestAccounts");
+    expect(bitgetLikeProvider.logger.debug).toHaveBeenCalledWith("eth_requestAccounts");
   });
 
   it("uses the Trust-specific injected provider instead of shared TronLink globals", async () => {
@@ -871,7 +1099,7 @@ describe("client entrypoints", () => {
     expect(request).toHaveBeenCalledWith({ method: "tron_requestAccounts" });
   });
 
-  it("does not mark SafePal available without the required tronWeb surface", async () => {
+  it("marks SafePal installed from SafePalHook even before tronWeb is ready", async () => {
     (globalThis as Record<string, unknown>).SafePalHook = {
       request: vi.fn(async () => ({ code: 200 })),
       defaultAddress: { base58: "TSafePalHookOnly" }
@@ -879,7 +1107,9 @@ describe("client entrypoints", () => {
 
     const manager = createWalletClient({ wallets: ["safepal"] });
 
-    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(false);
+    await expect(Promise.resolve(manager.getWallets()[0]?.detect?.())).resolves.toBe(true);
+    await expect(Promise.resolve(manager.getWallets()[0]?.isAvailable?.())).resolves.toBe(true);
+    await expect(manager.connect("safepal")).rejects.toMatchObject({ code: "WALLET_NOT_FOUND" });
   });
 
   it("connects SafePal when defaultAddress is populated after approval", async () => {

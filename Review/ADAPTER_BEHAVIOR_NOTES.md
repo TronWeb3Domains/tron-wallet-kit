@@ -693,3 +693,26 @@ pnpm add @tronweb3/tronwallet-adapter-ledger
   - Badge label is `HARDWARE`.
   - Ledger is not counted as an installed extension for installed-first featured ordering.
   - Mobile browser lists hide Ledger because hardware transport is desktop/manual.
+
+# 2026-07-13 Wallet detection vs connect-ready contract
+
+- Do not conflate wallet list state with connect readiness.
+- There are two separate phases:
+  - `detect()` is side-effect-free and only answers whether the wallet appears installed / detectable for UI list status.
+  - `connect()` is the only phase that may call wallet request methods, open popups, wait for delayed `tronWeb.defaultAddress`, or fail with wallet-specific connection errors.
+- UI list rendering must prefer `adapter.detect()` over `adapter.isAvailable()`.
+- `WalletManager.connect()` must not preflight `adapter.isAvailable()` before explicit user connect.
+- `isAvailable()` remains useful for restore/recovery or legacy compatibility, but it must not be the source of truth for list badges.
+- Regression coverage must protect:
+  - manager does not call `isAvailable()` before explicit connect;
+  - marker-only wallets can have `detect() === true` while `connect()` still fails if provider is not ready;
+  - TronLink request-only legacy injection is detected without requiring `ready` or `tronWeb` before connect;
+  - known cross-wallet namespaces still prevent false positives, especially TokenPocket, Trust, Math, Gate, OneKey, and Bitget.
+
+# 2026-07-13 TronLink vs Bybit global conflict
+
+- Bybit can inject a generic `window.tron` / `window.tronWeb` surface while TronLink owns a separate `window.tronLink`.
+- TronLink detection must not reject a separate valid `window.tronLink` just because `window.tron` is non-TronLink.
+- Rule:
+  - if a separate `window.tronLink` object exists and is not nested/linked to a known non-TronLink namespace, treat it as the TronLink UI detect marker;
+  - only use non-TronLink `window.tron` to block the fallback path where TronLink is being inferred from `window.tronWeb` alone.

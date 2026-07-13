@@ -1,4 +1,4 @@
-import type { WalletManager } from "@tron-wallet-kit/core";
+import { formatWalletError, type WalletManager } from "@tron-wallet-kit/core";
 import { resolveWalletUiConfig } from "./config";
 import { applyThemeToElement, createElementFromHtml, createWalletKitRoot, ensureWalletKitStyles } from "./dom";
 import { backIcon, closeIcon } from "./icons";
@@ -8,7 +8,7 @@ import { createStyledQrDataUrl, renderWalletQr } from "./qr";
 import { escapeAttribute, escapeHtml } from "./utils";
 import { applyWalletListConfig, mergeWalletOptionsWithCatalog } from "./wallet-catalog";
 import { mapAdapterToWalletOption, type WalletAvailability } from "./wallet-options";
-import { createConnectModalBodyHtml, normalizeConnectErrorMessage, resolveActiveWallet, resolveHeaderTitle, resolveQrEventWallet } from "./modal-views";
+import { createConnectModalBodyHtml, resolveActiveWallet, resolveHeaderTitle, resolveQrEventWallet } from "./modal-views";
 import type {
   ConnectModalLabels,
   ConnectModalView,
@@ -23,6 +23,9 @@ import type {
 
 const defaultConnectModalLabels: ConnectModalLabels = en.connectModal;
 const AUTO_CONNECT_RETRY_DELAY_MS = 650;
+const DETECT_FIRST_RENDER_MIN_MS = 600;
+const DETECT_FALSE_GRACE_MS = 1800;
+const DETECT_POLL_MS = 150;
 
 type ConnectWalletOptions = {
   retry?: boolean;
@@ -144,6 +147,7 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
   let qrCopyResetTimer: number | undefined;
   let retryTimer: number | undefined;
   let retryBusy = false;
+  let errorTitle: string | undefined;
   let errorMessage: string | undefined;
   let connectFlowId = 0;
   let activeConnectAdapterId: string | undefined;
@@ -191,7 +195,9 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
       ...(qrRenderFailed ? { qrRenderState: "error" as const } : {}),
       ...(qrCopyState === "copied" ? { qrCopyState } : {}),
       ...(retryBusy ? { retryState: "busy" as const } : {}),
+      ...(errorTitle ? { errorTitle } : {}),
       ...(errorMessage ? { errorMessage } : {}),
+      errorMessages: config.labels.errors,
       ...(allWalletsLoading && view === "all-wallets" ? { walletsLoading: true } : {}),
       catalog: config.catalog,
       labels: { ...config.labels.connectModal, title: config.modal.title, subtitle: config.modal.subtitle },
@@ -212,29 +218,43 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
     if (entering) focusPrimaryControl(root);
   };
 
-  const refreshAvailability = () => {
+  const refreshAvailability = (refreshOptions: { resetTransient?: boolean } = {}) => {
     for (const adapter of options.manager.getWallets()) {
       if (adapter.metadata.availabilityMode === "on-demand") {
         if (availability.get(adapter.metadata.id) === undefined) availability.set(adapter.metadata.id, true);
         continue;
       }
-      if (!adapter.isAvailable) {
+      const detectWallet = adapter.detect ?? adapter.isAvailable;
+      if (!detectWallet) {
         availability.set(adapter.metadata.id, true);
         continue;
       }
       const id = adapter.metadata.id;
-      const first = availability.get(id) === undefined;
+      const previous = availability.get(id);
+      const first = previous === undefined || (refreshOptions.resetTransient === true && previous !== true);
       if (first) availability.set(id, "loading");
-      const check = Promise.resolve(adapter.isAvailable()).catch(() => false);
+      const check = detectWithGrace(() => Promise.resolve(detectWallet.call(adapter)).catch(() => false), first);
       const settle = first
-        ? Promise.all([check, new Promise<void>((resolve) => documentRef.defaultView?.setTimeout(resolve, 600))]).then(([available]) => available)
+        ? Promise.all([check, new Promise<void>((resolve) => documentRef.defaultView?.setTimeout(resolve, DETECT_FIRST_RENDER_MIN_MS))]).then(([available]) => available)
         : check;
       void settle.then((available) => {
+        if (availability.get(id) === true && available === false) return;
         availability.set(id, available);
         render();
       });
     }
     render();
+  };
+
+  const detectWithGrace = async (detectWallet: () => Promise<boolean>, first: boolean): Promise<boolean> => {
+    if (await detectWallet()) return true;
+    if (!first) return false;
+    const deadline = Date.now() + DETECT_FALSE_GRACE_MS;
+    while (Date.now() < deadline) {
+      await new Promise<void>((resolve) => documentRef.defaultView?.setTimeout(resolve, DETECT_POLL_MS));
+      if (await detectWallet()) return true;
+    }
+    return false;
   };
 
   const pushView = (nextView: ConnectModalView) => {
@@ -266,10 +286,12 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
     qrRenderFailed = false;
     qrCopyState = "idle";
     retryBusy = false;
+    errorTitle = undefined;
     errorMessage = undefined;
   };
 
-  const cancelConnectionFlow = (options: { clearWallet?: boolean } = {}) => {
+  const cancelConnectionFlow = (flowOptions: { clearWallet?: boolean } = {}) => {
+    if (activeConnectAdapterId) void options.manager.cancelPendingConnection();
     connectFlowId += 1;
     if (retryTimer !== undefined) {
       documentRef.defaultView?.clearTimeout(retryTimer);
@@ -282,8 +304,9 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
     qrRenderFailed = false;
     qrCopyState = "idle";
     retryBusy = false;
+    errorTitle = undefined;
     errorMessage = undefined;
-    if (options.clearWallet !== false) {
+    if (flowOptions.clearWallet !== false) {
       selectedWalletId = undefined;
       activeWalletId = undefined;
     }
@@ -293,6 +316,7 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
     if (view === "qr" || view === "connecting") cancelConnectionFlow();
     if (viewStack.length > 1) viewStack.pop();
     view = viewStack.at(-1) ?? "featured";
+    errorTitle = undefined;
     errorMessage = undefined;
     render();
   };
@@ -312,6 +336,7 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
     qrRenderFailed = false;
     qrCopyState = "idle";
     if (!connectOptions?.retry) retryBusy = false;
+    errorTitle = undefined;
     errorMessage = undefined;
     render();
     void options.manager.connect(adapterId, {
@@ -330,6 +355,7 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
       if (flowId !== connectFlowId || activeConnectAdapterId !== adapterId) return;
       if (shouldAutoRetryConnect(error, wallet, { isQrFlow, attempt: connectOptions?.autoRetryAttempt ?? 0 })) {
         retryBusy = true;
+        errorTitle = undefined;
         errorMessage = undefined;
         view = "connecting";
         render();
@@ -343,7 +369,13 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
         return;
       }
       retryBusy = false;
-      errorMessage = normalizeConnectErrorMessage(error, wallet);
+      const formattedError = formatWalletError(error, { messages: config.labels.errors, includeDetails: false });
+      const rawErrorMessage = error instanceof Error ? error.message : String(error);
+      errorTitle = formattedError.title;
+      errorMessage =
+        formattedError.code === "CONFIGURATION_ERROR" && /dynamically imported module|importing a module script failed|failed to fetch/i.test(rawErrorMessage)
+          ? `${wallet.name} could not be loaded. Refresh the page and try again.`
+          : formattedError.message;
       view = qrUri ? "qr" : "connecting";
       render();
     });
@@ -372,6 +404,7 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
         cancelConnectionFlow();
         pushView("all-wallets");
         searchQuery = "";
+        errorTitle = undefined;
         errorMessage = undefined;
         primeAllWalletsSkeleton();
         render();
@@ -468,6 +501,7 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
       }).catch(() => {
         if (flowId === connectFlowId && activeConnectAdapterId === adapterId && qrUri === uri && view === "qr") {
           qrRenderFailed = true;
+          errorTitle = config.labels.errors.codes?.CONFIGURATION_ERROR?.title ?? "Configuration error";
           errorMessage = config.labels.connectModal.qrRenderFailed;
           render();
         }
@@ -476,7 +510,7 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
     const targetElement = resolveMountTarget(target, mode, documentRef);
     targetElement.append(root);
     render();
-    refreshAvailability();
+    if (mode !== "modal" || !root.hidden) refreshAvailability();
   };
 
   const closeModal = (options: { force?: boolean } = {}) => {
@@ -502,7 +536,7 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
         const wasHidden = root.hidden;
         lastFocusedElement = documentRef.activeElement instanceof HTMLElement ? documentRef.activeElement : null;
         root.hidden = false;
-        refreshAvailability();
+        refreshAvailability({ resetTransient: true });
         if (wasHidden) config.modal.onModalOpen();
       }
     },
@@ -541,6 +575,7 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
     }).catch(() => {
       if (flowId === connectFlowId && qrUri === uri && view === "qr") {
         qrRenderFailed = true;
+        errorTitle = config.labels.errors.codes?.CONFIGURATION_ERROR?.title ?? "Configuration error";
         errorMessage = config.labels.connectModal.qrRenderFailed;
         render();
       }

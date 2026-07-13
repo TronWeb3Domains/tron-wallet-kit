@@ -9,6 +9,7 @@ export type WalletStatus = "disconnected" | "connecting" | "connected";
 export type TronWalletProviderProps = WalletClientConfig & {
   kit?: WalletKit;
   children?: ReactNode;
+  clearStoredSessionOnAutoReconnectDisabled?: boolean;
 };
 
 export type ConnectModalProps = Omit<ConnectModalViewModel, "wallets"> & {
@@ -57,7 +58,11 @@ export function TronWalletProvider(props: TronWalletProviderProps) {
   }
   const kit = kitRef.current;
   useEffect(() => {
-    void kit.manager.autoReconnect();
+    if (kit.manager.config.autoReconnect) {
+      void kit.manager.autoReconnect();
+    } else if (props.clearStoredSessionOnAutoReconnectDisabled) {
+      void kit.manager.clearStoredSession();
+    }
     return () => {
       if (ownsKitRef.current) {
         kit.destroy();

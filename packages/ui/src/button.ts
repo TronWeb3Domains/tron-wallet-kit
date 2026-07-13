@@ -26,11 +26,11 @@ export function createWalletButtonHtml(viewModel: WalletButtonViewModel = {}): s
   const showBalance = isConnected && (viewModel.showBalance ?? Boolean(viewModel.balanceTrx ?? viewModel.balanceLoading));
   const icon = showAdapterIcon ? createWalletButtonIconHtml(viewModel) : "";
   const labelHtml = isConnected && viewModel.identityLoading
-    ? `<span class="twk-button-label twk-skeleton-name" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">${escapeHtml(label)}</span></span>`
+    ? `<span class="twk-button-label twk-skeleton-name twk-skeleton-pill" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">${escapeHtml(label)}</span></span>`
     : `<span class="twk-button-label">${escapeHtml(label)}</span>`;
   const balance = showBalance
     ? viewModel.balanceLoading
-      ? `<span class="twk-button-balance twk-skeleton-balance" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">TRX balance</span></span>`
+      ? `<span class="twk-button-balance twk-skeleton-balance twk-skeleton-pill" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">TRX balance</span></span>`
       : viewModel.balanceTrx
         ? `<span class="twk-button-balance">(${escapeHtml(viewModel.balanceTrx)} TRX)</span>`
         : ""

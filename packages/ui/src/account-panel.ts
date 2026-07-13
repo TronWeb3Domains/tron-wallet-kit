@@ -13,12 +13,12 @@ export function createAccountPanelHtml(viewModel: AccountPanelViewModel): string
   const displayName = viewModel.account.domain ?? viewModel.account.displayName;
   const balanceText = viewModel.balanceTrx ? `${viewModel.balanceTrx} TRX` : "";
   const identityHtml = viewModel.identityLoading
-    ? `<div class="twk-domain" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">${escapeHtml(shortenAddress(viewModel.account.address))}</span></div>`
+    ? `<div class="twk-domain twk-skeleton-line" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">${escapeHtml(shortenAddress(viewModel.account.address))}</span></div>`
     : hasIdentityName
       ? `<div class="twk-domain">${escapeHtml(displayName!)}</div>`
       : "";
   const balanceHtml = viewModel.balanceLoading
-    ? `<span class="twk-pill-balance" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">Loading balance</span></span>`
+    ? `<span class="twk-pill-balance twk-skeleton-pill" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">Loading balance</span></span>`
     : balanceText
       ? `<span class="twk-pill-balance">${escapeHtml(balanceText)}</span>`
       : "";
@@ -49,15 +49,17 @@ export function createAccountPanelHtml(viewModel: AccountPanelViewModel): string
   const maxVisibleTransactions = Math.max(1, Math.trunc(viewModel.maxVisibleTransactions ?? 3));
   const visibleTransactions = viewModel.recentTransactions?.slice(0, maxVisibleTransactions) ?? [];
   const transactions =
-    visibleTransactions.length > 0
+    viewModel.transactionsLoading
+      ? createTransactionSkeletonRowsHtml(Math.min(3, maxVisibleTransactions))
+      : visibleTransactions.length > 0
       ? visibleTransactions.map(createTransactionRowHtml).join("")
       : `<div class="twk-tx-empty">${escapeHtml(labels.noTransactions)}</div>`;
   const recent =
-    transactionCount > 0
+    transactionCount > 0 || viewModel.transactionsLoading
       ? `<section class="twk-tx-section" aria-label="${escapeAttribute(labels.recentTransactions)}">
         <div class="twk-tx-header">
           <span>${escapeHtml(labels.recentTransactions)}</span>
-          <span class="twk-tx-count">${transactionCount > 9 ? "9+" : transactionCount}</span>
+          <span class="twk-tx-count${viewModel.transactionsLoading ? " twk-skeleton-pill" : ""}" ${viewModel.transactionsLoading ? 'data-loading="true"' : ""}>${viewModel.transactionsLoading ? '<span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">Loading transactions</span>' : transactionCount > 9 ? "9+" : transactionCount}</span>
           ${transactionCount > maxVisibleTransactions ? `<button class="twk-tx-header-link" type="button" data-twk-action="tx-history">View ${externalIcon()}</button>` : ""}
         </div>
         <div class="twk-tx-list"><div class="twk-tx-list-inner">${transactions}</div></div>
@@ -107,7 +109,9 @@ export function createTransactionHistoryPanelHtml(viewModel: AccountPanelViewMod
   const labels = { ...defaultAccountPanelLabels, ...viewModel.labels };
   const transactionCount = viewModel.recentTransactions?.length ?? 0;
   const transactions =
-    transactionCount > 0
+    viewModel.transactionsLoading
+      ? createTransactionSkeletonRowsHtml(3)
+      : transactionCount > 0
       ? viewModel.recentTransactions!.map(createTransactionRowHtml).join("")
       : `<div class="twk-tx-empty">${escapeHtml(labels.noTransactions)}</div>`;
 
@@ -123,7 +127,7 @@ export function createTransactionHistoryPanelHtml(viewModel: AccountPanelViewMod
     <section class="twk-tx-section twk-tx-history-view" aria-label="${escapeAttribute(labels.recentTransactions)}">
       <div class="twk-tx-header">
         <span>${escapeHtml(labels.recentTransactions)}</span>
-        <span class="twk-tx-count">${transactionCount > 9 ? "9+" : transactionCount}</span>
+        <span class="twk-tx-count${viewModel.transactionsLoading ? " twk-skeleton-pill" : ""}" ${viewModel.transactionsLoading ? 'data-loading="true"' : ""}>${viewModel.transactionsLoading ? '<span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">Loading transactions</span>' : transactionCount > 9 ? "9+" : transactionCount}</span>
       </div>
       <div class="twk-tx-list"><div class="twk-tx-list-inner">${transactions}</div></div>
     </section>
@@ -142,7 +146,7 @@ export function createAddressQrPanelHtml(viewModel: AddressQrPanelViewModel): st
   const copyState = viewModel.copyState === "copied" ? "success" : undefined;
   const qrContent = viewModel.qrImageSrc
     ? `<img src="${escapeAttribute(viewModel.qrImageSrc)}" alt="${escapeAttribute(labels.qrAlt)}" />`
-    : `<span class="twk-qr-code" data-twk-address-qr-code="true" data-loading="true"><span class="twk-qr-skeleton" aria-hidden="true"></span></span>`;
+    : `<span class="twk-qr-code" data-twk-address-qr-code="true" data-loading="true"><span class="twk-qr-skeleton twk-skeleton-qr" aria-hidden="true"></span></span>`;
 
   return `<section class="twk-account-panel" data-twk-account-view="address-qr" aria-labelledby="twk-address-qr-title">
   <header class="twk-header">
@@ -173,6 +177,17 @@ function createTransactionRowHtml(transaction: RecentTransactionViewModel): stri
   <span class="twk-tx-main"><span class="twk-tx-label">${escapeHtml(transaction.label)}</span><span class="twk-tx-hash">${escapeHtml(txHash || transaction.status)}</span></span>
   ${link}
 </div>`;
+}
+
+function createTransactionSkeletonRowsHtml(count: number): string {
+  return Array.from({ length: Math.max(1, count) }, () => `<div class="twk-tx-row twk-tx-skeleton-row twk-skeleton-row" data-loading="true" aria-hidden="true">
+  <span class="twk-tx-icon twk-skeleton-circle" data-loading="true"><span class="twk-skeleton"></span></span>
+  <span class="twk-tx-main">
+    <span class="twk-tx-label twk-skeleton-line" data-loading="true"><span class="twk-skeleton"></span></span>
+    <span class="twk-tx-hash twk-skeleton-line" data-loading="true"><span class="twk-skeleton"></span></span>
+  </span>
+  <span class="twk-action twk-skeleton-button" data-loading="true"><span class="twk-skeleton"></span></span>
+</div>`).join("");
 }
 
 function avatarTone(address: string): string {

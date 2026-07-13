@@ -18,6 +18,7 @@ import {
   type WalletMetadata,
   type WalletNetwork
 } from "@tron-wallet-kit/core";
+import SignClient from "@walletconnect/sign-client";
 import { WALLETCONNECT_ICON } from "./icon.generated";
 
 export type WalletConnectNetworkName = "mainnet" | "shasta" | "nile";
@@ -39,6 +40,8 @@ export type WalletConnectWalletFactoryOptions = {
   network: string;
   relayUrl?: string;
   metadata?: Record<string, unknown>;
+  methods?: string[];
+  events?: string[];
   allWallets?: "SHOW" | "HIDE" | "ONLY_MOBILE";
 };
 
@@ -49,13 +52,31 @@ export type WalletConnectWalletFactory = (
 export type WalletConnectAdapterOptions = {
   projectId?: string;
   metadata?: Partial<WalletMetadata>;
+  icon?: string;
   onUri?: (uri: string) => void;
   network?: WalletConnectNetworkName | string;
   relayUrl?: string;
   walletFactory?: WalletConnectWalletFactory;
   appMetadata?: Record<string, unknown>;
+  methods?: string[];
+  events?: string[];
   allWallets?: "SHOW" | "HIDE" | "ONLY_MOBILE";
 };
+
+type SignClientInstance = Awaited<ReturnType<typeof SignClient.init>>;
+
+type WalletConnectSessionNamespace = {
+  accounts?: string[];
+};
+
+type WalletConnectSession = {
+  topic: string;
+  namespaces?: Record<string, WalletConnectSessionNamespace>;
+};
+
+const DEFAULT_WALLETCONNECT_METHODS = ["tron_signMessage", "tron_signTransaction"] as const;
+const DEFAULT_WALLETCONNECT_EVENTS = ["accountsChanged", "chainChanged"] as const;
+const DEFAULT_WALLETCONNECT_APPROVAL_TIMEOUT_MS = 180_000;
 
 export class WalletConnectAdapter implements WalletAdapter {
   readonly adapterApiVersion = "1.1";
@@ -78,6 +99,7 @@ export class WalletConnectAdapter implements WalletAdapter {
   private wallet: WalletConnectWalletLike | undefined;
   private account: WalletAccount | undefined;
   private network: WalletNetwork;
+  private connectAttemptId = 0;
 
   constructor(private readonly options: WalletConnectAdapterOptions = {}) {
     this.walletFactory = options.walletFactory ?? createDefaultWalletConnectWallet;
@@ -88,7 +110,7 @@ export class WalletConnectAdapter implements WalletAdapter {
     this.metadata = {
       id: "walletconnect",
       name: "WalletConnect",
-      icon: WALLETCONNECT_ICON,
+      icon: options.icon ?? WALLETCONNECT_ICON,
       homepage: "https://walletconnect.com/",
       downloadUrl: "https://walletconnect.com/",
       type: "walletconnect",
@@ -102,6 +124,10 @@ export class WalletConnectAdapter implements WalletAdapter {
     return Boolean(this.options.projectId);
   }
 
+  detect(): boolean {
+    return this.isAvailable();
+  }
+
   async connect(options: ConnectOptions & { onUri?: (uri: string) => void } = {}): Promise<ConnectResult> {
     if (!this.options.projectId) {
       throw new WalletKitError("WALLET_UNSUPPORTED", "WalletConnect requires a projectId before it can connect.");
@@ -109,6 +135,7 @@ export class WalletConnectAdapter implements WalletAdapter {
 
     try {
       this.network = typeof options.network === "object" && options.network ? options.network : this.network;
+      this.connectAttemptId += 1;
       const wallet = await this.getOrCreateWallet(this.options.projectId, this.network);
       const onUri =
         options.onUri || this.options.onUri
@@ -137,10 +164,16 @@ export class WalletConnectAdapter implements WalletAdapter {
   }
 
   async disconnect(): Promise<void> {
+    this.connectAttemptId += 1;
     const wallet = this.wallet;
     this.wallet = undefined;
     this.account = undefined;
     if (wallet) await wallet.disconnect();
+  }
+
+  async cancelPendingConnection(): Promise<void> {
+    this.connectAttemptId += 1;
+    await this.cleanupHalfOpenSession();
   }
 
   async signMessage(request: SignMessageRequest): Promise<SignMessageResult> {
@@ -203,6 +236,8 @@ export class WalletConnectAdapter implements WalletAdapter {
       projectId,
       network: network.walletConnectChainId ?? toWalletConnectChainId(network.id),
       allWallets: this.allWallets,
+      ...(this.options.methods ? { methods: this.options.methods } : {}),
+      ...(this.options.events ? { events: this.options.events } : {}),
       ...(this.relayUrl ? { relayUrl: this.relayUrl } : {}),
       ...(this.appMetadata ? { metadata: this.appMetadata } : {})
     });
@@ -232,23 +267,176 @@ export function createWalletConnectAdapter(options: WalletConnectAdapterOptions 
 }
 
 async function createDefaultWalletConnectWallet(options: WalletConnectWalletFactoryOptions): Promise<WalletConnectWalletLike> {
-  const module = (await import("@tronweb3/walletconnect-tron")) as unknown as {
-    WalletConnectWallet?: new (options: Record<string, unknown>) => WalletConnectWalletLike;
-  };
+  return new LiteWalletConnectWallet(options);
+}
 
-  if (!module.WalletConnectWallet) {
-    throw new WalletKitError("WALLET_UNSUPPORTED", "@tronweb3/walletconnect-tron does not export WalletConnectWallet.");
+class LiteWalletConnectWallet implements WalletConnectWalletLike {
+  private client: SignClientInstance | undefined;
+  private session: WalletConnectSession | undefined;
+  private address: string | undefined;
+
+  constructor(private readonly options: WalletConnectWalletFactoryOptions) {}
+
+  async connect(options: { onUri?: (uri: string) => void } = {}): Promise<{ address: string }> {
+    const client = await this.getClient();
+    const existingTopics = new Set(getSignClientSessions(client).map((session) => session.topic));
+    const { uri, approval } = await client.connect({
+      requiredNamespaces: {
+        tron: {
+          methods: this.options.methods ?? [...DEFAULT_WALLETCONNECT_METHODS],
+          chains: [this.options.network],
+          events: this.options.events ?? [...DEFAULT_WALLETCONNECT_EVENTS]
+        }
+      }
+    });
+
+    if (uri) options.onUri?.(uri);
+
+    const session = await Promise.race([
+      approval() as Promise<WalletConnectSession>,
+      waitForApprovedSession(client, this.options.network, existingTopics, DEFAULT_WALLETCONNECT_APPROVAL_TIMEOUT_MS)
+    ]);
+    const address = getSessionAddress(session, this.options.network);
+    if (!address) throw new WalletKitError("CONNECTION_FAILED", "WalletConnect did not return an address.", session);
+
+    this.session = session;
+    this.address = address;
+    return { address };
   }
 
-  return new module.WalletConnectWallet({
-    network: options.network,
-    options: {
-      projectId: options.projectId,
-      ...(options.relayUrl ? { relayUrl: options.relayUrl } : {}),
-      ...(options.metadata ? { metadata: options.metadata } : {})
-    },
-    allWallets: options.allWallets
-  });
+  async disconnect(): Promise<void> {
+    const session = this.session;
+    this.session = undefined;
+    this.address = undefined;
+    if (!session || !this.client) return;
+    await this.client.disconnect({
+      topic: session.topic,
+      reason: { code: 6000, message: "User disconnected." }
+    });
+  }
+
+  async signMessage(message: string): Promise<string> {
+    const result = await this.request<unknown>("tron_signMessage", {
+      address: this.getAddress(),
+      currentAddress: this.getAddress(),
+      message
+    });
+    return normalizeWalletConnectResult(result);
+  }
+
+  async signTransaction<TTransaction extends TransactionPayload>(transaction: TTransaction): Promise<TTransaction> {
+    const result = await this.request<unknown>("tron_signTransaction", {
+      currentAddress: this.getAddress(),
+      transaction: { ...transaction }
+    });
+    return normalizeWalletConnectResult<TTransaction>(result);
+  }
+
+  async checkConnectStatus(): Promise<{ address: string }> {
+    const client = await this.getClient();
+    const sessions = getSignClientSessions(client);
+    const session = sessions.find((candidate) => Boolean(getSessionAddress(candidate, this.options.network)));
+    const address = session ? getSessionAddress(session, this.options.network) : undefined;
+    if (!session || !address) return { address: "" };
+    this.session = session;
+    this.address = address;
+    return { address };
+  }
+
+  private async request<TResult>(method: string, params: Record<string, unknown>): Promise<TResult> {
+    const client = await this.getClient();
+    const session = this.getSession();
+    return client.request<TResult>({
+      topic: session.topic,
+      chainId: this.options.network,
+      request: { method, params }
+    });
+  }
+
+  private async getClient(): Promise<SignClientInstance> {
+    if (this.client) return this.client;
+    const metadata = normalizeWalletConnectMetadata(this.options.metadata);
+    this.client = await SignClient.init({
+      projectId: this.options.projectId,
+      ...(this.options.relayUrl ? { relayUrl: this.options.relayUrl } : {}),
+      metadata
+    });
+    this.client.on("session_delete", () => {
+      this.session = undefined;
+      this.address = undefined;
+    });
+    return this.client;
+  }
+
+  private getSession(): WalletConnectSession {
+    if (!this.session) throw new WalletKitError("NO_SESSION", "WalletConnect is not connected.");
+    return this.session;
+  }
+
+  private getAddress(): string {
+    if (!this.address) throw new WalletKitError("NO_SESSION", "WalletConnect is not connected.");
+    return this.address;
+  }
+}
+
+function normalizeWalletConnectMetadata(metadata: Record<string, unknown> | undefined): {
+  name: string;
+  description: string;
+  url: string;
+  icons: string[];
+} {
+  const defaultUrl = typeof globalThis.location === "object" && globalThis.location?.origin ? globalThis.location.origin : "https://trxdomains.xyz";
+  const icons = Array.isArray(metadata?.icons) ? metadata.icons.filter((icon): icon is string => typeof icon === "string") : [];
+  return {
+    name: typeof metadata?.name === "string" ? metadata.name : "TRON Wallet Kit",
+    description: typeof metadata?.description === "string" ? metadata.description : "TRON Wallet Kit",
+    url: typeof metadata?.url === "string" ? metadata.url : defaultUrl,
+    icons
+  };
+}
+
+function getSignClientSessions(client: SignClientInstance): WalletConnectSession[] {
+  const sessionStore = (client as SignClientInstance & { session?: { getAll?: () => WalletConnectSession[] } }).session;
+  return sessionStore?.getAll?.() ?? [];
+}
+
+async function waitForApprovedSession(client: SignClientInstance, chainId: string, existingTopics: ReadonlySet<string>, timeoutMs: number): Promise<WalletConnectSession> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const session = getSignClientSessions(client).find((candidate) => !existingTopics.has(candidate.topic) && Boolean(getSessionAddress(candidate, chainId)));
+    if (session) return session;
+    await delay(250);
+  }
+  throw new WalletKitError("REQUEST_TIMEOUT", "WalletConnect approval timed out.");
+}
+
+function getSessionAddress(session: WalletConnectSession, chainId: string): string | undefined {
+  const namespaces = Object.values(session.namespaces ?? {});
+  const accounts = namespaces.flatMap((namespace) => namespace.accounts ?? []);
+  const account = accounts.find((candidate) => candidate.startsWith(`${chainId}:`)) ??
+    accounts.find((candidate) => candidate.startsWith("tron:")) ??
+    accounts[0];
+  const address = account?.split(":").pop();
+  return address || undefined;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function normalizeWalletConnectResult<TResult = string>(result: unknown): TResult {
+  if (typeof result === "string") {
+    try {
+      const parsed = JSON.parse(result) as { result?: TResult };
+      return (parsed.result ?? parsed) as TResult;
+    } catch {
+      return result as TResult;
+    }
+  }
+  if (typeof result === "object" && result !== null && "result" in result) {
+    return (result as { result?: TResult }).result as TResult;
+  }
+  return result as TResult;
 }
 
 function toWalletConnectChainId(network: WalletConnectNetworkName | string): string {

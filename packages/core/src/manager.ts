@@ -106,11 +106,6 @@ export class WalletManager {
     this.pendingAbortController = new AbortController();
     this.events.emit("connecting", { adapterId });
     try {
-      const available = await adapter.isAvailable?.();
-      if (available === false) {
-        throw createWalletError.walletNotAvailable(adapter.metadata.name);
-      }
-
       const network = this.registry.resolve(options.network ?? this.config.network);
       const signal = options.signal ?? this.pendingAbortController.signal;
       const connectOptions: ConnectOptions = { ...options, network, signal };
@@ -162,6 +157,10 @@ export class WalletManager {
       this.autoReconnectPromise = undefined;
     });
     return this.autoReconnectPromise;
+  }
+
+  async clearStoredSession(): Promise<void> {
+    await this.storage.removeItem(this.storageKey);
   }
 
   async disconnect(): Promise<void> {

@@ -8,6 +8,7 @@ import { guarda } from "./entries/guarda";
 import { imtoken } from "./entries/imtoken";
 import { klever } from "./entries/klever";
 import { ledger } from "./entries/ledger";
+import { math } from "./entries/math";
 import { metamask } from "./entries/metamask";
 import { okx } from "./entries/okx";
 import { onekey } from "./entries/onekey";
@@ -30,6 +31,7 @@ export const BUILTIN_WALLET_DESCRIPTORS = [
   bybit,
   imtoken,
   klever,
+  math,
   binance,
   safepal,
   guarda,

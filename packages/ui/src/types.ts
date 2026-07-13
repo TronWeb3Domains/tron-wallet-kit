@@ -1,4 +1,4 @@
-import type { WalletAccount, WalletPlatform } from "@tron-wallet-kit/core";
+import type { WalletAccount, WalletKitErrorMessageCatalog, WalletPlatform } from "@tron-wallet-kit/core";
 
 export type ThemeName =
   | "default"
@@ -267,7 +267,9 @@ export type ConnectModalViewModel = {
   qrRenderState?: "error";
   qrCopyState?: "idle" | "copied";
   retryState?: "idle" | "busy";
+  errorTitle?: string;
   errorMessage?: string;
+  errorMessages?: WalletKitErrorMessageCatalog;
   showCloseButton?: boolean;
   showPoweredBy?: boolean;
   poweredByText?: string;
@@ -321,6 +323,7 @@ export type AccountPanelViewModel = {
   showExplorerButton?: boolean;
   copyState?: "idle" | "copied";
   recentTransactions?: readonly RecentTransactionViewModel[];
+  transactionsLoading?: boolean;
   maxVisibleTransactions?: number;
   showRecentTransactions?: boolean;
   showSendButton?: boolean;
@@ -354,6 +357,7 @@ export type WalletKitLabelPack = {
   accountPanel: AccountPanelLabels;
   walletButton: WalletButtonLabels;
   toast: ToastLabels;
+  errors: WalletKitErrorMessageCatalog;
 };
 
 export type WalletUiLabels = {
@@ -361,6 +365,7 @@ export type WalletUiLabels = {
   accountPanel?: Partial<AccountPanelLabels>;
   walletButton?: Partial<WalletButtonLabels>;
   toast?: Partial<ToastLabels>;
+  errors?: WalletKitErrorMessageCatalog;
 };
 
 export type WalletButtonViewModel = {

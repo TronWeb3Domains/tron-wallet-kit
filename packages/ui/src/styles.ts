@@ -477,6 +477,13 @@ ${selector} .twk-skeleton::after {
   position: absolute;
   transform: translateX(-100%);
 }
+${selector} .twk-skeleton-circle { border-radius: 999px; flex-shrink: 0; }
+${selector} .twk-skeleton-line { border-radius: 4px; }
+${selector} .twk-skeleton-pill { border-radius: 999px; }
+${selector} .twk-skeleton-card { border-radius: var(--twk-wallet-radius); }
+${selector} .twk-skeleton-button { border-radius: var(--twk-wallet-radius); }
+${selector} .twk-skeleton-row { width: 100%; }
+${selector} .twk-skeleton-qr { border-radius: 8px; box-sizing: border-box; }
 ${selector} .twk-wallet-name, ${selector} .twk-address {
   line-height: 1.28;
   overflow: hidden;
@@ -1273,6 +1280,12 @@ ${selector} .twk-tx-count {
   min-width: 18px;
   padding: 0 5px;
 }
+${selector} .twk-tx-count[data-loading="true"] {
+  min-width: 28px;
+  overflow: hidden;
+  padding: 0;
+  width: 28px;
+}
 ${selector} .twk-tx-list {
   display: grid;
   grid-template-rows: 1fr;
@@ -1293,6 +1306,40 @@ ${selector} .twk-tx-row {
 }
 ${selector} .twk-tx-row:first-child {
   border-top: 0;
+}
+${selector} .twk-tx-skeleton-row {
+  pointer-events: none;
+}
+${selector} .twk-tx-skeleton-row .twk-tx-icon {
+  display: block;
+  height: 24px;
+  width: 24px;
+}
+${selector} .twk-tx-skeleton-row .twk-tx-main {
+  display: grid;
+  gap: 6px;
+}
+${selector} .twk-tx-skeleton-row .twk-tx-label,
+${selector} .twk-tx-skeleton-row .twk-tx-hash {
+  display: block;
+  height: 12px;
+  overflow: hidden;
+}
+${selector} .twk-tx-skeleton-row .twk-tx-label {
+  width: min(132px, 42vw);
+}
+${selector} .twk-tx-skeleton-row .twk-tx-hash {
+  width: min(92px, 30vw);
+}
+${selector} .twk-tx-skeleton-row .twk-skeleton-button {
+  border: 0;
+  display: block;
+  height: 28px;
+  min-height: 0;
+  min-width: 54px;
+  overflow: hidden;
+  padding: 0;
+  width: 54px;
 }
 ${selector} .twk-tx-empty {
   border-top: 1px solid var(--twk-border);

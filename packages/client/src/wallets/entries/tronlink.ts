@@ -9,5 +9,5 @@ export const tronlink: WalletDescriptor = {
   platforms: ["extension", "mobile"],
   group: "featured",
   featured: 1,
-  createAdapter: (config) => createTronLinkAdapter({ checkTimeoutMs: 800, ...config.tronlink })
+  createAdapter: (config) => createTronLinkAdapter(config.tronlink)
 };

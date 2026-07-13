@@ -211,6 +211,11 @@ export interface WalletAdapter {
   adapterApiVersion?: "1.0" | "1.1" | string;
   metadata: WalletMetadata;
   capabilities: WalletCapabilities;
+  /**
+   * Side-effect-free installed/visible marker used by UI lists.
+   * This must not open wallet popups or call account request methods.
+   */
+  detect?: () => boolean | Promise<boolean>;
   isAvailable?: () => boolean | Promise<boolean>;
   connect(options: ConnectOptions): Promise<ConnectResult>;
   disconnect?: () => Promise<void>;

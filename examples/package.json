@@ -14,6 +14,7 @@
     "@tron-wallet-kit/adapter-walletconnect": "workspace:*",
     "@tron-wallet-kit/browser": "workspace:*",
     "@tron-wallet-kit/react": "workspace:*",
+    "@walletconnect/sign-client": "^2.23.9",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },

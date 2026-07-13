@@ -23,6 +23,6 @@
   },
   "dependencies": {
     "@tron-wallet-kit/core": "workspace:*",
-    "@tronweb3/walletconnect-tron": "^4.0.3"
+    "@walletconnect/sign-client": "^2.23.9"
   }
 }

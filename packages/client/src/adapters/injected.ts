@@ -47,6 +47,14 @@ export function createInjectedTronAdapter(config: InjectedTronAdapterConfig): Wa
       return false;
     }
   };
+  const detect = async () => {
+    try {
+      if (await config.availabilityProbe?.()) return true;
+    } catch {
+      // fall through to provider marker detection
+    }
+    return Boolean(resolveProvider());
+  };
 
   return {
     adapterApiVersion: "1.1",
@@ -57,6 +65,7 @@ export function createInjectedTronAdapter(config: InjectedTronAdapterConfig): Wa
       signMessage: true,
       signTransaction: true
     },
+    detect,
     isAvailable: async () => {
       if (await resolveAvailability()) return true;
       if (!config.availabilityTimeoutMs || config.availabilityTimeoutMs <= 0) return false;

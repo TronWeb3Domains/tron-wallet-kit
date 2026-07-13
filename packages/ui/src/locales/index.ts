@@ -11,7 +11,17 @@ export function resolveLabelPack(locale?: string, overrides?: WalletUiLabels): W
     connectModal: { ...BUILTIN_LOCALES.en.connectModal, ...base.connectModal, ...overrides?.connectModal },
     accountPanel: { ...BUILTIN_LOCALES.en.accountPanel, ...base.accountPanel, ...overrides?.accountPanel },
     walletButton: { ...BUILTIN_LOCALES.en.walletButton, ...base.walletButton, ...overrides?.walletButton },
-    toast: { ...BUILTIN_LOCALES.en.toast, ...base.toast, ...overrides?.toast }
+    toast: { ...BUILTIN_LOCALES.en.toast, ...base.toast, ...overrides?.toast },
+    errors: {
+      ...BUILTIN_LOCALES.en.errors,
+      ...base.errors,
+      ...overrides?.errors,
+      codes: {
+        ...BUILTIN_LOCALES.en.errors.codes,
+        ...base.errors.codes,
+        ...overrides?.errors?.codes
+      }
+    }
   };
 }
 

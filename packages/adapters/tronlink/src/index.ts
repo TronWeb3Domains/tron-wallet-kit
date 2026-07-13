@@ -113,7 +113,12 @@ export class TronLinkAdapter implements WalletAdapter {
   }
 
   async isAvailable(): Promise<boolean> {
+    if (hasGlobalTronLinkInstalledMarker()) return true;
     return Boolean(await this.waitForProvider());
+  }
+
+  detect(): boolean {
+    return hasGlobalTronLinkDetectMarker() || Boolean(this.providerResolver());
   }
 
   async connect(options: ConnectOptions = {}): Promise<ConnectResult> {
@@ -226,25 +231,37 @@ export class TronLinkAdapter implements WalletAdapter {
   private async waitForProvider(): Promise<TronLinkProvider | undefined> {
     const immediate = this.providerResolver();
     if (immediate || this.checkTimeoutMs <= 0 || (typeof window === "undefined" && !this.hasCustomProviderResolver)) return immediate;
-    if (!this.hasCustomProviderResolver) {
-      const tip6963Provider = await discoverTip6963TronLinkProvider(this.checkTimeoutMs);
-      if (tip6963Provider) return tip6963Provider;
-    }
-
-    const startedAt = Date.now();
     return new Promise((resolve) => {
+      let settled = false;
+      let tip6963Done = this.hasCustomProviderResolver;
+      let pollingDone = false;
       const check = () => {
+        if (settled) return;
         const provider = this.providerResolver();
         if (provider) {
-          resolve(provider);
+          finish(provider);
           return;
         }
         if (Date.now() - startedAt >= this.checkTimeoutMs) {
-          resolve(undefined);
+          pollingDone = true;
+          if (tip6963Done) finish();
           return;
         }
         globalThis.setTimeout(check, this.checkIntervalMs);
       };
+      const finish = (provider?: TronLinkProvider) => {
+        if (settled) return;
+        settled = true;
+        resolve(provider);
+      };
+      const startedAt = Date.now();
+      if (!this.hasCustomProviderResolver) {
+        void discoverTip6963TronLinkProvider(this.checkTimeoutMs).then((provider) => {
+          tip6963Done = true;
+          if (provider) finish(provider);
+          else if (pollingDone) finish();
+        });
+      }
       globalThis.setTimeout(check, this.checkIntervalMs);
     });
   }
@@ -273,6 +290,9 @@ function getGlobalTronLinkProvider(): TronLinkProvider | undefined {
     trustwallet?: unknown;
     backpack?: unknown;
     $onekey?: unknown;
+    mathwallet?: unknown;
+    mathWallet?: unknown;
+    MathWallet?: unknown;
   };
 
   if (globalObject.tron?.isTronLink && !isKnownNonTronLinkProvider(globalObject.tron, globalObject)) {
@@ -286,6 +306,31 @@ function getGlobalTronLinkProvider(): TronLinkProvider | undefined {
     return { kind: "legacy", provider };
   }
   return undefined;
+}
+
+function hasGlobalTronLinkInstalledMarker(): boolean {
+  const globalObject = globalThis as TronProviderGlobals;
+  if (globalObject.tron?.isTronLink && !isKnownNonTronLinkProvider(globalObject.tron, globalObject)) return true;
+  if (globalObject.tronLink?.isTronLink && !isKnownNonTronLinkProvider(globalObject.tronLink, globalObject)) return true;
+  if (!globalObject.tronLink || typeof globalObject.tronLink.request !== "function") return false;
+  if (isNestedKnownWalletProvider(globalObject.tronLink, globalObject)) return false;
+  if (isLinkedToKnownWalletProvider(globalObject.tronLink, globalObject)) return false;
+  return true;
+}
+
+function hasGlobalTronLinkDetectMarker(): boolean {
+  const globalObject = globalThis as TronProviderGlobals;
+  if (globalObject.tron?.isTronLink && !isKnownNonTronLinkProvider(globalObject.tron, globalObject)) return true;
+  if (globalObject.tronLink?.isTronLink && !isKnownNonTronLinkProvider(globalObject.tronLink, globalObject)) return true;
+  if (globalObject.tron && !globalObject.tron.isTronLink) return false;
+  if (globalObject.tronLink && typeof globalObject.tronLink === "object") {
+    if (isNestedKnownWalletProvider(globalObject.tronLink as LegacyTronLinkProvider, globalObject)) return false;
+    if (isLinkedToKnownWalletProvider(globalObject.tronLink, globalObject)) return false;
+    return true;
+  }
+  if (globalObject.tron && !globalObject.tron.isTronLink) return false;
+  if (isUsableTronWeb(globalObject.tronWeb) && !isTronWebLinkedToKnownWallet(globalObject.tronWeb, globalObject)) return true;
+  return false;
 }
 
 async function discoverTip6963TronLinkProvider(timeoutMs: number): Promise<TronLinkProvider | undefined> {
@@ -334,6 +379,9 @@ type TronProviderGlobals = {
   trustwallet?: unknown;
   backpack?: unknown;
   $onekey?: unknown;
+  mathwallet?: unknown;
+  mathWallet?: unknown;
+  MathWallet?: unknown;
 };
 
 function isLikelyTronLinkGlobal(globalObject: {
@@ -349,25 +397,15 @@ function isLikelyTronLinkGlobal(globalObject: {
   trustwallet?: unknown;
   backpack?: unknown;
   $onekey?: unknown;
+  mathwallet?: unknown;
+  mathWallet?: unknown;
+  MathWallet?: unknown;
 }): boolean {
   if (globalObject.tronLink?.isTronLink && !isKnownNonTronLinkProvider(globalObject.tronLink, globalObject)) return true;
   if (isNestedKnownWalletProvider(globalObject.tronLink, globalObject)) return false;
   if (isLinkedToKnownWalletProvider(globalObject.tronLink, globalObject)) return false;
   if (hasExplicitLegacyTronLinkSignal(globalObject.tronLink, globalObject.tronWeb)) return true;
-  if (globalObject.tron && !globalObject.tron.isTronLink) return false;
-  const knownNonTronLinkProviderExists = Boolean(
-    globalObject.tokenpocket ||
-      globalObject.bitkeep ||
-      globalObject.okxwallet ||
-      globalObject.bybitWallet ||
-      globalObject.gatewallet ||
-      globalObject.binancew3w ||
-      globalObject.trustwallet ||
-      globalObject.backpack ||
-      globalObject.$onekey
-  );
-  if (knownNonTronLinkProviderExists) return false;
-  return hasLegacyTronLinkShape(globalObject.tronLink, globalObject.tronWeb);
+  return hasLegacyTronLinkShape(globalObject.tronLink, globalObject.tronWeb) || hasLegacyTronLinkRequestShape(globalObject.tronLink);
 }
 
 function hasExplicitLegacyTronLinkSignal(provider: LegacyTronLinkProvider | undefined, tronWeb: TronWeb | undefined): boolean {
@@ -380,6 +418,10 @@ function hasExplicitLegacyTronLinkSignal(provider: LegacyTronLinkProvider | unde
 function hasLegacyTronLinkShape(provider: LegacyTronLinkProvider | undefined, tronWeb: TronWeb | undefined): boolean {
   if (!provider || typeof provider.request !== "function") return false;
   return Boolean(isUsableTronWeb(provider.tronWeb) || isUsableTronWeb(tronWeb));
+}
+
+function hasLegacyTronLinkRequestShape(provider: LegacyTronLinkProvider | undefined): boolean {
+  return Boolean(provider && typeof provider.request === "function");
 }
 
 function isUsableTronWeb(tronWeb: unknown): tronWeb is TronWeb {
@@ -417,7 +459,13 @@ const KNOWN_NON_TRONLINK_PROVIDER_PATHS = [
   ["backpack", "tron"],
   ["backpack", "tronLink"],
   ["$onekey", "tron"],
-  ["$onekey", "tronLink"]
+  ["$onekey", "tronLink"],
+  ["mathwallet", "tron"],
+  ["mathwallet", "tronLink"],
+  ["mathWallet", "tron"],
+  ["mathWallet", "tronLink"],
+  ["MathWallet", "tron"],
+  ["MathWallet", "tronLink"]
 ] as const;
 
 const KNOWN_NON_TRONLINK_PROVIDER_ROOTS = [
@@ -429,12 +477,20 @@ const KNOWN_NON_TRONLINK_PROVIDER_ROOTS = [
   "binancew3w",
   "trustwallet",
   "backpack",
-  "$onekey"
+  "$onekey",
+  "mathwallet",
+  "mathWallet",
+  "MathWallet"
 ] as const;
 
 function isLinkedToKnownWalletProvider(provider: unknown, globalObject: TronProviderGlobals): boolean {
   if (!provider) return false;
   const providerTronWeb = readPath(provider, ["tronWeb"]);
+  if (!providerTronWeb) return false;
+  return isTronWebLinkedToKnownWallet(providerTronWeb, globalObject);
+}
+
+function isTronWebLinkedToKnownWallet(providerTronWeb: unknown, globalObject: TronProviderGlobals): boolean {
   if (!providerTronWeb) return false;
   return KNOWN_NON_TRONLINK_PROVIDER_ROOTS.some((root) => {
     const wallet = readPath(globalObject, [root]);
@@ -461,15 +517,23 @@ async function requestAddress(provider: TronLinkProvider): Promise<string | unde
     const result = await provider.provider.request({ method: "tron_requestAccounts" });
     if (result?.code === 4001) throw new WalletKitError("USER_REJECTED", result.message ?? "User rejected TronLink connection.");
     if (result?.code === 4000) throw new WalletKitError("CONNECTION_FAILED", result.message ?? "A TronLink request is already pending.");
+    hydrateLegacyTronWeb(provider.provider);
   }
 
   return getProviderTronWeb(provider).defaultAddress?.base58;
 }
 
 function getProviderTronWeb(provider: TronLinkProvider): TronWeb {
+  if (provider.kind === "legacy") hydrateLegacyTronWeb(provider.provider);
   const tronWeb = provider.provider.tronWeb;
   if (!tronWeb) throw new WalletKitError("CONNECTION_FAILED", "TronLink tronWeb is not available.");
   return tronWeb;
+}
+
+function hydrateLegacyTronWeb(provider: LegacyTronLinkProvider): void {
+  if (provider.tronWeb) return;
+  const tronWeb = (globalThis as TronProviderGlobals).tronWeb;
+  if (tronWeb) provider.tronWeb = tronWeb;
 }
 
 async function resolveNetwork(tronWeb: TronWeb, fallback: ConnectOptions["network"]): Promise<WalletNetwork> {

@@ -1,7 +1,8 @@
 import type { TronLinkAdapterOptions } from "@tron-wallet-kit/adapter-tronlink";
-import type { TronwalletBridgeInnerAdapter, TronwalletBridgeTronWeb } from "@tron-wallet-kit/adapter-tronwallet-bridge";
 import type { WalletConnectAdapterOptions, WalletConnectNetworkName } from "@tron-wallet-kit/adapter-walletconnect";
+import type { TronwalletBridgeInnerAdapter, TronwalletBridgeTronWeb } from "@tron-wallet-kit/adapter-tronwallet-bridge";
 import type {
+  SignTransactionRequest,
   SignMessageRequest,
   SignMessageResult,
   SignTransactionResult,
@@ -23,6 +24,9 @@ import type {
 import type { ResolvedWalletUiConfig, ThemeConfig, WalletButton, WalletModal, WalletToast, WalletUiConfig } from "@tron-wallet-kit/ui";
 import type { TronWalletCatalogItem } from "@tron-wallet-kit/ui";
 import type { WalletDescriptor } from "./wallets/types";
+
+export type { WalletConnectAdapterOptions, WalletConnectNetworkName };
+
 
 export type DefaultAdaptersConfig = {
   wallets?: "all" | Array<string | WalletDescriptor>;
@@ -54,6 +58,11 @@ export type WalletClientConfig = Omit<WalletManagerConfig, "adapters" | "network
     useBrowserStorage?: boolean;
     identity?: WalletClientIdentityConfig;
     balance?: WalletClientBalanceConfig;
+    tronWeb?: {
+      fullHost?: string;
+      apiKey?: string;
+      headers?: Record<string, string>;
+    };
   };
 
 export type TronWeb3AdapterLike = TronwalletBridgeInnerAdapter;
@@ -136,8 +145,13 @@ export type TransferTrc20Request = {
 
 export type TriggerSmartContractRequest = {
   contractAddress: string;
-  functionSelector: string;
+  functionSelector?: string;
+  function?: string;
+  options?: Record<string, unknown>;
   parameters?: unknown[];
+  parameter?: unknown[];
+  issuerAddress?: string;
+  callValue?: string | number | bigint;
   feeLimit?: string | number | bigint;
   description?: string;
 };
@@ -171,8 +185,22 @@ export type WalletKit = {
   refreshIdentity(): Promise<TronIdentity | undefined>;
   getSession: WalletManager["getSession"];
   signMessage(request: string | SignMessageRequest): Promise<SignMessageResult>;
-  signTransaction(transaction: TransactionPayload): Promise<SignTransactionResult>;
+  signTransaction(transaction: TransactionPayload | SignTransactionRequest): Promise<SignTransactionResult>;
   sendTransaction(transaction: TransactionPayload): Promise<TxResult>;
+  sendRawTransaction(transaction: TransactionPayload): Promise<TxResult>;
+  signAndSendTransaction(transaction: TransactionPayload | SignTransactionRequest): Promise<TxResult>;
+  getTronWeb(): Promise<unknown>;
+  transactionBuilder: {
+    sendTrx(to: string, amountSun: string | number | bigint, from?: string): Promise<TransactionPayload>;
+    triggerSmartContract(
+      contractAddress: string,
+      functionSelector: string,
+      options?: Record<string, unknown>,
+      parameters?: unknown[],
+      issuerAddress?: string
+    ): Promise<TransactionPayload>;
+    triggerSmartContract(request: TriggerSmartContractRequest): Promise<TransactionPayload>;
+  };
   transferTrx(request: TransferTrxRequest): Promise<TxResult>;
   transferTrc10(request: TransferTrc10Request): Promise<TxResult>;
   transferTrc20(request: TransferTrc20Request): Promise<TxResult>;

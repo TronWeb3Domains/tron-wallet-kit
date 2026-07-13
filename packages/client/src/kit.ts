@@ -3,12 +3,15 @@ import { createWalletButton, createWalletModal, createWalletToast, resolveWallet
 import { createDefaultTrxBalanceResolver, normalizeBalance } from "./balance";
 import { createWalletClient } from "./client";
 import { resolveIdentityResolver } from "./identity";
+import { createTransactionRuntime } from "./transactions";
+import { configureSharedTronWeb } from "./tronweb";
 import type { TronIdentity, WalletClientConfig, WalletKit } from "./types";
 import { toThemeConfig } from "./utils";
 import { buildCatalog } from "./wallets/build-catalog";
 import { resolveWalletDescriptors } from "./wallets/registry";
 
 export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
+  configureSharedTronWeb(config.tronWeb);
   const manager = createWalletClient(config);
   const catalog = buildCatalog(resolveWalletDescriptors(config.wallets));
   const ui = { ...config.ui, catalog };
@@ -36,8 +39,9 @@ export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
     if (config.connectButton?.target) button?.mount(config.connectButton.target);
   }
 
+  const transactionRuntime = createTransactionRuntime(manager);
   const submit = (methodHint: TronMethodHint, transaction: TransactionPayload, description?: string) =>
-    manager.submitTransaction({ methodHint, transaction, ...(description ? { description } : {}) });
+    transactionRuntime.signAndSendTransaction({ methodHint, transaction }, methodHint, description);
   const getRefreshTargetSession = (session: NonNullable<ReturnType<typeof manager.getSession>>) => {
     const latest = manager.getSession();
     if (!latest) return null;
@@ -138,17 +142,31 @@ export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
     getSession: manager.getSession.bind(manager),
     signMessage: (request) => manager.signMessage(request),
     signTransaction: (transaction) => manager.signTransaction(transaction),
-    sendTransaction: (transaction) => submit("generic", transaction),
-    transferTrx: (request) => submit("transferTrx", { to: request.to, amountSun: String(request.amountSun) }, request.description),
+    sendTransaction: (transaction) => transactionRuntime.sendRawTransaction(transaction),
+    sendRawTransaction: transactionRuntime.sendRawTransaction,
+    signAndSendTransaction: (transaction) => transactionRuntime.signAndSendTransaction(transaction),
+    getTronWeb: transactionRuntime.getTronWeb,
+    transactionBuilder: transactionRuntime.transactionBuilder,
+    transferTrx: (request) =>
+      transactionRuntime.signAndSendBuiltTransaction(
+        () => transactionRuntime.transactionBuilder.sendTrx(request.to, request.amountSun, manager.getSession()?.account.address),
+        "transferTrx",
+        request.description
+      ),
     transferTrc10: (request) =>
       submit("transferTrc10", { tokenId: request.tokenId, to: request.to, amount: String(request.amount) }, request.description),
     transferTrc20: (request) =>
-      submit(
-        "transferTrc20",
-        { contractAddress: request.contractAddress, to: request.to, amount: String(request.amount), feeLimit: request.feeLimit ? String(request.feeLimit) : undefined },
-        request.description
-      ),
-    triggerSmartContract: (request) => submit("triggerSmartContract", { ...request }, request.description),
+      transactionRuntime.triggerSmartContract({
+        contractAddress: request.contractAddress,
+        functionSelector: "transfer(address,uint256)",
+        parameters: [
+          { type: "address", value: request.to },
+          { type: "uint256", value: String(request.amount) }
+        ],
+        ...(request.feeLimit !== undefined ? { feeLimit: request.feeLimit } : {}),
+        ...(request.description ? { description: request.description } : {})
+      }),
+    triggerSmartContract: transactionRuntime.triggerSmartContract,
     freezeBalance: (request) => submit("freezeBalance", { amountSun: String(request.amountSun), resource: request.resource }, request.description),
     unfreezeBalance: (request) => submit("unfreezeBalance", { amountSun: String(request.amountSun), resource: request.resource }, request.description),
     delegateResource: (request) => submit("delegateResource", { to: request.to, amountSun: String(request.amountSun), resource: request.resource }, request.description),

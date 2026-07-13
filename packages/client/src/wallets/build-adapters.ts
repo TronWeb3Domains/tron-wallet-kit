@@ -1,5 +1,5 @@
-import { createWalletConnectAdapter } from "@tron-wallet-kit/adapter-walletconnect";
 import type { WalletAdapter, WalletMetadata } from "@tron-wallet-kit/core";
+import { createWalletConnectAdapter } from "@tron-wallet-kit/adapter-walletconnect";
 import { createDefaultTronwalletBridgeAdapter, type DefaultTronwalletBridgeWalletConfig } from "../adapters/bridge";
 import { createInjectedTronAdapter } from "../adapters/injected";
 import type { DefaultAdaptersConfig, InjectedTronAdapterConfig } from "../types";
@@ -28,9 +28,11 @@ function buildAdapter(wallet: WalletDescriptor, config: DefaultAdaptersConfig): 
     case "walletconnect":
       if (wallet.id !== "walletconnect") return undefined;
       if (!config.walletConnectProjectId) return undefined;
+      const walletConnectIcon = wallet.icon ?? getWalletIcon(wallet.id);
       return createWalletConnectAdapter({
         projectId: config.walletConnectProjectId,
         ...config.walletconnect,
+        ...(walletConnectIcon ? { metadata: { ...config.walletconnect?.metadata, icon: walletConnectIcon } } : {}),
         ...(config.walletConnectNetwork ? { network: config.walletConnectNetwork } : {}),
         ...(config.onWalletConnectUri ? { onUri: config.onWalletConnectUri } : {})
       });

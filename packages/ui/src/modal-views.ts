@@ -1,3 +1,4 @@
+import { formatWalletError, type WalletKitErrorMessageCatalog } from "@tron-wallet-kit/core";
 import { createActionContentHtml } from "./actions";
 import { actionSpinnerIcon, checkIcon, externalIcon, linkIcon, qrIcon, refreshIcon, searchIcon, statusErrorIcon } from "./icons";
 import { escapeAttribute, escapeHtml } from "./utils";
@@ -7,16 +8,30 @@ import { inferWalletPlatforms, isHardwareWallet, isQrWallet } from "./wallet-kin
 import type { ConnectModalLabels, ConnectModalView, ConnectModalViewModel, WalletOptionViewModel } from "./types";
 
 export function normalizeConnectErrorMessage(error: unknown, wallet?: WalletOptionViewModel): string {
+  return resolveConnectErrorDisplay(error, wallet).message;
+}
+
+function resolveConnectErrorDisplay(error: unknown, wallet?: WalletOptionViewModel, messages?: WalletKitErrorMessageCatalog, title?: string): { title: string; message: string } {
+  if (title && typeof error === "string") return { title, message: error };
   const raw = error instanceof Error ? error.message : String(error);
-  if (/dynamically imported module|importing a module script failed|failed to fetch/i.test(raw)) {
-    return `${wallet?.name ?? "Wallet"} could not be loaded. Refresh the page and try again.`;
+  const formatted = formatWalletError(error, {
+    ...(messages ? { messages } : {}),
+    includeDetails: false
+  });
+  const walletName = wallet?.name ?? "Wallet";
+  if (formatted.code === "CONFIGURATION_ERROR" && /dynamically imported module|importing a module script failed|failed to fetch/i.test(raw)) {
+    return {
+      title: formatted.title,
+      message: `${walletName} could not be loaded. Refresh the page and try again.`
+    };
   }
-  if (/wallet_not_found|not found|not available/i.test(raw)) {
-    return `${wallet?.name ?? "Wallet"} is not available.`;
+  if (formatted.code === "WALLET_UNAVAILABLE" || formatted.code === "WALLET_NOT_FOUND") {
+    return {
+      title: formatted.title,
+      message: `${walletName} is not available.`
+    };
   }
-  const compact = raw.replace(/\s+/g, " ").trim();
-  if (compact.length <= 140) return compact;
-  return `${compact.slice(0, 137)}...`;
+  return { title: formatted.title, message: formatted.message };
 }
 
 export function createConnectModalBodyHtml(viewModel: ConnectModalViewModel & { view: ConnectModalView; labels: ConnectModalLabels }): string {
@@ -32,7 +47,8 @@ function createFeaturedHtml(viewModel: ConnectModalViewModel & { labels: Connect
   const layout = resolveWalletListLayout(viewModel.walletList);
   const walletRows = createWalletCollectionHtml(featuredWallets, labels, viewModel.selectedWalletId, layout, "featured");
   const total = viewModel.wallets.length;
-  const status = createStatusHtml(viewModel.errorMessage, viewModel.errorMessage ? "danger" : "idle");
+  const statusMessage = resolveStatusErrorMessage(viewModel);
+  const status = createStatusHtml(statusMessage, statusMessage ? "danger" : "idle");
   const allWalletsLabel = createAllWalletsTriggerLabel(labels.allWallets);
   return `${createNetworkBadgeHtml(viewModel)}
   ${walletRows}
@@ -61,7 +77,7 @@ function createAllWalletsHtml(viewModel: ConnectModalViewModel & { labels: Conne
       <span class="twk-search-icon" aria-hidden="true">${searchIcon()}</span>
     </label>
     ${gridBody}
-    ${createStatusHtml(viewModel.errorMessage, viewModel.errorMessage ? "danger" : "idle")}
+    ${createStatusHtml(resolveStatusErrorMessage(viewModel), viewModel.errorMessage ? "danger" : "idle")}
     ${createPoweredByFooterHtml(viewModel)}
   </div>`;
 }
@@ -72,8 +88,8 @@ function createPoweredByFooterHtml(viewModel: Pick<ConnectModalViewModel, "showP
 
 function createWalletSkeletonGridHtml(count: number, layout: "list" | "card", scope?: "featured" | "all"): string {
   const card = layout === "card"
-    ? `<span class="twk-wallet-card" data-loading="true" aria-hidden="true"><span class="twk-wallet-icon" data-loading="true"><span class="twk-skeleton"></span></span><span class="twk-wallet-name" data-loading="true"><span class="twk-skeleton"></span></span></span>`
-    : `<span class="twk-wallet-row" data-loading="true" aria-hidden="true"><span class="twk-wallet-main"><span class="twk-wallet-icon" data-loading="true"><span class="twk-skeleton"></span></span><span class="twk-wallet-name" data-loading="true"><span class="twk-skeleton"></span></span></span><span class="twk-badge" data-loading="true" data-tone="muted"><span class="twk-skeleton"></span></span></span>`;
+    ? `<span class="twk-wallet-card twk-skeleton-card" data-loading="true" aria-hidden="true"><span class="twk-wallet-icon twk-skeleton-circle" data-loading="true"><span class="twk-skeleton"></span></span><span class="twk-wallet-name twk-skeleton-line" data-loading="true"><span class="twk-skeleton"></span></span></span>`
+    : `<span class="twk-wallet-row twk-skeleton-row" data-loading="true" aria-hidden="true"><span class="twk-wallet-main"><span class="twk-wallet-icon twk-skeleton-circle" data-loading="true"><span class="twk-skeleton"></span></span><span class="twk-wallet-name twk-skeleton-line" data-loading="true"><span class="twk-skeleton"></span></span></span><span class="twk-badge twk-skeleton-pill" data-loading="true" data-tone="muted"><span class="twk-skeleton"></span></span></span>`;
   return `<div class="twk-wallet-grid" data-layout="${escapeAttribute(layout)}" ${scope ? `data-scope="${escapeAttribute(scope)}"` : ""} data-loading="true">${card.repeat(count)}</div>`;
 }
 
@@ -93,13 +109,13 @@ function createConnectingHtml(viewModel: ConnectModalViewModel & { labels: Conne
   const installUrl = wallet.downloadUrl ?? wallet.homepage;
   const installRow = createInstallRowHtml(wallet.name, installUrl, labels);
   const hasError = Boolean(viewModel.errorMessage);
-  const displayError = hasError ? normalizeConnectErrorMessage(viewModel.errorMessage, wallet) : undefined;
+  const displayError = hasError ? resolveConnectErrorDisplay(viewModel.errorMessage, wallet, viewModel.errorMessages, viewModel.errorTitle) : undefined;
   const retryBusy = viewModel.retryState === "busy";
   const retryIcon = retryBusy ? actionSpinnerIcon() : refreshIcon();
   return `<div class="twk-connect-detail">
     ${createConnectingWalletIconHtml(wallet, hasError)}
-    <h3 class="twk-title twk-view-title" ${hasError ? `data-tone="danger"` : ""}>${escapeHtml(hasError ? labels.connectionDeclined : `${labels.continueInWallet} ${wallet.name}`)}</h3>
-    <p class="twk-detail-subtitle">${escapeHtml(hasError ? displayError ?? labels.acceptRequest : labels.acceptRequest)}</p>
+    <h3 class="twk-title twk-view-title" ${hasError ? `data-tone="danger"` : ""}>${escapeHtml(hasError ? displayError?.title ?? labels.connectionDeclined : `${labels.continueInWallet} ${wallet.name}`)}</h3>
+    <p class="twk-detail-subtitle">${escapeHtml(hasError ? displayError?.message ?? labels.acceptRequest : labels.acceptRequest)}</p>
     <div class="twk-detail-actions">
       <button class="twk-action" type="button" data-twk-action="retry" ${retryBusy ? `data-busy="true" disabled` : ""}>${createActionContentHtml(retryIcon, labels.tryAgain, retryBusy ? "busy" : undefined)}</button>
     </div>
@@ -121,8 +137,8 @@ function createQrHtml(viewModel: ConnectModalViewModel & { labels: ConnectModalL
   const retryIcon = retryBusy ? actionSpinnerIcon() : refreshIcon();
   const installRow = wallet?.id === "walletconnect" ? "" : createInstallRowHtml(name, installUrl, labels);
   const qrContent = viewModel.qrUri
-    ? `<span class="twk-qr-code" data-twk-qr-code="true" ${viewModel.qrRenderState === "error" ? 'data-twk-qr-renderer="error"' : ""}>${viewModel.qrRenderState === "error" ? `<span class="twk-qr-error">${escapeHtml(labels.qrRenderFailed)}</span>` : viewModel.qrImageSrc ? `<img src="${escapeAttribute(viewModel.qrImageSrc)}" alt="${escapeAttribute(`${name} ${labels.qrCode}`)}" />${wallet ? `<span class="twk-qr-center-logo">${createWalletIconHtml(wallet)}</span>` : ""}` : `<span class="twk-qr-skeleton" aria-hidden="true"></span>`}</span>`
-    : `<span class="twk-qr-code" data-loading="true" data-twk-qr-code="true"><span class="twk-qr-skeleton" aria-hidden="true"></span><span class="twk-sr-only">${escapeHtml(labels.qrCode)}</span></span>`;
+    ? `<span class="twk-qr-code" data-twk-qr-code="true" ${viewModel.qrRenderState === "error" ? 'data-twk-qr-renderer="error"' : ""}>${viewModel.qrRenderState === "error" ? `<span class="twk-qr-error">${escapeHtml(labels.qrRenderFailed)}</span>` : viewModel.qrImageSrc ? `<img src="${escapeAttribute(viewModel.qrImageSrc)}" alt="${escapeAttribute(`${name} ${labels.qrCode}`)}" />${wallet ? `<span class="twk-qr-center-logo">${createWalletIconHtml(wallet, false)}</span>` : ""}` : `<span class="twk-qr-skeleton twk-skeleton-qr" aria-hidden="true"></span>`}</span>`
+    : `<span class="twk-qr-code" data-loading="true" data-twk-qr-code="true"><span class="twk-qr-skeleton twk-skeleton-qr" aria-hidden="true"></span><span class="twk-sr-only">${escapeHtml(labels.qrCode)}</span></span>`;
   return `<div class="twk-connect-detail">
     <div class="twk-qr-slot twk-qr-large">${qrContent}</div>
     <p class="twk-detail-subtitle">${escapeHtml(isQrTransport ? labels.scanQr : labels.acceptRequest)}</p>
@@ -130,7 +146,7 @@ function createQrHtml(viewModel: ConnectModalViewModel & { labels: ConnectModalL
       <button class="twk-action" type="button" data-twk-action="copy-uri" ${viewModel.qrUri ? "" : "disabled"}>${createActionContentHtml(copyIcon, labels.copyLink, copyState)}</button>
       <button class="twk-action" type="button" data-twk-action="retry" ${retryBusy ? `data-busy="true" disabled` : ""}>${createActionContentHtml(retryIcon, labels.tryAgain, retryBusy ? "busy" : undefined)}</button>
     </div>
-    ${createErrorHtml(viewModel.errorMessage ? normalizeConnectErrorMessage(viewModel.errorMessage, wallet) : undefined)}
+    ${createErrorHtml(viewModel.errorMessage ? resolveConnectErrorDisplay(viewModel.errorMessage, wallet, viewModel.errorMessages, viewModel.errorTitle).message : undefined)}
     ${installRow}
   </div>`;
 }
@@ -140,12 +156,14 @@ function createWalletRowHtml(wallet: WalletOptionViewModel, labels: ConnectModal
   const isConnecting = selectedWalletId === wallet.id || wallet.status === "connecting";
   const badge = wallet.badge ?? resolveWalletBadge(wallet, labels);
   const statusLabel = wallet.disabledReason ?? (disabled ? labels.unavailable : isConnecting ? labels.connecting : badge.label);
+  const rowBadgeLabel = wallet.readyState === "loading" ? labels.checking : isConnecting ? labels.connecting : badge.label;
+  const rowBadgeTone = wallet.readyState === "loading" ? "muted" : badge.tone;
   return `<button class="twk-wallet-row" type="button" data-twk-wallet-id="${escapeAttribute(wallet.id)}" data-twk-adapter-id="${escapeAttribute(wallet.adapterId ?? wallet.id)}" data-twk-platforms="${escapeAttribute(getWalletPlatforms(wallet).join(" "))}" aria-label="${escapeAttribute(`${wallet.name}: ${statusLabel}`)}" ${disabled ? "disabled" : ""}>
   <span class="twk-wallet-main">
-    ${createWalletIconHtml(wallet)}
-    ${createWalletNameHtml(wallet)}
+    ${createWalletIconHtml(wallet, wallet.readyState !== "loading")}
+    ${createWalletNameHtml(wallet, wallet.readyState !== "loading")}
   </span>
-  ${createWalletBadgeHtml(wallet, isConnecting ? labels.connecting : badge.label, badge.tone)}
+  ${createWalletBadgeHtml(wallet, rowBadgeLabel, rowBadgeTone, false)}
 </button>`;
 }
 
@@ -156,8 +174,8 @@ function createWalletCardHtml(wallet: WalletOptionViewModel, labels: ConnectModa
   const statusLabel = wallet.disabledReason ?? (disabled ? labels.unavailable : isConnecting ? labels.connecting : badge.label);
   const indicator = createWalletStatusIndicatorHtml(wallet, labels, isConnecting);
   return `<button class="twk-wallet-card" type="button" data-twk-wallet-id="${escapeAttribute(wallet.id)}" data-twk-adapter-id="${escapeAttribute(wallet.adapterId ?? wallet.id)}" data-twk-platforms="${escapeAttribute(getWalletPlatforms(wallet).join(" "))}" aria-label="${escapeAttribute(`${wallet.name}: ${statusLabel}`)}" ${disabled ? "disabled" : ""} ${wallet.readyState === "loading" ? 'data-loading="true"' : ""}>
-    <span class="twk-wallet-icon-wrap">${createWalletIconHtml(wallet)}${indicator}</span>
-    ${createWalletNameHtml(wallet)}
+    <span class="twk-wallet-icon-wrap">${createWalletIconHtml(wallet, true)}${indicator}</span>
+    ${createWalletNameHtml(wallet, true)}
   </button>`;
 }
 
@@ -183,23 +201,23 @@ function createWalletStatusIndicatorHtml(wallet: WalletOptionViewModel, labels: 
   return "";
 }
 
-function createWalletNameHtml(wallet: WalletOptionViewModel): string {
-  if (wallet.readyState === "loading") {
-    return `<span class="twk-wallet-name" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">${escapeHtml(wallet.name)}</span></span>`;
+function createWalletNameHtml(wallet: WalletOptionViewModel, skeletonWhenLoading: boolean): string {
+  if (wallet.readyState === "loading" && skeletonWhenLoading) {
+    return `<span class="twk-wallet-name twk-skeleton-line" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">${escapeHtml(wallet.name)}</span></span>`;
   }
   return `<span class="twk-wallet-name">${escapeHtml(wallet.name)}</span>`;
 }
 
-function createWalletBadgeHtml(wallet: WalletOptionViewModel, label: string, tone?: NonNullable<WalletOptionViewModel["badge"]>["tone"]): string {
-  if (wallet.readyState === "loading") {
-    return `<span class="twk-badge" data-loading="true" data-tone="muted"><span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">${escapeHtml(label)}</span></span>`;
+function createWalletBadgeHtml(wallet: WalletOptionViewModel, label: string, tone?: NonNullable<WalletOptionViewModel["badge"]>["tone"], skeletonWhenLoading = true): string {
+  if (wallet.readyState === "loading" && skeletonWhenLoading) {
+    return `<span class="twk-badge twk-skeleton-pill" data-loading="true" data-tone="muted"><span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">${escapeHtml(label)}</span></span>`;
   }
   return `<span class="twk-badge" data-tone="${escapeAttribute(tone ?? "muted")}">${escapeHtml(label)}</span>`;
 }
 
-function createWalletIconHtml(wallet: WalletOptionViewModel): string {
-  if (wallet.readyState === "loading") {
-    return `<span class="twk-wallet-icon" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span></span>`;
+function createWalletIconHtml(wallet: WalletOptionViewModel, skeletonWhenLoading: boolean): string {
+  if (wallet.readyState === "loading" && skeletonWhenLoading) {
+    return `<span class="twk-wallet-icon twk-skeleton-circle" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span></span>`;
   }
   const icon = wallet.icon
     ? `<img src="${escapeAttribute(wallet.icon)}" alt="" aria-hidden="true" onerror="this.remove()" /><span class="twk-wallet-icon-fallback" aria-hidden="true">${escapeHtml(wallet.name.slice(0, 1).toUpperCase())}</span>`
@@ -236,6 +254,11 @@ function createAllWalletsTriggerLabel(label: string): string {
 
 function createErrorHtml(message?: string): string {
   return message ? `<div class="twk-error" role="alert">${escapeHtml(message)}</div>` : "";
+}
+
+function resolveStatusErrorMessage(viewModel: ConnectModalViewModel): string | undefined {
+  if (!viewModel.errorMessage) return undefined;
+  return resolveConnectErrorDisplay(viewModel.errorMessage, undefined, viewModel.errorMessages, viewModel.errorTitle).message;
 }
 
 function createStatusHtml(message: string | undefined, tone: "idle" | "danger" = "idle"): string {

@@ -66,6 +66,7 @@ function ExampleApp() {
         accountPanel: { mode: accountPanelMode === "modal" ? "modal" : "inline", showRecentTransactions }
       }}
       autoReconnect={false}
+      clearStoredSessionOnAutoReconnectDisabled
       storageKey="react-basic-session-v2"
       useBrowserStorage
     >
@@ -131,6 +132,12 @@ function ExampleWorkspace(props: ExampleWorkspaceProps) {
   const [walletConnectUri, setWalletConnectUri] = useState("");
   const [toastHtml, setToastHtml] = useState("");
   const [gateDiagnostics, setGateDiagnostics] = useState("");
+  const [trxRecipient, setTrxRecipient] = useState("");
+  const [trxAmountSun, setTrxAmountSun] = useState("1000000");
+  const [contractAddress, setContractAddress] = useState("");
+  const [contractFunction, setContractFunction] = useState("buyDomain(string,string)");
+  const [contractOptions, setContractOptions] = useState('{"feeLimit":100000000}');
+  const [contractParameters, setContractParameters] = useState('[{"type":"string","value":"alice"},{"type":"string","value":"trx"}]');
   const kitThemeStyle = useMemo(() => {
     const properties = createThemeStyleProperties({ themeName: props.themeName });
     const { "color-scheme": colorScheme, ...variables } = properties;
@@ -176,6 +183,51 @@ function ExampleWorkspace(props: ExampleWorkspaceProps) {
     try {
       const result = await kit.signMessage("Hello from TRON Wallet Kit");
       setLog(`Signature:\n${result.proof ?? result.signature ?? result.txBlob ?? ""}`);
+    } catch (error) {
+      setLog(formatError(error));
+    }
+  };
+
+  const buildTrxTransfer = async () => {
+    try {
+      const transaction = await kit.transactionBuilder.sendTrx(trxRecipient, trxAmountSun, session?.account.address);
+      setLog(formatJson({ action: "transactionBuilder.sendTrx", transaction }));
+    } catch (error) {
+      setLog(formatError(error));
+    }
+  };
+
+  const signAndSendTrx = async () => {
+    try {
+      const result = await kit.transferTrx({
+        to: trxRecipient,
+        amountSun: trxAmountSun,
+        description: `Send ${trxAmountSun} SUN`
+      });
+      setLog(formatJson({ action: "transferTrx", result }));
+    } catch (error) {
+      setLog(formatError(error));
+    }
+  };
+
+  const buildSmartContract = async () => {
+    try {
+      const request = readSmartContractRequest(contractAddress, contractFunction, contractOptions, contractParameters, session?.account.address);
+      const transaction = await kit.transactionBuilder.triggerSmartContract(request);
+      setLog(formatJson({ action: "transactionBuilder.triggerSmartContract", transaction }));
+    } catch (error) {
+      setLog(formatError(error));
+    }
+  };
+
+  const signAndSendSmartContract = async () => {
+    try {
+      const request = readSmartContractRequest(contractAddress, contractFunction, contractOptions, contractParameters, session?.account.address);
+      const result = await kit.triggerSmartContract({
+        ...request,
+        description: `Trigger ${contractFunction}`
+      });
+      setLog(formatJson({ action: "triggerSmartContract", result }));
     } catch (error) {
       setLog(formatError(error));
     }
@@ -386,6 +438,57 @@ function ExampleWorkspace(props: ExampleWorkspaceProps) {
             </div>
           </section>
 
+          <section className="panel task-panel">
+            <div className="section-heading">
+              <span>Transactions</span>
+              <small>Build, sign, broadcast</small>
+            </div>
+            <div className="config-grid">
+              <label className="field">
+                <span>TRX recipient</span>
+                <input className="input" value={trxRecipient} onChange={(event) => setTrxRecipient(event.target.value)} placeholder="T..." />
+              </label>
+              <label className="field">
+                <span>Amount SUN</span>
+                <input className="input" value={trxAmountSun} onChange={(event) => setTrxAmountSun(event.target.value)} inputMode="numeric" />
+              </label>
+            </div>
+            <div className="task-list">
+              <button className="button secondary" type="button" disabled={status !== "connected" || !trxRecipient} onClick={buildTrxTransfer}>
+                Build TRX tx
+              </button>
+              <button className="button" type="button" disabled={status !== "connected" || !trxRecipient} onClick={signAndSendTrx}>
+                Sign and send TRX
+              </button>
+            </div>
+            <div className="config-grid">
+              <label className="field">
+                <span>Contract address</span>
+                <input className="input" value={contractAddress} onChange={(event) => setContractAddress(event.target.value)} placeholder="T..." />
+              </label>
+              <label className="field">
+                <span>Function selector</span>
+                <input className="input" value={contractFunction} onChange={(event) => setContractFunction(event.target.value)} />
+              </label>
+              <label className="field">
+                <span>Options JSON</span>
+                <textarea className="textarea compact" value={contractOptions} onChange={(event) => setContractOptions(event.target.value)} />
+              </label>
+              <label className="field">
+                <span>Parameters JSON</span>
+                <textarea className="textarea compact" value={contractParameters} onChange={(event) => setContractParameters(event.target.value)} />
+              </label>
+            </div>
+            <div className="task-list">
+              <button className="button secondary" type="button" disabled={status !== "connected" || !contractAddress} onClick={buildSmartContract}>
+                Build contract tx
+              </button>
+              <button className="button" type="button" disabled={status !== "connected" || !contractAddress} onClick={signAndSendSmartContract}>
+                Sign and execute
+              </button>
+            </div>
+          </section>
+
           <section className="panel log-panel">
             <div className="section-heading">
               <span>Log</span>
@@ -412,6 +515,32 @@ function ExampleWorkspace(props: ExampleWorkspaceProps) {
 
 function formatError(error: unknown): string {
   return error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+}
+
+function formatJson(value: unknown): string {
+  return JSON.stringify(value, null, 2);
+}
+
+function readSmartContractRequest(contractAddress: string, functionSelector: string, optionsJson: string, parametersJson: string, issuerAddress: string | undefined) {
+  return {
+    contractAddress,
+    functionSelector,
+    options: parseJsonObject(optionsJson),
+    parameters: parseJsonArray(parametersJson),
+    ...(issuerAddress ? { issuerAddress } : {})
+  };
+}
+
+function parseJsonObject(value: string): Record<string, unknown> {
+  const parsed = JSON.parse(value || "{}");
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Options JSON must be an object.");
+  return parsed as Record<string, unknown>;
+}
+
+function parseJsonArray(value: string): unknown[] {
+  const parsed = JSON.parse(value || "[]");
+  if (!Array.isArray(parsed)) throw new Error("Parameters JSON must be an array.");
+  return parsed;
 }
 
 function readGateDiagnostics() {

@@ -103,6 +103,7 @@ export function createTronwalletBridgeAdapter(
     adapterApiVersion: "1.1",
     metadata,
     capabilities,
+    detect: () => isTronwalletAdapterAvailable(inner),
     isAvailable: () => isTronwalletAdapterAvailable(inner),
     connect: async (connectOptions: ConnectOptions = {}) => {
       cleanupEvents?.();
@@ -247,6 +248,10 @@ export function createLazyTronwalletBridgeAdapter(options: LazyTronwalletBridgeA
     adapterApiVersion: "1.1",
     metadata,
     capabilities,
+    detect: async () => {
+      if (!adapter) return false;
+      return Boolean(await Promise.resolve(adapter.detect?.()).catch(() => false));
+    },
     isAvailable: async () => {
       try {
         const inner = await loadInner();

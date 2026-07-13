@@ -4,6 +4,7 @@ export * from "./kit";
 export * from "./balance";
 export * from "./identity";
 export * from "./tronweb";
+export * from "./transactions";
 export * from "./utils";
 export * from "./adapters/bridge";
 export * from "./adapters/combinators";
