@@ -8,8 +8,8 @@ The browser package builds an IIFE global named `TronWalletKit`.
   const kit = TronWalletKit.createBrowserKit({
     root: document.body,
     theme: { themeName: "tron" },
-    walletConnectProjectId: "a4109c95d50e5c136cdafaf9fc44c105",
-    walletConnectNetwork: "nile",
+    walletConnectProjectId: "YOUR_WALLETCONNECT_PROJECT_ID",
+    walletConnectNetwork: "mainnet",
   });
 </script>
 ```

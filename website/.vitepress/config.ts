@@ -2,21 +2,27 @@ import { defineConfig } from "vitepress";
 
 export default defineConfig({
   title: "TRON Wallet Kit",
-  description: "TRON-native wallet kit with polished wallet UX.",
+  description: "The best way to connect a TRON wallet — a polished, TRON-native wallet UX kit for dApps.",
   cleanUrls: true,
   themeConfig: {
     nav: [
       { text: "Docs", link: "/docs/introduction" },
-      { text: "Examples", link: "http://127.0.0.1:5173/" },
+      { text: "Wallets", link: "/docs/wallets/catalog" },
       { text: "Theme", link: "/docs/configuration/theming" },
-      { text: "API", link: "/docs/api/ui" },
+      { text: "Demo", link: "http://127.0.0.1:5173/" },
+      { text: "GitHub", link: "https://github.com/" },
     ],
     sidebar: [
       {
         text: "Guide",
         items: [
           { text: "Introduction", link: "/docs/introduction" },
-          { text: "Quick Start", link: "/docs/quick-start" },
+          { text: "Quick start", link: "/docs/quick-start" },
+        ],
+      },
+      {
+        text: "Frameworks",
+        items: [
           { text: "React", link: "/docs/frameworks/react" },
           { text: "HTML / CDN", link: "/docs/frameworks/html-cdn" },
         ],
@@ -30,6 +36,12 @@ export default defineConfig({
         ],
       },
       {
+        text: "Wallets",
+        items: [
+          { text: "Catalog", link: "/docs/wallets/catalog" },
+        ],
+      },
+      {
         text: "Adapters",
         items: [
           { text: "Overview", link: "/docs/adapters/overview" },
@@ -38,16 +50,21 @@ export default defineConfig({
         ],
       },
       {
-        text: "API",
+        text: "Reference",
         items: [
-          { text: "UI", link: "/docs/api/ui" },
+          { text: "Troubleshooting", link: "/docs/troubleshooting" },
+          { text: "Migration from tronwallet-adapter", link: "/docs/migration-from-tronwallet-adapter" },
+        ],
+      },
+      {
+        text: "API reference",
+        items: [
           { text: "Client", link: "/docs/api/client" },
+          { text: "UI", link: "/docs/api/ui" },
         ],
       },
     ],
-    socialLinks: [],
-    search: {
-      provider: "local",
-    },
+    socialLinks: [{ icon: "github", link: "https://github.com/" }],
+    search: { provider: "local" },
   },
 });

@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { TronWalletProvider, WalletButton, useWalletKit, useWalletSession, useWalletStatus } from "@tron-wallet-kit/react";
 import { createQrDataUrl, createThemeStyleProperties, createTransactionToastContainerHtml, getThemeNames, type ThemeName, type WalletListConfig } from "@tron-wallet-kit/ui";
 
-const walletConnectProjectId = "a4109c95d50e5c136cdafaf9fc44c105";
+const walletConnectProjectId = ((import.meta as ImportMeta & { env?: { VITE_WALLETCONNECT_PROJECT_ID?: string } }).env?.VITE_WALLETCONNECT_PROJECT_ID) || "";
 const kitFontFamily = 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 
 type ButtonVariant = "default" | "pill" | "minimal";

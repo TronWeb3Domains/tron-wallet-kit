@@ -6,8 +6,8 @@ WalletConnect is the primary mobile/QR adapter for the MVP.
 import { createWalletConnectAdapter } from "@tron-wallet-kit/adapter-walletconnect";
 
 const adapter = createWalletConnectAdapter({
-  projectId: "a4109c95d50e5c136cdafaf9fc44c105",
-  network: "nile",
+  projectId: "YOUR_WALLETCONNECT_PROJECT_ID",
+  network: "mainnet",
   onUri(uri) {
     // Render this URI into a QR code.
   },

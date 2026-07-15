@@ -1,0 +1,84 @@
+:root {
+  /* Brand — TRON red */
+  --vp-c-brand-1: #d0001f;
+  --vp-c-brand-2: #ef0027;
+  --vp-c-brand-3: #ef0027;
+  --vp-c-brand-soft: rgba(239, 0, 39, 0.08);
+  --vp-c-brand-softer: rgba(239, 0, 39, 0.04);
+
+  /* TRON spectrum — each hue encodes meaning */
+  --twkd-teal: #0ca678;
+  --twkd-amber: #e8920c;
+  --twkd-blue: #3b82f6;
+  --twkd-violet: #7c6bf0;
+  --twkd-coral: #ff6a3d;
+  --twkd-teal-bg: #e1f5ee;
+  --twkd-amber-bg: #fbeeda;
+  --twkd-gray-bg: #ededf0;
+  --twkd-teal-fg: #0a6b52;
+  --twkd-amber-fg: #8a5a0b;
+  --twkd-gray-fg: #5f5f66;
+
+  /* Home hero */
+  --vp-home-hero-name-color: #ef0027;
+  --vp-button-brand-bg: #ef0027;
+  --vp-button-brand-hover-bg: #d0001f;
+  --vp-button-brand-border: #ef0027;
+}
+
+.dark {
+  --vp-c-brand-1: #ff6673;
+  --vp-c-brand-2: #ff4d5e;
+  --vp-c-brand-3: #ff4d5e;
+  --vp-c-brand-soft: rgba(255, 77, 94, 0.14);
+  --vp-c-brand-softer: rgba(255, 77, 94, 0.07);
+
+  --twkd-teal: #2fd19e;
+  --twkd-amber: #f6b54a;
+  --twkd-blue: #5c9dff;
+  --twkd-violet: #9a8bff;
+  --twkd-coral: #ff7e52;
+  --twkd-teal-bg: #10261f;
+  --twkd-amber-bg: #2e2410;
+  --twkd-gray-bg: #212227;
+  --twkd-teal-fg: #7fe7c4;
+  --twkd-amber-fg: #f6c87a;
+  --twkd-gray-fg: #b7b7be;
+
+  --vp-home-hero-name-color: #ff4d5e;
+  --vp-button-brand-bg: #ff4d5e;
+  --vp-button-brand-hover-bg: #ff6673;
+  --vp-button-brand-border: #ff4d5e;
+}
+
+/* Wallet support tier badges */
+.twk-badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 10px;
+  border-radius: 20px;
+  line-height: 1.5;
+}
+.twk-badge.live { background: var(--twkd-teal-bg); color: var(--twkd-teal-fg); }
+.twk-badge.beta { background: var(--twkd-amber-bg); color: var(--twkd-amber-fg); }
+.twk-badge.qa { background: var(--twkd-gray-bg); color: var(--twkd-gray-fg); }
+
+/* TRON-specific callout container (::: trx) */
+.custom-block.trx {
+  border-color: var(--twkd-teal);
+  background: var(--twkd-teal-bg);
+}
+.custom-block.trx .custom-block-title { color: var(--twkd-teal-fg); }
+
+/* Live component embeds sit on a surface panel */
+.twk-embed {
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  padding: 20px;
+  background: var(--vp-c-bg-soft);
+  margin: 16px 0;
+}
+
+/* Feature cards on home tighten to brand */
+.VPFeature .icon { background: var(--vp-c-brand-soft) !important; }

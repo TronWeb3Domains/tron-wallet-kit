@@ -107,7 +107,7 @@ export class WalletConnectAdapter implements WalletAdapter {
     this.relayUrl = options.relayUrl;
     this.appMetadata = options.appMetadata;
     this.allWallets = options.allWallets ?? "HIDE";
-    this.network = resolveWalletConnectNetwork(options.network ?? "nile");
+    this.network = resolveWalletConnectNetwork(options.network ?? "mainnet");
     this.metadata = {
       id: "walletconnect",
       name: "WalletConnect",

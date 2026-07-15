@@ -87,7 +87,9 @@ export function getFeaturedWalletOptions(wallets: readonly WalletOptionViewModel
 
   const installedIds = new Set(installed.map((wallet) => wallet.id));
   const walletConnect = byId.get("walletconnect");
-  const targetCount = Math.max(installed.length + (walletConnect ? 1 : 0), rankedIds.length);
+  const rankedWallets = rankedIds.flatMap((id) => byId.get(id) ? [byId.get(id) as WalletOptionViewModel] : []);
+  const targetCount = Math.max(installed.length + (walletConnect ? 1 : 0), rankedWallets.length);
+  const hasPendingDetection = wallets.some((wallet) => wallet.readyState === "loading");
   const qrFallbacks = wallets
     .filter((wallet) => !installedIds.has(wallet.id) && isQrFeaturedFallbackWallet(wallet))
     .sort(compareWalletRank);
@@ -97,13 +99,25 @@ export function getFeaturedWalletOptions(wallets: readonly WalletOptionViewModel
   const loading = wallets
     .filter((wallet) => !installedIds.has(wallet.id) && !isWalletConnectWallet(wallet) && !isQrFeaturedFallbackWallet(wallet) && !isHardwareWallet(wallet) && wallet.readyState === "loading")
     .sort(compareWalletRank);
-  const featured = uniqueWalletsById([
-    ...installed,
-    ...(walletConnect ? [walletConnect] : []),
-    ...qrFallbacks,
-    ...hardware,
-    ...loading
-  ]).slice(0, targetCount);
+  const featured = uniqueWalletsById(
+    hasPendingDetection
+      ? [
+          ...rankedWallets,
+          ...installed,
+          ...(walletConnect ? [walletConnect] : []),
+          ...qrFallbacks,
+          ...hardware,
+          ...loading
+        ]
+      : [
+          ...installed,
+          ...(walletConnect ? [walletConnect] : []),
+          ...qrFallbacks,
+          ...hardware,
+          ...rankedWallets,
+          ...loading
+        ]
+  ).slice(0, targetCount);
   if (installed.length === 0) {
     return walletConnect ? uniqueWalletsById([walletConnect, ...featured]) : featured;
   }
@@ -126,7 +140,7 @@ export function applyWalletListConfig(wallets: readonly WalletOptionViewModel[],
     if (config.showUnavailable === false && isUnavailableWallet(wallet) && !shouldKeepUnavailableForEnvironment(wallet, environment)) return false;
     return true;
   });
-  if (config.sortAvailableFirst === false) return filtered;
+  if (config.sortAvailableFirst === false || filtered.some((wallet) => wallet.readyState === "loading")) return filtered;
   return sortWalletsByAvailability(filtered);
 }
 

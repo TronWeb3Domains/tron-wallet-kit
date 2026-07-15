@@ -330,8 +330,11 @@ ${selector} .twk-button-panel-overlay .twk-account-panel[data-has-recent="true"]
   height: min(650px, calc(100dvh - 48px));
 }
 ${selector} .twk-wallet-row, ${selector} .twk-wallet-card {
+  animation: twk-wallet-item-settle .18s cubic-bezier(.25, 1, .5, 1);
   border-color: color-mix(in srgb, var(--twk-border) 72%, transparent);
+  transition: background-color .16s ease, border-color .16s ease, color .16s ease, opacity .24s ease, filter .24s ease;
 }
+@keyframes twk-wallet-item-settle { from { opacity: .72; transform: translateY(2px); } to { opacity: 1; transform: none; } }
 ${selector} .twk-wallet-row {
   gap: 8px;
   justify-content: space-between;
@@ -340,7 +343,16 @@ ${selector} .twk-wallet-row {
   text-align: left;
   width: 100%;
 }
-${selector} .twk-wallet-row:disabled { cursor: not-allowed; opacity: 0.68; }
+${selector} .twk-wallet-row:disabled { cursor: not-allowed; }
+${selector} .twk-wallet-row[data-availability="unavailable"],
+${selector} .twk-wallet-card[data-availability="unavailable"] {
+  filter: grayscale(.18);
+  opacity: .42;
+}
+${selector} .twk-wallet-row[data-availability="unavailable"]:hover,
+${selector} .twk-wallet-card[data-availability="unavailable"]:hover {
+  background: var(--twk-surface-elevated);
+}
 ${selector} .twk-wallet-icon-wrap {
   display: inline-flex;
   position: relative;
@@ -614,7 +626,7 @@ ${selector} .twk-wallet-card[data-loading="true"] .twk-wallet-icon {
   height: 56px;
   width: 56px;
 }
-${selector} .twk-wallet-card:disabled { cursor: not-allowed; opacity: 0.64; }
+${selector} .twk-wallet-card:disabled { cursor: not-allowed; }
 ${selector} .twk-wallet-card:disabled[data-loading="true"] { opacity: 1; }
 ${selector} .twk-wallet-card .twk-wallet-icon {
   flex-basis: 56px;
@@ -1539,7 +1551,7 @@ ${selector} .twk-toast-link:hover, ${selector} .twk-toast-dismiss:hover { backgr
 @keyframes twk-skeleton-shimmer { to { transform: translateX(100%); } }
 @keyframes twk-toast-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) {
-  ${selector} .twk-toast, ${selector} .twk-toast-spinner, ${selector} .twk-action-spin, ${selector} .twk-connecting-ring-accent, ${selector} .twk-tx-icon::before, ${selector} .twk-skeleton::after, ${selector} .twk-qr-skeleton::after { animation: none; }
+  ${selector} .twk-toast, ${selector} .twk-toast-spinner, ${selector} .twk-action-spin, ${selector} .twk-connecting-ring-accent, ${selector} .twk-tx-icon::before, ${selector} .twk-skeleton::after, ${selector} .twk-qr-skeleton::after, ${selector} .twk-wallet-row, ${selector} .twk-wallet-card { animation: none; }
   ${selector} .twk-close, ${selector} .twk-back, ${selector} .twk-action, ${selector} .twk-address-qr-action, ${selector} .twk-tx-header-link, ${selector} .twk-wallet-row, ${selector} .twk-wallet-card, ${selector} .twk-search-trigger, ${selector} .twk-connect-button { transition: none; }
 }
 @media (max-width: 420px) {

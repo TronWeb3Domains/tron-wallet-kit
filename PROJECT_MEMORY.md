@@ -121,13 +121,13 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Added `createThemeStyleProperties` to `@tron-wallet-kit/ui` so framework wrappers can apply the same token contract without duplicating CSS variable mapping.
 - Added root `vitest.config.ts` aliases for workspace packages so tests resolve source files instead of stale `dist` output.
 - Added React server-render tests for connect modal and account panel wrappers. Added React/ReactDOM dev dependencies for testing.
-- Received WalletConnect demo project ID `a4109c95d50e5c136cdafaf9fc44c105` from the user. It is documented for demos but intentionally not hardcoded into core or adapter defaults.
+- Received WalletConnect demo project ID `YOUR_WALLETCONNECT_PROJECT_ID` from the user. It is documented for demos but intentionally not hardcoded into core or adapter defaults.
 - Browser/CDN entrypoint now re-exports TronLink and WalletConnect adapter factories and adds `createDefaultBrowserAdapters({ walletConnectProjectId, walletConnectNetwork, walletConnectOnUri })`.
 - Added initial HTML/CDN and React usage docs with TronLink + WalletConnect examples using the provided project ID.
 - Browser IIFE currently bundles WalletConnect support for convenience and built successfully, but the all-in-one global bundle is large. Before public release, decide whether to keep this all-in-one IIFE or publish separate adapter browser bundles.
 - Added runnable examples workspace at `examples/` with Vite:
   - `/` example index.
-  - `/react-basic/` React provider/connect modal/account panel example using TronLink and WalletConnect project ID `a4109c95d50e5c136cdafaf9fc44c105`.
+  - `/react-basic/` React provider/connect modal/account panel example using TronLink and WalletConnect project ID `YOUR_WALLETCONNECT_PROJECT_ID`.
   - `/html-cdn/` vanilla HTML/CDN example using the browser IIFE served from `/vendor/tron-wallet-kit.global.js`.
 - Added root `dev:examples` script that runs `pnpm --filter @tron-wallet-kit/examples dev`.
 - Examples typecheck and build pass. Build emits expected warnings because the HTML/CDN page intentionally loads a global script and WalletConnect/AppKit dependencies are large.
@@ -167,7 +167,7 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Rebuilt React/Next bindings around the new kit model. React now exposes `TronWalletProvider`, `useWalletKit`, `useWalletSession`, `useWalletAccount`, `useWalletStatus`, and `useWalletCapabilities`; `TronWalletKitProvider` remains an alias.
 - Rebuilt browser/CDN entrypoint around `createBrowserKit()` and `window.TronWalletKit`. HTML/CDN example now uses `kit.manager` and `kit.openModal()` rather than the removed scaffold-era `kit.client`.
 - Expanded auth to spec names: `createSignInMessage`, `verifySignIn`, `generateNonce`, and `verifyTronSignature`, while keeping `createAuthMessage` as an alias.
-- Updated React and HTML examples to the new APIs. The WalletConnect demo project ID remains `a4109c95d50e5c136cdafaf9fc44c105` in examples only.
+- Updated React and HTML examples to the new APIs. The WalletConnect demo project ID remains `YOUR_WALLETCONNECT_PROJECT_ID` in examples only.
 - Quality gates after clean rebuild: `pnpm install`, `pnpm typecheck`, `pnpm test`, `pnpm build`, and `pnpm lint` all passed. `pnpm build` still warns that the all-in-one browser IIFE/examples include large WalletConnect/AppKit chunks and that the HTML/CDN example intentionally loads a non-module global script.
 - Important follow-up: the browser IIFE is still about 9 MB because WalletConnect/AppKit plus identity-related dependencies are bundled into the all-in-one global build. Split browser bundles or optional adapter globals should be prioritized before public release.
 
@@ -4448,3 +4448,135 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Verification:
   - `pnpm --filter @tron-wallet-kit/adapter-walletconnect typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/adapter-walletconnect test -- --run --reporter=dot` passed with 9 tests.
+
+## 2026-07-14 Release Readiness P0 Beta Prep
+
+- Read `Review/RELEASE_READINESS.md` and corrected release target back to `0.1.0-beta.0` because this project has not been published to npm yet.
+- Added release foundation:
+  - root `LICENSE` with MIT text;
+  - root `README.md`;
+  - root `CHANGELOG.md`;
+  - `.github/workflows/ci.yml`;
+  - per-package README files for npm package pages.
+- Bumped root, public packages, examples, and website package versions from `0.0.0` to `0.1.0-beta.0`.
+- Added package `publishConfig` for public packages:
+  - `access: "public"`;
+  - `provenance: true`;
+  - `tag: "beta"`.
+- Removed the hardcoded WalletConnect project ID from docs and examples:
+  - React example now reads `import.meta.env.VITE_WALLETCONNECT_PROJECT_ID`;
+  - HTML/CDN example now reads `window.WALLETCONNECT_PROJECT_ID`;
+  - docs now use `YOUR_WALLETCONNECT_PROJECT_ID`.
+- Changed WalletConnect default network from Nile to mainnet and updated related docs snippets.
+- Remaining before beta publish:
+  - live QA WalletConnect QR with Bitget and Klever.
+- Verification:
+  - `pnpm install --lockfile-only` passed.
+  - `pnpm lint` passed.
+  - `pnpm typecheck` passed.
+  - `pnpm test` passed.
+  - `pnpm build` passed.
+  - `pnpm publish --dry-run --no-git-checks --tag beta` passed for all 10 public packages.
+  - `pnpm pack` check for `@tron-wallet-kit/client` confirmed internal `workspace:*` dependencies are rewritten to `0.1.0-beta.0` in the tarball.
+
+## 2026-07-15 Release Readiness Checklist Sync
+
+- Continued `Review/RELEASE_READINESS.md` work after confirming this project has never been published to npm.
+- Synced the top-level P0 checklist in `Review/RELEASE_READINESS.md` with the implementation status:
+  - root README, LICENSE, CI, versions, package READMEs, publish metadata, secret cleanup, local gates, browser IIFE size, and WalletConnect mainnet default are now marked done;
+  - real-wallet QA items remain open.
+- Updated `Review/RELEASE_CHECKLIST.md`:
+  - first public release checklist now marks completed package manager, names, workspace layout, build formats, IIFE global, React/Next APIs, adapter contracts, theme tokens, HTML/CDN docs, React docs, all-in-one IIFE decision, and changelog process;
+  - wallet icon brand/source licensing remains open;
+  - added release readiness gates for full local checks, publish dry-run, browser IIFE size, and public package manifest audit.
+- Ran a manifest audit across all 10 public packages:
+  - `version`, `exports`, `types`, `files`, `sideEffects`, `publishConfig`, and README are present.
+- Recorded browser IIFE sizes:
+  - `tron-wallet-kit.iife.js`: 3,459,117 bytes;
+  - `tron-wallet-kit.iife.min.js`: 1,737,483 bytes.
+- Ran `pnpm pack --pack-destination $env:TEMP/twk-release-size-check` for all 10 public packages:
+  - adapter-tronlink: 24,550 bytes;
+  - adapter-tronwallet-bridge: 11,844 bytes;
+  - adapter-walletconnect: 21,612 bytes;
+  - auth: 4,074 bytes;
+  - browser: 4,057,415 bytes;
+  - client: 193,361 bytes;
+  - core: 59,911 bytes;
+  - next: 2,354 bytes;
+  - react: 23,129 bytes;
+  - ui: 175,653 bytes.
+
+## 2026-07-15 Wallet Availability Soft Transition
+
+- Improved connect modal wallet detection UX so the first detect pass does not make wallet cards jump abruptly.
+- Updated featured wallet selection:
+  - ranked featured slots remain stable during detection;
+  - unavailable featured wallets stay visible instead of being removed immediately;
+  - unavailable wallets can fade/disable in place, which avoids grid/list reflow.
+- Updated wallet list sorting:
+  - while any wallet is still `loading`, the UI keeps source order instead of re-sorting available wallets to the top;
+  - after detection settles, installed wallets and QR-capable fallbacks sort to the top in one batched render;
+  - explicit hidden-unavailable flows can still filter/sort.
+- Added `data-availability` to wallet row/card markup for `available`, `checking`, `unavailable`, and `qr` states.
+- Added token-driven CSS fade for unavailable wallets:
+  - reduced opacity;
+  - subtle grayscale;
+  - no layout-affecting animation.
+- Batched availability re-renders in the modal controller to avoid one DOM rebuild per wallet detect result.
+- Added a subtle wallet item settle animation for the final order update, with reduced-motion support.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot` passed with 43 tests.
+
+## 2026-07-15 TRON Native ConnectKit Gap Review
+
+- Added `Review/TRON_NATIVE_CONNECTKIT_GAP_REVIEW.md` as a reviewer-facing product gap review.
+- The document positions TRON Wallet Kit as a TRON-native ConnectKit/RainbowKit-style UX layer rather than a direct replacement for `tronweb3/tronwallet-adapter`.
+- It summarizes current strengths and the main gaps:
+  - public live demo;
+  - deeper docs/DX;
+  - transaction playground;
+  - wallet QA gating;
+  - theme builder;
+  - SSR/Next polish;
+  - release trust layer.
+- It proposes phased roadmap A-F from current beta stabilization through public demo, docs, wallet QA, beta publish, and stable readiness.
+- It includes reviewer questions and a proposed definition of done for claiming the ConnectKit/RainbowKit-style positioning.
+
+## 2026-07-15 ConnectKit Masterplan Phase 1 API
+
+- Started implementing `Review/TRON_CONNECTKIT_MASTERPLAN.md` in the SDK layer.
+- Added ConnectKit-style React API in `@tron-wallet-kit/react`:
+  - `getDefaultConfig`;
+  - `TronKitProvider`;
+  - `TronConnectButton`;
+  - `useTronKit`;
+  - `useTronAccount`;
+  - `useTronConnect`;
+  - `useTronDisconnect`;
+  - `useTronBalance`;
+  - `useSignMessage`;
+  - `useTrxName`;
+  - `useConnectModal`;
+  - `useAccountModal`.
+- Added theme factories:
+  - `lightTheme`;
+  - `darkTheme`;
+  - shortcut support for `accentColor`, `accentColorForeground`, `borderRadius`, `fontStack`, and direct token overrides.
+- Kept old React API intact:
+  - `TronWalletProvider`;
+  - `WalletButton`;
+  - `ConnectModal`;
+  - `AccountPanel`.
+- Updated `WalletButton` with optional controlled account-panel state so `useAccountModal` and `TronConnectButton` can open the account modal without breaking uncontrolled legacy usage.
+- Updated docs/readmes:
+  - root README now uses `getDefaultConfig` + `TronKitProvider` + `TronConnectButton`;
+  - expanded README content for `react`, `client`, `core`, `ui`, `browser`, `next`, `auth`, `adapter-tronlink`, `adapter-walletconnect`, and `adapter-tronwallet-bridge`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react test -- --run --reporter=dot` passed with 5 tests.
+- Remaining:
+  - finish full masterplan Phase 2 system-adaptive theme object support;
+  - expand hook tests beyond SSR/static render;
+  - add transaction/read helper docs once API names are finalized;
+  - later run full workspace `lint/typecheck/test/build` before release commit.

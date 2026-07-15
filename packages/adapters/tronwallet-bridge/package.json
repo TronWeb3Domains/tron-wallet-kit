@@ -1,6 +1,6 @@
 {
   "name": "@tron-wallet-kit/adapter-tronwallet-bridge",
-  "version": "0.0.0",
+  "version": "0.1.0-beta.0",
   "description": "Bridge runtime @tronweb3/tronwallet-adapter instances into TRON Wallet Kit.",
   "license": "MIT",
   "type": "module",
@@ -15,7 +15,9 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --sourcemap --clean",
     "test": "vitest run",
@@ -35,5 +37,10 @@
     "tronweb": {
       "optional": true
     }
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "tag": "beta"
   }
 }

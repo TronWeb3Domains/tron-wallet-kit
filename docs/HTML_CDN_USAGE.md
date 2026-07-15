@@ -7,7 +7,7 @@ This guide is for legacy HTML or no-build demos that use the browser IIFE bundle
 Current WalletConnect demo project ID:
 
 ```txt
-a4109c95d50e5c136cdafaf9fc44c105
+YOUR_WALLETCONNECT_PROJECT_ID
 ```
 
 WalletConnect project IDs are passed by the app. They are not hardcoded in core or adapter defaults.
@@ -27,8 +27,8 @@ After running `pnpm build`, load the browser bundle:
   const kit = TronWalletKit.createBrowserKit({
     root: walletRoot,
     theme: { themeName: "tron" },
-    walletConnectProjectId: "a4109c95d50e5c136cdafaf9fc44c105",
-    walletConnectNetwork: "nile",
+    walletConnectProjectId: "YOUR_WALLETCONNECT_PROJECT_ID",
+    walletConnectNetwork: "mainnet",
     onWalletConnectUri(uri) {
       console.log("WalletConnect URI:", uri);
     },

@@ -16,7 +16,7 @@ import { TronWalletProvider, WalletButton } from "@tron-wallet-kit/react";
 
 const kit = createWalletKit({
   walletConnect: {
-    projectId: "a4109c95d50e5c136cdafaf9fc44c105",
+    projectId: "YOUR_WALLETCONNECT_PROJECT_ID",
   },
   identity: { enabled: true },
 });
@@ -38,7 +38,7 @@ export function App() {
 - Identity resolution calls the TRX Domains smart contract directly through the shared/lazy TronWeb path; there is no external domain SDK runtime dependency.
 - Address QR can use `createQrDataUrl(address)`.
 - Transaction toast markup is available through `createTransactionToastContainerHtml`.
-- WalletConnect real-wallet QA still needs TokenPocket/mobile testing with the project ID above.
+- WalletConnect requires an app-owned project ID. Use `VITE_WALLETCONNECT_PROJECT_ID` or another runtime configuration source in examples and apps.
 
 ## Ledger Support
 

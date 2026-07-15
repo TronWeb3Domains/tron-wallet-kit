@@ -115,17 +115,17 @@ export class TronLinkAdapter implements WalletAdapter {
     this.providerResolver = options.provider ?? getGlobalTronLinkProvider;
     this.checkTimeoutMs = options.checkTimeoutMs ?? 5000;
     this.checkIntervalMs = options.checkIntervalMs ?? 100;
-    this.startTip6963Discovery();
+    void this.startTip6963Discovery();
   }
 
   async isAvailable(): Promise<boolean> {
-    this.startTip6963Discovery();
+    void this.startTip6963Discovery();
     if (hasGlobalTronLinkInstalledMarker()) return true;
     return Boolean(await this.waitForProvider());
   }
 
   detect(): boolean {
-    this.startTip6963Discovery();
+    void this.startTip6963Discovery();
     return Boolean(this.discoveredTip6963Provider) || hasGlobalTronLinkDetectMarker() || Boolean(this.providerResolver());
   }
 
@@ -237,7 +237,7 @@ export class TronLinkAdapter implements WalletAdapter {
   }
 
   private async waitForProvider(): Promise<TronLinkProvider | undefined> {
-    this.startTip6963Discovery();
+    void this.startTip6963Discovery();
     const immediate = this.providerResolver() ?? this.discoveredTip6963Provider;
     if (immediate || this.checkTimeoutMs <= 0 || (typeof window === "undefined" && !this.hasCustomProviderResolver)) return immediate;
     return new Promise((resolve) => {

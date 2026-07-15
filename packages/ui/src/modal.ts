@@ -156,6 +156,7 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
   let allWalletsPrimed = false;
   let allWalletsLoading = false;
   let allWalletsTimer: number | undefined;
+  let availabilityRenderTimer: number | undefined;
 
   const getWalletOptions = () =>
     mergeWalletOptionsWithCatalog(
@@ -217,6 +218,19 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
     if (entering) focusPrimaryControl(root);
   };
 
+  const scheduleAvailabilityRender = () => {
+    if (availabilityRenderTimer !== undefined) return;
+    const timer = documentRef.defaultView?.setTimeout(() => {
+      availabilityRenderTimer = undefined;
+      render();
+    }, 120);
+    if (timer === undefined) {
+      render();
+      return;
+    }
+    availabilityRenderTimer = timer;
+  };
+
   const refreshAvailability = (refreshOptions: { resetTransient?: boolean } = {}) => {
     for (const adapter of options.manager.getWallets()) {
       if (adapter.metadata.availabilityMode === "on-demand") {
@@ -238,7 +252,7 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
       void settle.then((available) => {
         if (availability.get(id) === true && available === false) return;
         availability.set(id, available);
-        render();
+        scheduleAvailabilityRender();
       });
     }
     render();
@@ -576,6 +590,7 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
       if (qrCopyResetTimer !== undefined) documentRef.defaultView?.clearTimeout(qrCopyResetTimer);
       if (retryTimer !== undefined) documentRef.defaultView?.clearTimeout(retryTimer);
       if (allWalletsTimer !== undefined) documentRef.defaultView?.clearTimeout(allWalletsTimer);
+      if (availabilityRenderTimer !== undefined) documentRef.defaultView?.clearTimeout(availabilityRenderTimer);
       root?.remove();
       root = null;
     }

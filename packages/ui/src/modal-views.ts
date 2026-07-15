@@ -158,7 +158,7 @@ function createWalletRowHtml(wallet: WalletOptionViewModel, labels: ConnectModal
   const statusLabel = wallet.disabledReason ?? (disabled ? labels.unavailable : isConnecting ? labels.connecting : badge.label);
   const rowBadgeLabel = wallet.readyState === "loading" ? labels.checking : isConnecting ? labels.connecting : badge.label;
   const rowBadgeTone = wallet.readyState === "loading" ? "muted" : badge.tone;
-  return `<button class="twk-wallet-row" type="button" data-twk-wallet-id="${escapeAttribute(wallet.id)}" data-twk-adapter-id="${escapeAttribute(wallet.adapterId ?? wallet.id)}" data-twk-platforms="${escapeAttribute(getWalletPlatforms(wallet).join(" "))}" aria-label="${escapeAttribute(`${wallet.name}: ${statusLabel}`)}" ${disabled ? "disabled" : ""}>
+  return `<button class="twk-wallet-row" type="button" data-twk-wallet-id="${escapeAttribute(wallet.id)}" data-twk-adapter-id="${escapeAttribute(wallet.adapterId ?? wallet.id)}" data-twk-platforms="${escapeAttribute(getWalletPlatforms(wallet).join(" "))}" data-availability="${escapeAttribute(resolveWalletAvailabilityState(wallet))}" aria-label="${escapeAttribute(`${wallet.name}: ${statusLabel}`)}" ${disabled ? "disabled" : ""}>
   <span class="twk-wallet-main">
     ${createWalletIconHtml(wallet, wallet.readyState !== "loading")}
     ${createWalletNameHtml(wallet, wallet.readyState !== "loading")}
@@ -173,7 +173,7 @@ function createWalletCardHtml(wallet: WalletOptionViewModel, labels: ConnectModa
   const badge = wallet.badge ?? resolveWalletBadge(wallet, labels);
   const statusLabel = wallet.disabledReason ?? (disabled ? labels.unavailable : isConnecting ? labels.connecting : badge.label);
   const indicator = createWalletStatusIndicatorHtml(wallet, labels, isConnecting);
-  return `<button class="twk-wallet-card" type="button" data-twk-wallet-id="${escapeAttribute(wallet.id)}" data-twk-adapter-id="${escapeAttribute(wallet.adapterId ?? wallet.id)}" data-twk-platforms="${escapeAttribute(getWalletPlatforms(wallet).join(" "))}" aria-label="${escapeAttribute(`${wallet.name}: ${statusLabel}`)}" ${disabled ? "disabled" : ""} ${wallet.readyState === "loading" ? 'data-loading="true"' : ""}>
+  return `<button class="twk-wallet-card" type="button" data-twk-wallet-id="${escapeAttribute(wallet.id)}" data-twk-adapter-id="${escapeAttribute(wallet.adapterId ?? wallet.id)}" data-twk-platforms="${escapeAttribute(getWalletPlatforms(wallet).join(" "))}" data-availability="${escapeAttribute(resolveWalletAvailabilityState(wallet))}" aria-label="${escapeAttribute(`${wallet.name}: ${statusLabel}`)}" ${disabled ? "disabled" : ""} ${wallet.readyState === "loading" ? 'data-loading="true"' : ""}>
     <span class="twk-wallet-icon-wrap">${createWalletIconHtml(wallet, true)}${indicator}</span>
     ${createWalletNameHtml(wallet, true)}
   </button>`;
@@ -277,6 +277,13 @@ function createNetworkBadgeHtml(viewModel: ConnectModalViewModel): string {
 function isWalletDisabled(wallet: WalletOptionViewModel): boolean {
   if (isHardwareWallet(wallet)) return false;
   return wallet.readyState === "unsupported" || (wallet.readyState === "notFound" && !isQrWallet(wallet));
+}
+
+function resolveWalletAvailabilityState(wallet: WalletOptionViewModel): "available" | "checking" | "unavailable" | "qr" {
+  if (isQrWallet(wallet)) return "qr";
+  if (wallet.readyState === "loading") return "checking";
+  if (wallet.readyState === "notFound" || wallet.readyState === "unsupported" || wallet.available === false) return "unavailable";
+  return "available";
 }
 
 export function resolveActiveWallet(wallets: readonly WalletOptionViewModel[], walletId?: string): WalletOptionViewModel | undefined {

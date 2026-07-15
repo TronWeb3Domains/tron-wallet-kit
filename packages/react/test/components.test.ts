@@ -3,9 +3,34 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createWalletKit } from "@tron-wallet-kit/client";
 import type { WalletAdapter } from "@tron-wallet-kit/core";
-import { AccountPanel, ConnectModal, TronWalletProvider, WalletButton } from "../src/index";
+import { AccountPanel, ConnectModal, TronConnectButton, TronKitProvider, TronWalletProvider, WalletButton, darkTheme, getDefaultConfig, lightTheme } from "../src/index";
 
 describe("React wallet surfaces", () => {
+  it("creates a ConnectKit-style default config without requiring WalletConnect", () => {
+    const config = getDefaultConfig({ appName: "TRON dApp", network: "mainnet" });
+
+    expect(config.appName).toBe("TRON dApp");
+    expect(config.network).toBe("mainnet");
+    expect(config.walletConnectProjectId).toBeUndefined();
+    expect(config.ui?.accountPanel?.mode).toBe("modal");
+    expect(config.ui?.walletList?.featuredMode).toBe("installed-first");
+  });
+
+  it("renders the ConnectKit-style provider and button API", () => {
+    const kit = createWalletKit({ adapters: [createMockAdapter()] });
+    const html = renderToStaticMarkup(
+      createElement(
+        TronKitProvider,
+        { kit, config: getDefaultConfig({ appName: "TRON dApp" }), theme: lightTheme() },
+        createElement(TronConnectButton, { accountStatus: "full", chainStatus: "none" })
+      )
+    );
+
+    expect(html).toContain("twk-connect-button");
+    expect(html).toContain("Connect Wallet");
+    expect(darkTheme().themeName).toBe("dark");
+  });
+
   it("renders the connect modal from registered adapters", () => {
     const kit = createWalletKit({ adapters: [createMockAdapter()] });
     const html = renderToStaticMarkup(

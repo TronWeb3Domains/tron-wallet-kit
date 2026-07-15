@@ -566,6 +566,10 @@ describe("wallet kit surfaces", () => {
     const installedFirstWallets = getFeaturedWalletOptions(wallets, {
       featuredMode: "installed-first",
     });
+    const installedFirstDuringDetection = getFeaturedWalletOptions(
+      wallets.map((wallet) => wallet.id === "tokenpocket" ? { ...wallet, readyState: "loading" as const } : wallet),
+      { featuredMode: "installed-first" }
+    );
     const installedOnlyWithoutInstalled = getFeaturedWalletOptions(
       wallets.map((wallet) => ({ ...wallet, readyState: wallet.id === "walletconnect" ? "found" as const : "notFound" as const, available: wallet.id === "walletconnect" })),
       { featuredMode: "installed-only" }
@@ -577,11 +581,12 @@ describe("wallet kit surfaces", () => {
 
     expect(featuredWallets.map((wallet) => wallet.id)).toEqual(["tronlink", "tokenpocket", "okx", "bitget", "trust", "binance", "walletconnect", "metamask", "gate", "bybit", "guarda"]);
     expect(installedFirstWallets.map((wallet) => wallet.id)).toEqual(["tronlink", "walletconnect", "tokenpocket", "binance", "safepal"]);
+    expect(installedFirstDuringDetection.map((wallet) => wallet.id)).toEqual(["tronlink", "tokenpocket", "okx", "bitget", "walletconnect"]);
     expect(installedFirstWallets.findIndex((wallet) => wallet.id === "walletconnect")).toBeLessThan(installedFirstWallets.findIndex((wallet) => wallet.id === "tokenpocket"));
-    expect(installedFirstWallets.map((wallet) => wallet.id)).not.toEqual(expect.arrayContaining(["okx", "bitget"]));
+    expect(installedFirstDuringDetection.map((wallet) => wallet.id)).toEqual(expect.arrayContaining(["okx", "bitget"]));
     expect(installedFirstWallets.some((wallet) => wallet.readyState === "notFound" && !wallet.capabilities?.includes("qr") && wallet.transport !== "hardware")).toBe(false);
     expect(installedOnlyWithoutInstalled.map((wallet) => wallet.id)).toEqual(["walletconnect"]);
-    expect(installedFirstWithoutInstalled[0]?.id).toBe("walletconnect");
+    expect(installedFirstWithoutInstalled.map((wallet) => wallet.id)).toEqual(["walletconnect", "tokenpocket", "binance", "safepal", "trust"]);
 
     const manyInstalled = getFeaturedWalletOptions(
       mergeWalletOptionsWithCatalog(
@@ -619,6 +624,9 @@ describe("wallet kit surfaces", () => {
 
     const styles = createWalletKitStyles("[data-twk-root]");
     expect(styles).toContain(".twk-wallet-status");
+    expect(styles).toContain('data-availability="unavailable"');
+    expect(styles).toContain("filter: grayscale(.18)");
+    expect(styles).toContain("@keyframes twk-wallet-item-settle");
     expect(styles).toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
     expect(styles).toContain('.twk-wallet-grid[data-scope="featured"]');
     expect(styles).toContain("max-height: min(360px, 52vh)");

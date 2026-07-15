@@ -6,8 +6,8 @@
 import { createWalletKit } from "@tron-wallet-kit/client";
 
 const kit = createWalletKit({
-  walletConnectProjectId: "a4109c95d50e5c136cdafaf9fc44c105",
-  walletConnectNetwork: "nile",
+  walletConnectProjectId: "YOUR_WALLETCONNECT_PROJECT_ID",
+  walletConnectNetwork: "mainnet",
   ui: { themeName: "tron", toast: true },
 });
 

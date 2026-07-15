@@ -1,6 +1,6 @@
-import { createContext, createElement, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
+import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 import { createWalletKit, type TronIdentity, type WalletClientConfig, type WalletKit } from "@tron-wallet-kit/client";
-import type { WalletAccount, WalletCapabilities, WalletSession } from "@tron-wallet-kit/core";
+import type { SignMessageRequest, SignMessageResult, WalletAccount, WalletCapabilities, WalletNetworkId, WalletSession } from "@tron-wallet-kit/core";
 import { copyToClipboard, createAccountPanelHtml, createAddressQrPanelHtml, createConnectModalHtml, createStyledQrDataUrl, createThemeStyleProperties, createTransactionHistoryPanelHtml, createWalletButtonHtml, ensureWalletKitStyles, mapAdapterToWalletOption, mergeWalletOptionsWithCatalog, QR_FALLBACK_DARK, resolveSessionWalletMetadata, shortenAddress, type AccountPanelViewModel, type ConnectModalViewModel, type ThemeConfig, type WalletButtonViewModel } from "@tron-wallet-kit/ui";
 import type { WalletAvailability } from "@tron-wallet-kit/ui";
 
@@ -10,6 +10,81 @@ export type TronWalletProviderProps = WalletClientConfig & {
   kit?: WalletKit;
   children?: ReactNode;
   clearStoredSessionOnAutoReconnectDisabled?: boolean;
+};
+
+export type TronKitProviderProps = {
+  config?: WalletClientConfig;
+  kit?: WalletKit;
+  theme?: ThemeConfig;
+  children?: ReactNode;
+  clearStoredSessionOnAutoReconnectDisabled?: boolean;
+};
+
+export type ThemeFactoryOptions = Partial<ThemeConfig["tokens"]> & {
+  accentColor?: string;
+  accentColorForeground?: string;
+  borderRadius?: "none" | "small" | "medium" | "large";
+  fontStack?: "system" | "rounded";
+  tokens?: ThemeConfig["tokens"];
+};
+
+export type DefaultTronKitConfig = Omit<WalletClientConfig, "network" | "walletConnectNetwork" | "walletConnectProjectId"> & {
+  appName: string;
+  network?: WalletNetworkId | WalletClientConfig["network"];
+  walletConnectProjectId?: string;
+  walletConnectNetwork?: WalletClientConfig["walletConnectNetwork"];
+};
+
+export type TronConnectButtonProps = Omit<WalletButtonProps, "connectedLabel"> & {
+  accountStatus?: "full" | "avatar" | "address";
+  chainStatus?: "full" | "icon" | "none";
+};
+
+export type TronAccountState = {
+  address?: string;
+  account: WalletAccount | null;
+  session: WalletSession | null;
+  status: WalletStatus;
+  isConnected: boolean;
+  isConnecting: boolean;
+  displayName?: string;
+};
+
+export type TronConnectState = {
+  wallets: ReturnType<WalletKit["manager"]["getWallets"]>;
+  connect(walletId?: string): Promise<WalletSession | void>;
+  openConnectModal(): void;
+  closeConnectModal(): void;
+  status: WalletStatus;
+};
+
+export type TronBalanceState = {
+  balance: WalletSession["balance"] | undefined;
+  data: WalletSession["balance"] | undefined;
+  isLoading: boolean;
+  refresh(): Promise<WalletSession["balance"] | undefined>;
+};
+
+export type SignMessageState = {
+  signMessage(request: string | SignMessageRequest): Promise<SignMessageResult>;
+  isPending: boolean;
+};
+
+export type TrxNameState = {
+  name?: string;
+  identity?: TronIdentity;
+  isLoading: boolean;
+  refresh(): Promise<TronIdentity | undefined>;
+};
+
+export type AccountModalState = {
+  openAccountModal?: () => void;
+  closeAccountModal?: () => void;
+  accountModalOpen: boolean;
+};
+
+type InternalAccountModalState = AccountModalState & {
+  setAccountModalOpen?: (open: boolean) => void;
 };
 
 export type ConnectModalProps = Omit<ConnectModalViewModel, "wallets"> & {
@@ -26,6 +101,8 @@ export type WalletButtonProps = Omit<WalletButtonViewModel, "status" | "address"
   theme?: ThemeConfig;
   onClick?: () => void;
   accountPanelMode?: "dropdown" | "modal";
+  accountPanelOpen?: boolean;
+  onAccountPanelOpenChange?: (open: boolean) => void;
   showRecentTransactions?: boolean;
   maxVisibleTransactions?: number;
   explorerAccountUrl?: string;
@@ -48,6 +125,151 @@ type WalletButtonAccountPanelModel = {
 };
 
 const WalletKitContext = createContext<WalletKit | null>(null);
+const AccountModalContext = createContext<InternalAccountModalState>({ accountModalOpen: false });
+
+export function getDefaultConfig(config: DefaultTronKitConfig): WalletClientConfig {
+  const walletConnectProjectId = config.walletConnectProjectId?.trim();
+  const network = config.network ?? "mainnet";
+  const {
+    walletConnectProjectId: _walletConnectProjectId,
+    walletConnectNetwork: _walletConnectNetwork,
+    network: _network,
+    ...baseConfig
+  } = config;
+  const resolved: WalletClientConfig = {
+    ...baseConfig,
+    appName: config.appName,
+    network,
+    useBrowserStorage: config.useBrowserStorage ?? true,
+    autoReconnect: config.autoReconnect ?? false,
+    ui: {
+      toast: true,
+      ...config.ui,
+      accountPanel: {
+        mode: "modal",
+        showRecentTransactions: true,
+        ...config.ui?.accountPanel
+      },
+      walletList: {
+        featuredMode: "installed-first",
+        sortAvailableFirst: true,
+        ...config.ui?.walletList
+      }
+    }
+  };
+  if (walletConnectProjectId) resolved.walletConnectProjectId = walletConnectProjectId;
+  if (config.walletConnectNetwork) {
+    resolved.walletConnectNetwork = config.walletConnectNetwork;
+  } else if (typeof network === "string") {
+    resolved.walletConnectNetwork = network;
+  }
+  return resolved;
+}
+
+export function lightTheme(options?: ThemeFactoryOptions): ThemeConfig {
+  return createFactoryTheme("light", options);
+}
+
+export function darkTheme(options?: ThemeFactoryOptions): ThemeConfig {
+  return createFactoryTheme("dark", options);
+}
+
+function createFactoryTheme(themeName: "light" | "dark", options: ThemeFactoryOptions = {}): ThemeConfig {
+  const {
+    accentColor,
+    accentColorForeground,
+    borderRadius,
+    fontStack,
+    tokens,
+    ...tokenOverrides
+  } = options;
+  const resolvedTokens: ThemeConfig["tokens"] = {
+    ...tokenOverrides,
+    ...tokens
+  };
+  if (accentColor) {
+    resolvedTokens.accent = accentColor;
+    resolvedTokens.focusRing = accentColor;
+  }
+  if (accentColorForeground) resolvedTokens.accentText = accentColorForeground;
+  const radius = resolveFactoryRadius(borderRadius);
+  if (radius) {
+    resolvedTokens.radius = radius.modal;
+    resolvedTokens.walletRadius = radius.wallet;
+    resolvedTokens.walletIconRadius = radius.icon;
+  }
+  const fontFamily = resolveFactoryFont(fontStack);
+  if (fontFamily) resolvedTokens.fontFamily = fontFamily;
+  return Object.keys(resolvedTokens).length > 0 ? { themeName, tokens: resolvedTokens } : { themeName };
+}
+
+function resolveFactoryRadius(borderRadius: ThemeFactoryOptions["borderRadius"]): { modal: string; wallet: string; icon: string } | undefined {
+  switch (borderRadius) {
+    case "none":
+      return { modal: "0px", wallet: "0px", icon: "0px" };
+    case "small":
+      return { modal: "8px", wallet: "6px", icon: "5px" };
+    case "medium":
+      return { modal: "16px", wallet: "12px", icon: "10px" };
+    case "large":
+      return { modal: "24px", wallet: "18px", icon: "14px" };
+    default:
+      return undefined;
+  }
+}
+
+function resolveFactoryFont(fontStack: ThemeFactoryOptions["fontStack"]): string | undefined {
+  if (fontStack === "rounded") {
+    return '"Nunito Sans", Inter, ui-rounded, "SF Pro Rounded", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  }
+  if (fontStack === "system") {
+    return 'Inter, "Inter var", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  }
+  return undefined;
+}
+
+export function TronKitProvider(props: TronKitProviderProps) {
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const config = useMemo<WalletClientConfig>(() => {
+    const base = props.config ?? {};
+    if (!props.theme) return base;
+    const themedUi = {
+      ...base.ui,
+      ...props.theme
+    };
+    if (props.theme.tokens) themedUi.customTheme = props.theme.tokens;
+    return {
+      ...base,
+      ui: themedUi
+    };
+  }, [props.config, props.theme]);
+
+  const accountModal = useMemo<InternalAccountModalState>(
+    () => ({
+      accountModalOpen,
+      setAccountModalOpen,
+      openAccountModal: () => setAccountModalOpen(true),
+      closeAccountModal: () => setAccountModalOpen(false)
+    }),
+    [accountModalOpen]
+  );
+
+  return createElement(
+    AccountModalContext.Provider,
+    { value: accountModal },
+    createElement(
+      TronWalletProvider,
+      {
+        ...config,
+        ...(props.kit ? { kit: props.kit } : {}),
+        ...(props.clearStoredSessionOnAutoReconnectDisabled !== undefined
+          ? { clearStoredSessionOnAutoReconnectDisabled: props.clearStoredSessionOnAutoReconnectDisabled }
+          : {})
+      },
+      props.children
+    )
+  );
+}
 
 export function TronWalletProvider(props: TronWalletProviderProps) {
   const kitRef = useRef<WalletKit | null>(null);
@@ -83,6 +305,139 @@ export function useWalletKit(): WalletKit {
   return kit;
 }
 
+export const useTronKit = useWalletKit;
+
+export function useTronAccount(): TronAccountState {
+  const session = useWalletSession();
+  const status = useWalletStatus();
+  const displayName = session?.account.domain ?? session?.account.displayName ?? (session?.account.address ? shortenAddress(session.account.address) : undefined);
+  return {
+    ...(session?.account.address ? { address: session.account.address } : {}),
+    account: session?.account ?? null,
+    session,
+    status,
+    isConnected: status === "connected",
+    isConnecting: status === "connecting",
+    ...(displayName ? { displayName } : {})
+  };
+}
+
+export function useTronConnect(): TronConnectState {
+  const kit = useWalletKit();
+  const status = useWalletStatus();
+  const wallets = useManagerSnapshot(kit, () => kit.manager.getWallets());
+  const openConnectModal = useCallback(() => kit.openModal(), [kit]);
+  const closeConnectModal = useCallback(() => kit.closeModal(), [kit]);
+  const connect = useCallback(
+    async (walletId?: string) => {
+      if (!walletId) {
+        kit.openModal();
+        return undefined;
+      }
+      return kit.manager.connect(walletId);
+    },
+    [kit]
+  );
+  return { wallets, connect, openConnectModal, closeConnectModal, status };
+}
+
+export function useTronDisconnect() {
+  const kit = useWalletKit();
+  const disconnect = useCallback(() => kit.disconnect(), [kit]);
+  return { disconnect };
+}
+
+export function useConnectModal() {
+  const kit = useWalletKit();
+  return {
+    openConnectModal: useCallback(() => kit.openModal(), [kit]),
+    closeConnectModal: useCallback(() => kit.closeModal(), [kit])
+  };
+}
+
+export function useAccountModal(): AccountModalState {
+  return useContext(AccountModalContext);
+}
+
+export function useTronBalance(): TronBalanceState {
+  const kit = useWalletKit();
+  const session = useWalletSession();
+  const [balance, setBalance] = useState(session?.balance);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    setBalance(session?.balance);
+  }, [session?.balance, session?.account.address, session?.network.id]);
+
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const next = await kit.refreshBalance();
+      setBalance(next);
+      return next;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [kit]);
+
+  useEffect(() => {
+    if (!session?.account.address || session.balance) return;
+    void refresh().catch(() => setIsLoading(false));
+  }, [refresh, session?.account.address, session?.balance]);
+
+  return { balance, data: balance, isLoading, refresh };
+}
+
+export function useTrxName(): TrxNameState {
+  const kit = useWalletKit();
+  const session = useWalletSession();
+  const [identity, setIdentity] = useState<TronIdentity | undefined>();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const next = await kit.refreshIdentity();
+      setIdentity(next);
+      return next;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [kit]);
+
+  useEffect(() => {
+    setIdentity(session?.account.domain || session?.account.displayName || session?.account.avatar
+      ? {
+          ...(session.account.domain ? { domain: session.account.domain } : {}),
+          ...(session.account.displayName ? { displayName: session.account.displayName } : {}),
+          ...(session.account.avatar ? { avatar: session.account.avatar } : {})
+        }
+      : undefined);
+    if (!session?.account.address || session.account.domain || session.account.displayName) return;
+    void refresh().catch(() => setIsLoading(false));
+  }, [refresh, session?.account.address, session?.account.domain, session?.account.displayName, session?.account.avatar, session?.network.id]);
+
+  const name = identity?.domain ?? identity?.displayName ?? session?.account.domain ?? session?.account.displayName;
+  return { ...(name ? { name } : {}), ...(identity ? { identity } : {}), isLoading, refresh };
+}
+
+export function useSignMessage(): SignMessageState {
+  const kit = useWalletKit();
+  const [isPending, setIsPending] = useState(false);
+  const signMessage = useCallback(
+    async (request: string | SignMessageRequest) => {
+      setIsPending(true);
+      try {
+        return await kit.signMessage(request);
+      } finally {
+        setIsPending(false);
+      }
+    },
+    [kit]
+  );
+  return { signMessage, isPending };
+}
+
 export function useWalletSession(): WalletSession | null {
   const kit = useWalletKit();
   return useManagerSnapshot(kit, () => kit.manager.getSession());
@@ -107,11 +462,23 @@ export function useWalletCapabilities(): WalletCapabilities | null {
 
 export function WalletButton(props: WalletButtonProps) {
   const kit = useWalletKit();
+  const accountModal = useContext(AccountModalContext);
   useWalletKitStyles();
   const session = useWalletSession();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
-  const [accountOpen, setAccountOpen] = useState(false);
+  const [uncontrolledAccountOpen, setUncontrolledAccountOpen] = useState(false);
+  const controlledAccountOpen = props.accountPanelOpen ?? (accountModal.setAccountModalOpen ? accountModal.accountModalOpen : undefined);
+  const accountOpen = controlledAccountOpen ?? uncontrolledAccountOpen;
+  const setAccountOpen = useCallback(
+    (next: boolean | ((open: boolean) => boolean)) => {
+      const resolved = typeof next === "function" ? next(accountOpen) : next;
+      if (props.accountPanelOpen === undefined && !accountModal.setAccountModalOpen) setUncontrolledAccountOpen(resolved);
+      if (props.accountPanelOpen === undefined) accountModal.setAccountModalOpen?.(resolved);
+      props.onAccountPanelOpenChange?.(resolved);
+    },
+    [accountModal, accountOpen, props.accountPanelOpen, props.onAccountPanelOpenChange]
+  );
   const [accountPanelView, setAccountPanelView] = useState<"account" | "address-qr" | "tx-history">("account");
   const [identity, setIdentity] = useState<TronIdentity | undefined>();
   const [balanceTrx, setBalanceTrx] = useState<string | undefined>();
@@ -353,6 +720,27 @@ export function WalletButton(props: WalletButtonProps) {
     onClick: handleClick,
     dangerouslySetInnerHTML: { __html: `${html}${panelHtml}` }
   });
+}
+
+export function TronConnectButton(props: TronConnectButtonProps) {
+  const accountModal = useContext(AccountModalContext);
+  const accountStatus = props.accountStatus ?? "full";
+  const chainStatus = props.chainStatus ?? "none";
+  const { accountStatus: _accountStatus, chainStatus: _chainStatus, ...walletButtonProps } = props;
+  const buttonProps: WalletButtonProps = {
+    ...walletButtonProps,
+    accountPanelMode: props.accountPanelMode ?? "modal",
+    onAccountPanelOpenChange: (open) => {
+      accountModal.setAccountModalOpen?.(open);
+      props.onAccountPanelOpenChange?.(open);
+    },
+    showAdapterIcon: props.showAdapterIcon ?? accountStatus !== "address",
+    showBalance: props.showBalance ?? accountStatus === "full",
+    showChevron: props.showChevron ?? chainStatus !== "none"
+  };
+  const controlledOpen = props.accountPanelOpen ?? (accountModal.setAccountModalOpen ? accountModal.accountModalOpen : undefined);
+  if (controlledOpen !== undefined) buttonProps.accountPanelOpen = controlledOpen;
+  return createElement(WalletButton, buttonProps);
 }
 
 function createWalletButtonAccountPanelHtml(input: WalletButtonAccountPanelModel): string {

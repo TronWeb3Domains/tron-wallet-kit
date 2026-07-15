@@ -73,7 +73,7 @@
 
     <script src="/vendor/tron-wallet-kit.iife.min.js"></script>
     <script>
-      const walletConnectProjectId = "a4109c95d50e5c136cdafaf9fc44c105";
+      const walletConnectProjectId = window.WALLETCONNECT_PROJECT_ID || "";
       const walletRoot = document.getElementById("wallet-root");
       const stateLog = document.getElementById("state-log");
       const actionLog = document.getElementById("action-log");
@@ -87,7 +87,7 @@
         root: walletRoot,
         theme: { themeName },
         walletConnectProjectId,
-        walletConnectNetwork: "nile",
+        walletConnectNetwork: "mainnet",
         onWalletConnectUri(uri) {
           walletConnectUri.value = uri;
           renderQr(walletConnectQr, uri, "WalletConnect QR");

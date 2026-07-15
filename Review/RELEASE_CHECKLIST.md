@@ -11,20 +11,20 @@
 
 ## Before First Public Release
 
-- [ ] Confirm package manager and lockfile.
-- [ ] Confirm package names.
-- [ ] Confirm workspace layout.
-- [ ] Confirm build output formats.
-- [ ] Confirm browser/CDN IIFE global name.
-- [ ] Confirm React integration API.
-- [ ] Confirm Next.js integration API.
-- [ ] Confirm adapter contracts.
-- [ ] Confirm theme token contract.
+- [x] Confirm package manager and lockfile.
+- [x] Confirm package names.
+- [x] Confirm workspace layout.
+- [x] Confirm build output formats.
+- [x] Confirm browser/CDN IIFE global name.
+- [x] Confirm React integration API.
+- [x] Confirm Next.js integration API.
+- [x] Confirm adapter contracts.
+- [x] Confirm theme token contract.
 - [ ] Confirm wallet icon brand/source licensing for generated SVG data URIs.
-- [ ] Confirm docs for HTML legacy/CDN usage.
-- [ ] Confirm docs for React usage.
-- [ ] Decide all-in-one browser IIFE vs split adapter browser bundles.
-- [ ] Confirm changelog/release process.
+- [x] Confirm docs for HTML legacy/CDN usage.
+- [x] Confirm docs for React usage.
+- [x] Decide all-in-one browser IIFE vs split adapter browser bundles.
+- [x] Confirm changelog/release process.
 
 ## Quality Gates
 
@@ -50,6 +50,11 @@
 | UI QR/toast foundation | `pnpm --filter @tron-wallet-kit/ui test` | Unit-tested on 2026-07-03 |
 | Website docs build | `pnpm --filter @tron-wallet-kit/website build` | Passed on 2026-07-03 |
 | Full workspace build after website/UI updates | `pnpm build` | Passed on 2026-07-03 with expected WalletConnect/IIFE/chunk and HTML global-script warnings |
+| Release readiness full local gate | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` | Passed on 2026-07-14 |
+| Release readiness publish dry-run | `pnpm publish --dry-run --no-git-checks --tag beta` | Passed on 2026-07-14 for all 10 public packages |
+| Browser IIFE release size | `Get-ChildItem packages/browser/dist/tron-wallet-kit.iife*.js` | `tron-wallet-kit.iife.js` 3,459,117 bytes; `tron-wallet-kit.iife.min.js` 1,737,483 bytes |
+| Public package tarball size check | `pnpm pack --pack-destination $env:TEMP/twk-release-size-check` | Passed on 2026-07-15; browser tarball 4,057,415 bytes, client 193,361 bytes, ui 175,653 bytes |
+| Public package manifest audit | Node manifest check | Passed on 2026-07-15: version, exports, types, files, sideEffects, publishConfig, README present for all 10 public packages |
 | Examples dev server smoke after QR/toast updates | `Invoke-WebRequest` against `http://127.0.0.1:5174/`, `/react-basic/`, `/html-cdn/`, `/vendor/tron-wallet-kit.iife.min.js` | Passed on 2026-07-03 |
 | Website dev server smoke | `Invoke-WebRequest` against `http://127.0.0.1:5176/`, `/docs/introduction`, `/docs/configuration/theming` | Passed on 2026-07-03 |
 | TRX Domains identity resolver | `pnpm --filter @tron-wallet-kit/client test` | Mock-tested on 2026-07-03 |
@@ -78,5 +83,11 @@
 
 ## Release Notes
 
-- No release has been prepared yet.
-- Initial scaffold is not release-ready; all requested package shells exist, but adapter runtime behavior and UI components are not complete.
+- `0.1.0-beta.0` release preparation started on 2026-07-14.
+- Root `LICENSE`, `README.md`, `CHANGELOG.md`, package READMEs, CI workflow, beta versions, and package publish metadata have been added.
+- Full local gates passed on 2026-07-14: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+- Package publish dry-runs passed on 2026-07-14 for all public packages with `pnpm publish --dry-run --no-git-checks --tag beta`.
+- Public package manifest audit passed on 2026-07-15 for all 10 public packages: version, exports, types, files, sideEffects, publishConfig, and README are present.
+- Public package tarball size check passed on 2026-07-15 for all 10 public packages.
+- Browser IIFE release size recorded on 2026-07-15: unminified 3,459,117 bytes; minified 1,737,483 bytes.
+- Public stable release is still not ready; publish first with npm tag `beta` after live WalletConnect QA.
