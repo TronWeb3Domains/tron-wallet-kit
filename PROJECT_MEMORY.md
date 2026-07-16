@@ -5209,3 +5209,29 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - Next.js auth.
 - Remaining:
   - optional connect-modal sign-in step when an auth adapter is present.
+
+## 2026-07-16 Transaction Preview Confirmation UI
+
+- Continued `Review/XRPL_PARITY_UPGRADE_PLAN.md` P1.1.
+- Extended transaction preview runtime:
+  - added `TransactionPreviewConfirmer`;
+  - `transactionPreview.confirm` can return `false` to cancel before wallet signing;
+  - existing resolver support remains compatible.
+- Added kit-owned UI:
+  - new `packages/ui/src/transaction-preview.ts`;
+  - new `ui.transactionPreview` config with `enabled`, labels, and optional raw display;
+  - `createWalletKit` wires the built-in dialog in browser contexts.
+- Updated docs:
+  - `packages/client/README.md`;
+  - `website/docs/api/client.md`;
+  - `website/docs/transactions/overview.md`;
+  - `Review/XRPL_PARITY_UPGRADE_PLAN.md`.
+- Verification so far:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed;
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed;
+  - targeted client preview tests passed.
+- Note:
+  - full `@tron-wallet-kit/client` test run hit the existing Gate/OneKey timeout test, unrelated to the preview confirmation change.
+- Remaining:
+  - visual QA of the confirmation dialog in `react-basic`/website flows;
+  - decide whether to add a dedicated React example action for preview confirmation.

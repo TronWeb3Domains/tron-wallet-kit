@@ -102,18 +102,32 @@ See [Transactions](/docs/transactions/overview) for the full list and error hand
 ## Transaction preview
 
 `transactionPreview` runs before `signAndSendTransaction`, `transferTrx`, `transferTrc20`, and
-`triggerSmartContract` ask the wallet to sign. The kit creates a default human-readable preview and
-passes it to your resolver.
+`triggerSmartContract` ask the wallet to sign. The kit creates a default human-readable preview,
+shows the built-in confirmation UI in browser builds, and passes the preview through your resolver
+or confirmer when provided.
 
 ```ts
 const kit = createWalletKit({
   metadata: { name: "My dApp" },
-  transactionPreview: async (request, context) => {
-    console.log(context.defaultPreview.summary);
-    // Open your own confirmation UI here, or throw to cancel signing.
+  transactionPreview: {
+    resolver: async (request, context) => {
+      console.log(context.defaultPreview.summary);
+    },
+    confirm: async (preview) => {
+      return preview.summary.includes("TRX");
+    }
+  },
+  ui: {
+    transactionPreview: {
+      enabled: true,
+      confirmLabel: "Sign",
+      cancelLabel: "Cancel"
+    }
   }
 });
 ```
+
+Return `false` from `confirm`, or throw from `resolver`, to cancel before the wallet prompt opens.
 
 ## Building transactions manually
 

@@ -53,15 +53,21 @@ React dapps should normally consume these through `@tron-wallet-kit/react`.
 ## Transaction Preview
 
 Use `transactionPreview` to inspect or confirm a human-readable summary before the kit asks the
-wallet to sign. The resolver receives the normalized sign request plus a TRON-native default preview
-for common helpers such as `transferTrx`, `transferTrc20`, and `triggerSmartContract`.
+wallet to sign. `createWalletKit` shows the built-in confirmation dialog by default in browser
+contexts; pass `ui.transactionPreview.enabled: false` to disable it.
 
 ```ts
 const kit = createWalletKit({
   metadata: { name: "My TRON dApp" },
-  transactionPreview: async (request, context) => {
-    console.log(context.defaultPreview.summary);
-    // Return a custom preview, open your own confirmation UI, or throw to cancel.
+  transactionPreview: {
+    resolver: async (request, context) => {
+      console.log(context.defaultPreview.summary);
+      // Return a custom preview or leave the default TRON-native summary in place.
+    },
+    confirm: async (preview) => {
+      // Return false to cancel before the wallet prompt opens.
+      return window.confirm(preview.summary);
+    }
   }
 });
 ```

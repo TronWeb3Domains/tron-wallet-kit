@@ -272,6 +272,21 @@ describe("client entrypoints", () => {
     ]);
   });
 
+  it("cancels transaction signing when preview confirmation is rejected", async () => {
+    const adapter = createMockAdapter();
+    const signTransaction = vi.fn(adapter.signTransaction);
+    const kit = createWalletKit({
+      adapters: [{ ...adapter, signTransaction }],
+      transactionPreview: {
+        confirm: async () => false
+      }
+    });
+
+    await kit.manager.connect("mock");
+    await expect(kit.signAndSendTransaction({ txID: "cancelled-hash" })).rejects.toMatchObject({ code: "USER_REJECTED" });
+    expect(signTransaction).not.toHaveBeenCalled();
+  });
+
   it("builds, signs, and broadcasts triggerSmartContract transactions", async () => {
     const calls = {
       triggerSmartContract: [] as unknown[][]

@@ -1,9 +1,9 @@
 import { type TransactionPayload, type TronMethodHint } from "@tron-wallet-kit/core";
-import { createWalletButton, createWalletModal, createWalletToast, resolveWalletUiConfig } from "@tron-wallet-kit/ui";
+import { createTransactionPreviewDialog, createWalletButton, createWalletModal, createWalletToast, resolveWalletUiConfig } from "@tron-wallet-kit/ui";
 import { createDefaultTrxBalanceResolver, normalizeBalance } from "./balance";
 import { createWalletClient } from "./client";
 import { resolveIdentityResolver } from "./identity";
-import { createTransactionRuntime } from "./transactions";
+import { createTransactionRuntime, type TransactionPreviewConfig, type TransactionPreviewConfirmer } from "./transactions";
 import { configureSharedTronWeb } from "./tronweb";
 import type { TronIdentity, WalletClientConfig, WalletKit } from "./types";
 import { toThemeConfig } from "./utils";
@@ -18,6 +18,15 @@ export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
   const uiConfig = resolveWalletUiConfig(ui);
   const modal = createWalletModal({ manager, ui });
   const buttonTheme = toThemeConfig(config.ui);
+  const transactionPreviewDialog =
+    typeof document !== "undefined" && uiConfig.transactionPreview.enabled
+      ? createTransactionPreviewDialog({
+          ...(buttonTheme ?? {}),
+          confirmLabel: uiConfig.transactionPreview.confirmLabel,
+          cancelLabel: uiConfig.transactionPreview.cancelLabel,
+          showRaw: uiConfig.transactionPreview.showRaw
+        })
+      : null;
   const identityResolver = resolveIdentityResolver(config.identity, manager);
   const identityCache = new Map<string, { identity: TronIdentity | undefined; expiresAt: number }>();
   const identityInFlight = new Map<string, Promise<TronIdentity | undefined>>();
@@ -132,10 +141,15 @@ export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
   if (typeof document !== "undefined") {
     modal.mount();
     toast?.mount();
+    transactionPreviewDialog?.mount();
     if (config.connectButton?.target) button?.mount(config.connectButton.target);
   }
 
-  const transactionRuntime = createTransactionRuntime(manager, config.transactionPreview ? { transactionPreview: config.transactionPreview } : {});
+  const resolvedTransactionPreview = resolveKitTransactionPreview(config.transactionPreview, transactionPreviewDialog?.confirm);
+  const transactionRuntime = createTransactionRuntime(
+    manager,
+    resolvedTransactionPreview ? { transactionPreview: resolvedTransactionPreview } : {}
+  );
   const submit = (methodHint: TronMethodHint, transaction: TransactionPayload, description?: string) =>
     transactionRuntime.signAndSendTransaction({ methodHint, transaction }, methodHint, description);
 
@@ -150,10 +164,12 @@ export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
       modal.setTheme(theme);
       button?.setTheme(theme);
       toast?.setTheme(theme);
+      transactionPreviewDialog?.setTheme(theme);
     },
     destroy: () => {
       button?.destroy();
       toast?.destroy();
+      transactionPreviewDialog?.destroy();
       modal.destroy();
       manager.destroy();
       identityCache.clear();
@@ -199,6 +215,19 @@ export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
     delegateResource: (request) => submit("delegateResource", { to: request.to, amountSun: String(request.amountSun), resource: request.resource }, request.description),
     undelegateResource: (request) => submit("undelegateResource", { to: request.to, amountSun: String(request.amountSun), resource: request.resource }, request.description),
     voteWitness: (request) => submit("voteWitness", { votes: request.votes }, request.description)
+  };
+}
+
+function resolveKitTransactionPreview(
+  config: TransactionPreviewConfig | undefined,
+  confirm: TransactionPreviewConfirmer | undefined
+): TransactionPreviewConfig | undefined {
+  if (!config) return confirm ? { confirm } : undefined;
+  if (typeof config === "function") return confirm ? { resolver: config, confirm } : config;
+  if (config.enabled === false) return config;
+  return {
+    ...config,
+    ...(confirm && !config.confirm ? { confirm } : {})
   };
 }
 

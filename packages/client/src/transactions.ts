@@ -65,11 +65,17 @@ export type TransactionPreviewResolver = (
   context: TransactionPreviewResolverContext
 ) => WalletTransactionPreview | void | Promise<WalletTransactionPreview | void>;
 
+export type TransactionPreviewConfirmer = (
+  preview: WalletTransactionPreview,
+  context: TransactionPreviewResolverContext
+) => boolean | void | Promise<boolean | void>;
+
 export type TransactionPreviewConfig =
   | TransactionPreviewResolver
   | {
       enabled?: boolean;
       resolver?: TransactionPreviewResolver;
+      confirm?: TransactionPreviewConfirmer;
     };
 
 export type TransactionRuntimeOptions = {
@@ -80,6 +86,7 @@ const DEFAULT_CONTRACT_FEE_LIMIT_SUN = 100_000_000;
 
 export function createTransactionRuntime(manager: WalletManager, options: TransactionRuntimeOptions = {}): TransactionRuntime {
   const previewResolver = resolvePreviewResolver(options.transactionPreview);
+  const previewConfirmer = resolvePreviewConfirmer(options.transactionPreview);
   const getTronWebForSession = async () => {
     const session = manager.getSession();
     return getSharedTronWeb(manager, session?.network, getEffectiveWalletId(manager));
@@ -158,7 +165,7 @@ export function createTransactionRuntime(manager: WalletManager, options: Transa
     description?: string
   ): Promise<TxResult> => {
     const request = normalizeSignRequest(transactionOrRequest, methodHint);
-    await resolveTransactionPreview(request, description, previewResolver);
+    await resolveTransactionPreview(request, description, previewResolver, previewConfirmer);
     const signed = await manager.signTransaction(request);
     const transaction = signed.signedTransaction ?? signed.transaction;
     if (!transaction) throw new WalletKitError("INVALID_TRANSACTION_SIGNATURE", "Wallet did not return a signed transaction.");
@@ -257,19 +264,25 @@ export function createDefaultTransactionPreview(request: SignTransactionRequest,
 async function resolveTransactionPreview(
   request: SignTransactionRequest,
   description: string | undefined,
-  resolver: TransactionPreviewResolver | undefined
+  resolver: TransactionPreviewResolver | undefined,
+  confirm: TransactionPreviewConfirmer | undefined
 ): Promise<WalletTransactionPreview> {
   const transaction = request.transaction;
   const defaultPreview = createDefaultTransactionPreview(request, description);
-  if (!resolver) return defaultPreview;
-  const resolved = await resolver(request, {
+  const context: TransactionPreviewResolverContext = {
     request,
     transaction,
     ...(request.methodHint ? { methodHint: request.methodHint } : {}),
     ...(description ? { description } : {}),
     defaultPreview
-  });
-  return resolved ?? defaultPreview;
+  };
+  const resolved = resolver ? await resolver(request, context) : undefined;
+  const preview = resolved ?? defaultPreview;
+  const accepted = confirm ? await confirm(preview, context) : undefined;
+  if (accepted === false) {
+    throw new WalletKitError("USER_REJECTED", "The transaction was cancelled before signing.");
+  }
+  return preview;
 }
 
 function resolvePreviewResolver(config: TransactionPreviewConfig | undefined): TransactionPreviewResolver | undefined {
@@ -277,6 +290,11 @@ function resolvePreviewResolver(config: TransactionPreviewConfig | undefined): T
   if (typeof config === "function") return config;
   if (config.enabled === false) return undefined;
   return config.resolver;
+}
+
+function resolvePreviewConfirmer(config: TransactionPreviewConfig | undefined): TransactionPreviewConfirmer | undefined {
+  if (!config || typeof config === "function" || config.enabled === false) return undefined;
+  return config.confirm;
 }
 
 function normalizeTriggerRequest(request: TriggerSmartContractRequest, fallbackIssuerAddress: string | undefined): Required<Pick<TriggerSmartContractRequest, "contractAddress" | "functionSelector">> & {

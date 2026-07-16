@@ -66,8 +66,11 @@ before GasFree send so both share one preview surface.
 - Runtime hook completed in `packages/client/src/transactions.ts`.
 - Public config added as `transactionPreview` on `WalletClientConfig`.
 - Default previewers added for `transferTrx`, `transferTrc20`, `triggerSmartContract`, and raw fallback.
-- Client tests cover resolver execution before signing.
-- Remaining: dedicated kit-owned confirmation UI/modal surface. Current hook lets host apps show their own confirmation UI or throw to cancel before the wallet prompt.
+- Added `TransactionPreviewConfirmer` so apps can return `false` to cancel before the wallet prompt opens.
+- Added kit-owned confirmation UI in `@tron-wallet-kit/ui` and wired it through `createWalletKit`.
+- Added `ui.transactionPreview` config for enabling/disabling the built-in dialog plus labels/raw visibility.
+- Client tests cover resolver execution and confirmation cancellation before signing.
+- Remaining: visual QA of the confirmation dialog inside `react-basic`/website transaction flows.
 
 ### 2. Client-side transaction history store
 

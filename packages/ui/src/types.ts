@@ -170,6 +170,12 @@ export type WalletUiConfig = {
         maxVisible?: number;
         autoDismissMs?: number;
       };
+  transactionPreview?: {
+    enabled?: boolean;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    showRaw?: boolean;
+  };
 };
 
 export type ResolvedTheme = {
@@ -185,6 +191,7 @@ export type ResolvedWalletUiConfig = {
   qr: Required<NonNullable<WalletUiConfig["qr"]>>;
   walletList: Required<NonNullable<WalletUiConfig["walletList"]>>;
   accountPanel: Required<NonNullable<WalletUiConfig["accountPanel"]>>;
+  transactionPreview: Required<NonNullable<WalletUiConfig["transactionPreview"]>>;
   toast: false | {
     position: ToastPosition;
     maxVisible: number;

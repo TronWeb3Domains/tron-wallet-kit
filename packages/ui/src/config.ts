@@ -61,6 +61,12 @@ export function resolveWalletUiConfig(config: WalletUiConfig = {}): ResolvedWall
       maxVisibleTransactions: config.accountPanel?.maxVisibleTransactions ?? config.maxVisibleTransactions ?? 3,
       explorerAccountUrl: config.accountPanel?.explorerAccountUrl ?? ""
     },
+    transactionPreview: {
+      enabled: config.transactionPreview?.enabled ?? true,
+      confirmLabel: config.transactionPreview?.confirmLabel ?? "Confirm",
+      cancelLabel: config.transactionPreview?.cancelLabel ?? "Cancel",
+      showRaw: config.transactionPreview?.showRaw ?? false
+    },
     toast: config.toast
       ? {
           position: typeof config.toast === "object" ? config.toast.position ?? "bottom-right" : "bottom-right",

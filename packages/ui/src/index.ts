@@ -11,6 +11,7 @@ export * from "./session-wallet";
 export * from "./styles";
 export * from "./themes";
 export * from "./toast";
+export * from "./transaction-preview";
 export * from "./types";
 export * from "./utils";
 export * from "./wallet-catalog";
