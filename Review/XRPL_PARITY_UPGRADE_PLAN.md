@@ -121,6 +121,11 @@ Add docs `auth/custom-backend.md` + `auth/nextjs.md` mirroring XRPL.
 - Existing SIWT message and verification primitives remain intact.
 - Tests cover successful nonce -> sign -> verify flow and not-connected error flow.
 - Remaining: integrate optional sign-in step into the connect modal when an auth adapter is present; add deeper backend guide pages if needed.
+- Follow-up docs completed on 2026-07-16:
+  - added `auth/custom-backend.md`;
+  - added `auth/nextjs.md`;
+  - updated sidebar auth section.
+- Remaining: integrate optional sign-in step into the connect modal when an auth adapter is present.
 
 ---
 

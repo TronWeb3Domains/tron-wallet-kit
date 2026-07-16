@@ -68,6 +68,8 @@ export default defineConfig({
         text: "Authentication",
         items: [
           { text: "Sign-In with TRON", link: "/docs/auth/sign-in-with-tron" },
+          { text: "Custom backend", link: "/docs/auth/custom-backend" },
+          { text: "Next.js auth", link: "/docs/auth/nextjs" },
         ],
       },
       {

@@ -5196,3 +5196,16 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Remaining:
   - jscpd still reports known clones under the allowed threshold;
   - optional Vue/Nuxt docs/examples remain deferred unless requested.
+
+## 2026-07-16 Auth Backend Docs Follow-up
+
+- Continued `Review/XRPL_PARITY_UPGRADE_PLAN.md` P1.3 docs follow-up.
+- Added auth docs:
+  - `website/docs/auth/custom-backend.md`;
+  - `website/docs/auth/nextjs.md`.
+- Updated VitePress sidebar auth section:
+  - Sign-In with TRON;
+  - Custom backend;
+  - Next.js auth.
+- Remaining:
+  - optional connect-modal sign-in step when an auth adapter is present.
