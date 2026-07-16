@@ -33,6 +33,14 @@ export default defineConfig({
         ],
       },
       {
+        text: "Advanced",
+        items: [
+          { text: "Headless usage", link: "/docs/advanced/headless" },
+          { text: "Events and hooks", link: "/docs/advanced/events-hooks" },
+          { text: "Bundle performance", link: "/docs/advanced/bundle-performance" },
+        ],
+      },
+      {
         text: "Configuration",
         items: [
           { text: "Connect button", link: "/docs/configuration/connect-button" },
@@ -73,6 +81,7 @@ export default defineConfig({
       {
         text: "Reference",
         items: [
+          { text: "Going live", link: "/docs/guides/going-live" },
           { text: "Troubleshooting", link: "/docs/troubleshooting" },
           { text: "Migration from tronwallet-adapter", link: "/docs/migration-from-tronwallet-adapter" },
         ],
@@ -81,7 +90,9 @@ export default defineConfig({
         text: "API reference",
         items: [
           { text: "Client", link: "/docs/api/client" },
+          { text: "Manager", link: "/docs/api/manager" },
           { text: "UI", link: "/docs/api/ui" },
+          { text: "Modal and toast", link: "/docs/api/modal-toast" },
           { text: "Errors", link: "/docs/api/errors" },
         ],
       },

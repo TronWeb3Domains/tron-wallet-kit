@@ -5127,3 +5127,23 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Remaining:
   - wire optional sign-in step into connect modal when an auth adapter is provided;
   - add custom backend and Next.js auth docs if needed.
+
+## 2026-07-16 XRPL Parity P2.4 Docs Breadth Pass
+
+- Started `Review/XRPL_PARITY_UPGRADE_PLAN.md` P2.4 docs breadth work.
+- Added Advanced docs:
+  - `website/docs/advanced/headless.md`;
+  - `website/docs/advanced/events-hooks.md`;
+  - `website/docs/advanced/bundle-performance.md`.
+- Added guide:
+  - `website/docs/guides/going-live.md`.
+- Expanded API reference:
+  - `website/docs/api/manager.md`;
+  - `website/docs/api/modal-toast.md`.
+- Updated VitePress sidebar to expose the new pages.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/website build` passed.
+- Remaining:
+  - deeper per-wallet adapter pages;
+  - optional use-case pages;
+  - deeper Next.js/auth backend guides.
