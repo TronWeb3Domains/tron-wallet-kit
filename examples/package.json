@@ -12,6 +12,7 @@
   "dependencies": {
     "@tron-wallet-kit/adapter-tronlink": "workspace:*",
     "@tron-wallet-kit/adapter-walletconnect": "workspace:*",
+    "@tron-wallet-kit/auth": "workspace:*",
     "@tron-wallet-kit/browser": "workspace:*",
     "@tron-wallet-kit/react": "workspace:*",
     "@walletconnect/sign-client": "^2.23.9",

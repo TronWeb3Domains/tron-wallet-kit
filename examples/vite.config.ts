@@ -64,6 +64,7 @@ export default defineConfig(({ mode }) => {
       "@tron-wallet-kit/adapter-tronlink": `${root}/packages/adapters/tronlink/src/index.ts`,
       "@tron-wallet-kit/adapter-tronwallet-bridge": `${root}/packages/adapters/tronwallet-bridge/src/index.ts`,
       "@tron-wallet-kit/adapter-walletconnect": `${root}/packages/adapters/walletconnect/src/index.ts`,
+      "@tron-wallet-kit/auth": `${root}/packages/auth/src/index.ts`,
       "@tron-wallet-kit/browser": `${root}/packages/browser/src/index.ts`,
       "@tron-wallet-kit/client": `${root}/packages/client/src/index.ts`,
       "@tron-wallet-kit/core": `${root}/packages/core/src/index.ts`,

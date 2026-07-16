@@ -56,6 +56,8 @@ account modal, toast, `.trx` identity, TRX balance).
 | `config` | `WalletClientConfig` | From `getDefaultConfig` (or a hand-built config). |
 | `theme` | `ThemeConfig` | From `lightTheme()` / `darkTheme()`. Optional. |
 | `kit` | `WalletKit` | Provide an existing kit instead of `config`. |
+| `authenticationAdapter` | `TronAuthAdapter` | Optional Sign-In with TRON adapter. Shows a sign-in step after wallet connect. |
+| `authenticationOptions` | `TronAuthControllerOptions` | Domain, URI, statement, and chain options for the sign-in message. |
 | `children` | `ReactNode` | Your app. |
 
 ### `TronConnectButton` props
@@ -81,7 +83,45 @@ Everything the button shows is available as a hook, so you can build a fully cus
 | `useTronBalance()` | `{ balance, data, isLoading, refresh() }` |
 | `useTrxName()` | `{ name, avatar, isLoading }` — `.trx` identity |
 | `useSignMessage()` | `{ signMessage(message), data, error, isPending }` |
+| `useTronAuth()` | SIWT state plus `signIn()` / `signOut()` when auth is configured |
 | `useTronKit()` | the underlying `WalletKit` instance |
+
+## Sign-In with TRON
+
+Pass an authentication adapter to `TronKitProvider` to show a sign-in step after the user connects a
+wallet. The provider uses `createWalletAuth` internally and also exposes the same state through
+`useTronAuth()`.
+
+```tsx
+import { createTronAuthenticationAdapter } from "@tron-wallet-kit/auth";
+import { TronKitProvider, TronConnectButton } from "@tron-wallet-kit/react";
+
+const authenticationAdapter = createTronAuthenticationAdapter({
+  getNonce: () => fetch("/auth/nonce").then((r) => r.text()),
+  verify: (input) =>
+    fetch("/auth/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input)
+    }).then((r) => r.json())
+});
+
+export function App() {
+  return (
+    <TronKitProvider
+      config={config}
+      authenticationAdapter={authenticationAdapter}
+      authenticationOptions={{
+        domain: window.location.host,
+        uri: window.location.origin,
+        statement: "Sign in to My TRON dApp"
+      }}
+    >
+      <TronConnectButton />
+    </TronKitProvider>
+  );
+}
+```
 
 ### Custom connect UI (hooks only)
 

@@ -1,4 +1,5 @@
 import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
+import { createWalletAuth, type TronAuthAdapter, type TronAuthController, type TronAuthControllerOptions, type TronAuthState } from "@tron-wallet-kit/auth";
 import { createWalletKit, type TronIdentity, type WalletClientConfig, type WalletKit } from "@tron-wallet-kit/client";
 import type { SignMessageRequest, SignMessageResult, WalletAccount, WalletCapabilities, WalletNetworkId, WalletSession } from "@tron-wallet-kit/core";
 import { copyToClipboard, createAccountPanelHtml, createAddressQrPanelHtml, createConnectModalHtml, createStyledQrDataUrl, createThemeStyleProperties, createTransactionHistoryPanelHtml, createWalletButtonHtml, ensureWalletKitStyles, mapAdapterToWalletOption, mergeWalletOptionsWithCatalog, QR_FALLBACK_DARK, resolveSessionWalletMetadata, shortenAddress, type AccountPanelViewModel, type ConnectModalViewModel, type ThemeConfig, type WalletButtonViewModel } from "@tron-wallet-kit/ui";
@@ -10,6 +11,9 @@ export type TronWalletProviderProps = WalletClientConfig & {
   kit?: WalletKit;
   children?: ReactNode;
   clearStoredSessionOnAutoReconnectDisabled?: boolean;
+  authenticationAdapter?: TronAuthAdapter;
+  authenticationOptions?: TronAuthControllerOptions;
+  authenticationController?: TronAuthController;
 };
 
 export type TronKitProviderProps = {
@@ -18,6 +22,9 @@ export type TronKitProviderProps = {
   theme?: TronKitProviderTheme;
   children?: ReactNode;
   clearStoredSessionOnAutoReconnectDisabled?: boolean;
+  authenticationAdapter?: TronAuthAdapter;
+  authenticationOptions?: TronAuthControllerOptions;
+  authenticationController?: TronAuthController;
 };
 
 export type AdaptiveThemeConfig = {
@@ -85,6 +92,14 @@ export type TrxNameState = {
   refresh(): Promise<TronIdentity | undefined>;
 };
 
+export type TronAuthHookState = TronAuthState & {
+  signIn(): Promise<TronAuthState>;
+  signOut(): void;
+  isAvailable: boolean;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+};
+
 export type AccountModalState = {
   openAccountModal?: () => void;
   closeAccountModal?: () => void;
@@ -135,6 +150,7 @@ type WalletButtonAccountPanelModel = {
 const WalletKitContext = createContext<WalletKit | null>(null);
 const AccountModalContext = createContext<InternalAccountModalState>({ accountModalOpen: false });
 const ThemeContext = createContext<ThemeConfig | undefined>(undefined);
+const AuthContext = createContext<TronAuthController | null>(null);
 
 export function getDefaultConfig(config: DefaultTronKitConfig): WalletClientConfig {
   const walletConnectProjectId = config.walletConnectProjectId?.trim();
@@ -313,7 +329,10 @@ export function TronKitProvider(props: TronKitProviderProps) {
           ...(props.kit ? { kit: props.kit } : {}),
           ...(props.clearStoredSessionOnAutoReconnectDisabled !== undefined
             ? { clearStoredSessionOnAutoReconnectDisabled: props.clearStoredSessionOnAutoReconnectDisabled }
-            : {})
+            : {}),
+          ...(props.authenticationAdapter ? { authenticationAdapter: props.authenticationAdapter } : {}),
+          ...(props.authenticationOptions ? { authenticationOptions: props.authenticationOptions } : {}),
+          ...(props.authenticationController ? { authenticationController: props.authenticationController } : {})
         },
         props.children
       )
@@ -329,6 +348,19 @@ export function TronWalletProvider(props: TronWalletProviderProps) {
     ownsKitRef.current = !props.kit;
   }
   const kit = kitRef.current;
+  const authControllerRef = useRef<TronAuthController | null>(null);
+  const ownsAuthControllerRef = useRef(false);
+  if (props.authenticationController) {
+    if (authControllerRef.current !== props.authenticationController) {
+      if (ownsAuthControllerRef.current) authControllerRef.current?.destroy();
+      authControllerRef.current = props.authenticationController;
+      ownsAuthControllerRef.current = false;
+    }
+  } else if (props.authenticationAdapter && !authControllerRef.current) {
+    authControllerRef.current = createWalletAuth(kit.manager, props.authenticationAdapter, props.authenticationOptions);
+    ownsAuthControllerRef.current = true;
+  }
+  const authController = authControllerRef.current;
   useEffect(() => {
     if (kit.manager.config.autoReconnect) {
       void kit.manager.autoReconnect();
@@ -336,6 +368,10 @@ export function TronWalletProvider(props: TronWalletProviderProps) {
       void kit.manager.clearStoredSession();
     }
     return () => {
+      if (ownsAuthControllerRef.current) {
+        authControllerRef.current?.destroy();
+        authControllerRef.current = null;
+      }
       if (ownsKitRef.current) {
         kit.destroy();
         kitRef.current = null;
@@ -344,10 +380,142 @@ export function TronWalletProvider(props: TronWalletProviderProps) {
       }
     };
   }, [kit]);
-  return createElement(WalletKitContext.Provider, { value: kit }, props.children);
+  const children = authController
+    ? createElement(
+        AuthContext.Provider,
+        { value: authController },
+        props.children,
+        createElement(TronAuthPrompt, { controller: authController })
+      )
+    : props.children;
+  return createElement(WalletKitContext.Provider, { value: kit }, children);
 }
 
 export const TronWalletKitProvider = TronWalletProvider;
+
+function TronAuthPrompt(props: { controller: TronAuthController }) {
+  const providerTheme = useContext(ThemeContext);
+  const session = useWalletSession();
+  const state = useSyncExternalStore(
+    (onStoreChange) => props.controller.subscribe(onStoreChange),
+    () => props.controller.getState(),
+    () => props.controller.getState()
+  );
+  const [dismissedFor, setDismissedFor] = useState<string | null>(null);
+  const sessionKey = session ? `${session.adapterId}:${session.account.address}:${session.network.id}` : "";
+  useWalletKitStyles();
+
+  useEffect(() => {
+    setDismissedFor(null);
+  }, [sessionKey]);
+
+  if (!session || state.status === "authenticated" || dismissedFor === sessionKey) return null;
+
+  const loading = state.status === "loading";
+  const errorMessage = state.status === "error" ? formatReactAuthError(state.error) : "";
+  const signIn = () => {
+    void props.controller.signIn();
+  };
+
+  return createElement(
+    "div",
+    {
+      className: "twk-root",
+      "data-twk-root": "true",
+      style: useThemeStyle(providerTheme)
+    },
+    createElement(
+      "div",
+      {
+        className: "twk-button-panel-overlay",
+        "data-twk-auth-panel": "true"
+      },
+      createElement(
+        "section",
+        {
+          className: "twk-account-panel twk-auth-panel",
+          role: "dialog",
+          "aria-modal": "true",
+          "aria-labelledby": "twk-auth-title",
+          tabIndex: -1
+        },
+        createElement(
+          "header",
+          { className: "twk-header" },
+          createElement("span", { className: "twk-header-spacer", "aria-hidden": "true" }),
+          createElement(
+            "div",
+            { className: "twk-header-main" },
+            createElement("h2", { className: "twk-title", id: "twk-auth-title" }, "Sign in with TRON")
+          ),
+          createElement(
+            "button",
+            {
+              className: "twk-close",
+              type: "button",
+              "aria-label": "Close sign-in prompt",
+              onClick: () => setDismissedFor(sessionKey)
+            },
+            createElement("span", { "aria-hidden": "true" }, "×")
+          )
+        ),
+        createElement(
+          "div",
+          { className: "twk-body twk-auth-body" },
+          createElement("p", { className: "twk-transaction-preview-summary" }, "Sign a message to prove ownership of this TRON account."),
+          createElement(
+            "dl",
+            { className: "twk-transaction-preview-details" },
+            createElement(
+              "div",
+              { className: "twk-transaction-preview-detail" },
+              createElement("dt", null, "Wallet"),
+              createElement("dd", null, session.walletName)
+            ),
+            createElement(
+              "div",
+              { className: "twk-transaction-preview-detail" },
+              createElement("dt", null, "Account"),
+              createElement("dd", null, session.account.domain ?? shortenAddress(session.account.address))
+            )
+          ),
+          errorMessage ? createElement("div", { className: "twk-status", "data-tone": "danger" }, errorMessage) : null,
+          createElement(
+            "div",
+            { className: "twk-transaction-preview-footer twk-auth-actions" },
+            createElement(
+              "button",
+              {
+                className: "twk-action",
+                type: "button",
+                disabled: loading,
+                onClick: () => setDismissedFor(sessionKey)
+              },
+              "Not now"
+            ),
+            createElement(
+              "button",
+              {
+                className: "twk-action",
+                "data-tone": "primary",
+                type: "button",
+                disabled: loading,
+                "data-busy": loading ? "true" : undefined,
+                onClick: signIn
+              },
+              loading ? "Signing..." : "Sign in"
+            )
+          )
+        )
+      )
+    )
+  );
+}
+
+function formatReactAuthError(error: unknown): string {
+  const message = error instanceof Error ? error.message : typeof error === "string" ? error : "Authentication failed.";
+  return message.length > 160 ? `${message.slice(0, 157)}...` : message;
+}
 
 export function useWalletKit(): WalletKit {
   const kit = useContext(WalletKitContext);
@@ -356,6 +524,26 @@ export function useWalletKit(): WalletKit {
 }
 
 export const useTronKit = useWalletKit;
+
+export function useTronAuth(): TronAuthHookState {
+  const controller = useContext(AuthContext);
+  const state = useSyncExternalStore(
+    (onStoreChange) => {
+      if (!controller) return () => undefined;
+      return controller.subscribe(onStoreChange);
+    },
+    () => controller?.getState() ?? ({ status: "unauthenticated" } satisfies TronAuthState),
+    () => controller?.getState() ?? ({ status: "unauthenticated" } satisfies TronAuthState)
+  );
+  return {
+    ...state,
+    signIn: () => controller?.signIn() ?? Promise.resolve({ status: "error", error: new Error("Authentication is not configured.") }),
+    signOut: () => controller?.signOut(),
+    isAvailable: Boolean(controller),
+    isLoading: state.status === "loading",
+    isAuthenticated: state.status === "authenticated"
+  };
+}
 
 export function useTronAccount(): TronAccountState {
   const session = useWalletSession();

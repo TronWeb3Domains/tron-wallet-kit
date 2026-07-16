@@ -27,6 +27,7 @@ export type TronAuthController = {
   signIn(): Promise<TronAuthState>;
   signOut(): void;
   subscribe(listener: (state: TronAuthState) => void): () => void;
+  destroy(): void;
 };
 
 export function createTronAuthenticationAdapter(adapter: TronAuthAdapter): TronAuthAdapter {
@@ -36,6 +37,13 @@ export function createTronAuthenticationAdapter(adapter: TronAuthAdapter): TronA
 export function createWalletAuth(manager: WalletManager, adapter: TronAuthAdapter, options: TronAuthControllerOptions = {}): TronAuthController {
   let state: TronAuthState = { status: "unauthenticated", ...(manager.getSession() ? { session: manager.getSession()! } : {}) };
   const listeners = new Set<(state: TronAuthState) => void>();
+  const off = [
+    manager.on("connected", ({ session }) => setState({ status: "unauthenticated", session })),
+    manager.on("session_restored", ({ session }) => setState({ status: "unauthenticated", session })),
+    manager.on("disconnected", () => setState({ status: "unauthenticated" })),
+    manager.on("session_expired", () => setState({ status: "unauthenticated" })),
+    manager.on("session_stale", () => setState({ status: "unauthenticated" }))
+  ];
   const setState = (next: TronAuthState) => {
     state = next;
     listeners.forEach((listener) => listener(state));
@@ -51,6 +59,10 @@ export function createWalletAuth(manager: WalletManager, adapter: TronAuthAdapte
     signOut() {
       const session = manager.getSession() ?? undefined;
       setState({ status: "unauthenticated", ...(session ? { session } : {}) });
+    },
+    destroy() {
+      off.forEach((unsubscribe) => unsubscribe());
+      listeners.clear();
     },
     async signIn() {
       const session = manager.getSession();

@@ -123,12 +123,18 @@ Add docs `auth/custom-backend.md` + `auth/nextjs.md` mirroring XRPL.
 - Controller implements `unauthenticated | loading | authenticated | error` state flow.
 - Existing SIWT message and verification primitives remain intact.
 - Tests cover successful nonce -> sign -> verify flow and not-connected error flow.
-- Remaining: integrate optional sign-in step into the connect modal when an auth adapter is present; add deeper backend guide pages if needed.
+- React provider now accepts `authenticationAdapter`, `authenticationOptions`, or an existing `authenticationController`.
+- React provider shows a Sign-In with TRON prompt after wallet connect when auth is configured.
+- `useTronAuth()` exposes auth state plus `signIn()` / `signOut()` for custom React UI.
+- `react-basic` includes a disabled-by-default mock SIWT toggle for QA.
+- Tests cover successful nonce -> sign -> verify flow, not-connected error flow, and wallet session lifecycle.
+- Remaining: visual QA of the React auth prompt with real wallets; optional vanilla/client auth UI remains deferred.
 - Follow-up docs completed on 2026-07-16:
   - added `auth/custom-backend.md`;
   - added `auth/nextjs.md`;
   - updated sidebar auth section.
 - Remaining: integrate optional sign-in step into the connect modal when an auth adapter is present.
+- React sign-in step completed on 2026-07-16; vanilla/client auth UI remains optional/deferred.
 
 ---
 

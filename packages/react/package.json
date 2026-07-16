@@ -27,6 +27,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@tron-wallet-kit/auth": "workspace:*",
     "@tron-wallet-kit/client": "workspace:*",
     "@tron-wallet-kit/core": "workspace:*",
     "@tron-wallet-kit/ui": "workspace:*"

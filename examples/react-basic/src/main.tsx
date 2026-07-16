@@ -1,4 +1,5 @@
 import { StrictMode, useEffect, useMemo, useState } from "react";
+import { createTronAuthenticationAdapter } from "@tron-wallet-kit/auth";
 import { createRoot } from "react-dom/client";
 import { TronConnectButton, TronKitProvider, getDefaultConfig, useTronKit, useWalletSession, useWalletStatus } from "@tron-wallet-kit/react";
 import { createQrDataUrl, createThemeStyleProperties, createTransactionToastContainerHtml, getThemeNames, type ThemeName, type WalletListConfig } from "@tron-wallet-kit/ui";
@@ -32,6 +33,7 @@ function ExampleApp() {
   const [resolveIdentity, setResolveIdentity] = useState(true);
   const [showRecentTransactions, setShowRecentTransactions] = useState(true);
   const [transactionPreviewEnabled, setTransactionPreviewEnabled] = useState(true);
+  const [mockAuthEnabled, setMockAuthEnabled] = useState(false);
   const [walletLayout, setWalletLayout] = useState<WalletLayout>("list");
   const [featuredMode, setFeaturedMode] = useState<FeaturedMode>("installed-first");
   const [featuredPreset, setFeaturedPreset] = useState<FeaturedPreset>("recommended");
@@ -79,11 +81,36 @@ function ExampleApp() {
     storageKey: "react-basic-session-v2",
     useBrowserStorage: true
   }), [accountPanelMode, resolveIdentity, showRecentTransactions, themeName, transactionPreviewEnabled, walletList]);
+  const authenticationAdapter = useMemo(
+    () =>
+      mockAuthEnabled
+        ? createTronAuthenticationAdapter({
+            getNonce: () => `react-basic-${Date.now()}`,
+            verify: async (input) => ({
+              ...input,
+              valid: Boolean(input.proof),
+              ...(!input.proof ? { reason: "Missing wallet signature." } : {})
+            })
+          })
+        : undefined,
+    [mockAuthEnabled]
+  );
+  const authenticationProps = authenticationAdapter
+    ? {
+        authenticationAdapter,
+        authenticationOptions: {
+          domain: "React Basic",
+          uri: typeof window !== "undefined" ? window.location.origin : "https://trxdomains.xyz",
+          statement: "Sign in to the TRON Wallet Kit playground."
+        }
+      }
+    : {};
 
   return (
     <TronKitProvider
       config={config}
       clearStoredSessionOnAutoReconnectDisabled
+      {...authenticationProps}
     >
       <ExampleWorkspace
         accountPanelMode={accountPanelMode}
@@ -92,6 +119,7 @@ function ExampleApp() {
         resolveIdentity={resolveIdentity}
         showRecentTransactions={showRecentTransactions}
         transactionPreviewEnabled={transactionPreviewEnabled}
+        mockAuthEnabled={mockAuthEnabled}
         walletLayout={walletLayout}
         featuredMode={featuredMode}
         featuredPreset={featuredPreset}
@@ -104,6 +132,7 @@ function ExampleApp() {
         onResolveIdentityChange={setResolveIdentity}
         onShowRecentTransactionsChange={setShowRecentTransactions}
         onTransactionPreviewEnabledChange={setTransactionPreviewEnabled}
+        onMockAuthEnabledChange={setMockAuthEnabled}
         onWalletLayoutChange={setWalletLayout}
         onFeaturedModeChange={setFeaturedMode}
         onFeaturedPresetChange={setFeaturedPreset}
@@ -122,6 +151,7 @@ type ExampleWorkspaceProps = {
   resolveIdentity: boolean;
   showRecentTransactions: boolean;
   transactionPreviewEnabled: boolean;
+  mockAuthEnabled: boolean;
   walletLayout: WalletLayout;
   featuredMode: FeaturedMode;
   featuredPreset: FeaturedPreset;
@@ -134,6 +164,7 @@ type ExampleWorkspaceProps = {
   onResolveIdentityChange: (resolveIdentity: boolean) => void;
   onShowRecentTransactionsChange: (showRecentTransactions: boolean) => void;
   onTransactionPreviewEnabledChange: (enabled: boolean) => void;
+  onMockAuthEnabledChange: (enabled: boolean) => void;
   onWalletLayoutChange: (layout: WalletLayout) => void;
   onFeaturedModeChange: (mode: FeaturedMode) => void;
   onFeaturedPresetChange: (preset: FeaturedPreset) => void;
@@ -438,6 +469,10 @@ function ExampleWorkspace(props: ExampleWorkspaceProps) {
               <label>
                 <input aria-label="Transaction preview confirmation" type="checkbox" checked={props.transactionPreviewEnabled} onChange={(event) => props.onTransactionPreviewEnabledChange(event.target.checked)} />
                 <span>Transaction preview confirmation</span>
+              </label>
+              <label>
+                <input aria-label="Mock SIWT authentication" type="checkbox" checked={props.mockAuthEnabled} onChange={(event) => props.onMockAuthEnabledChange(event.target.checked)} />
+                <span>Mock SIWT authentication</span>
               </label>
               <label>
                 <input aria-label="Show unavailable wallets" type="checkbox" checked={props.showUnavailableWallets} onChange={(event) => props.onShowUnavailableWalletsChange(event.target.checked)} />

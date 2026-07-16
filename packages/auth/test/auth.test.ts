@@ -69,4 +69,20 @@ describe("createAuthMessage", () => {
 
     await expect(controller.signIn()).resolves.toMatchObject({ status: "error" });
   });
+
+  it("tracks wallet session lifecycle", async () => {
+    const manager = new WalletManager({ adapters: [createAdapter()], network: TRON_MAINNET });
+    const controller = createWalletAuth(manager, {
+      getNonce: () => "nonce",
+      verify: async (input) => ({ ...input, valid: true })
+    });
+    const states: string[] = [];
+    controller.subscribe((state) => states.push(`${state.status}:${state.session?.account.address ?? "none"}`));
+
+    await manager.connect("mock");
+    await manager.disconnect();
+
+    expect(states).toEqual(["unauthenticated:none", "unauthenticated:TAuthAddress", "unauthenticated:none"]);
+    controller.destroy();
+  });
 });

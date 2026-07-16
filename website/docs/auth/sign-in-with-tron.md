@@ -75,6 +75,40 @@ const state = await auth.signIn();
 The state is one of `unauthenticated`, `loading`, `authenticated`, or `error`. Subscribe to it when
 you need to drive custom UI.
 
+## React provider
+
+In React apps, pass the adapter directly to `TronKitProvider`. The kit shows a sign-in step after
+wallet connect and keeps the auth state available through `useTronAuth()`.
+
+```tsx
+import { createTronAuthenticationAdapter } from "@tron-wallet-kit/auth";
+import { TronKitProvider, TronConnectButton, useTronAuth } from "@tron-wallet-kit/react";
+
+const authenticationAdapter = createTronAuthenticationAdapter({
+  getNonce: () => fetch("/auth/nonce").then((r) => r.text()),
+  verify: (input) =>
+    fetch("/auth/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input)
+    }).then((r) => r.json())
+});
+
+export function App() {
+  return (
+    <TronKitProvider config={config} authenticationAdapter={authenticationAdapter}>
+      <TronConnectButton />
+      <AuthStatus />
+    </TronKitProvider>
+  );
+}
+
+function AuthStatus() {
+  const auth = useTronAuth();
+  return <span>{auth.status}</span>;
+}
+```
+
 ## Server
 
 ```ts

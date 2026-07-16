@@ -49,7 +49,42 @@ createRoot(document.getElementById("root")!).render(<App />);
 
 `walletConnectProjectId` is optional. If it is omitted, WalletConnect is not shown in the default wallet list.
 
-`metadata` identifies your dApp in WalletConnect and future auth prompts. `appName` still works as a shorthand for `metadata.name`.
+`metadata` identifies your dApp in WalletConnect and Sign-In with TRON prompts. `appName` still works as a shorthand for `metadata.name`.
+
+## Sign-In with TRON
+
+Install the optional auth package and pass an adapter to `TronKitProvider`. The provider shows a
+sign-in step after wallet connect and exposes the state through `useTronAuth()`.
+
+```sh
+pnpm add @tron-wallet-kit/auth@beta
+```
+
+```tsx
+import { createTronAuthenticationAdapter } from "@tron-wallet-kit/auth";
+
+const authenticationAdapter = createTronAuthenticationAdapter({
+  getNonce: () => fetch("/auth/nonce").then((r) => r.text()),
+  verify: (input) =>
+    fetch("/auth/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input)
+    }).then((r) => r.json())
+});
+
+<TronKitProvider
+  config={config}
+  authenticationAdapter={authenticationAdapter}
+  authenticationOptions={{
+    domain: window.location.host,
+    uri: window.location.origin,
+    statement: "Sign in to My TRON dApp"
+  }}
+>
+  <TronConnectButton />
+</TronKitProvider>;
+```
 
 ## Exports
 
@@ -67,6 +102,7 @@ createRoot(document.getElementById("root")!).render(<App />);
 - `useTronDisconnect`
 - `useTronBalance`
 - `useSignMessage`
+- `useTronAuth`
 - `useTrxName`
 - `useConnectModal`
 - `useAccountModal`

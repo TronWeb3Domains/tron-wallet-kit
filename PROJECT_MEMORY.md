@@ -5248,3 +5248,34 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/examples build` passed.
 - Note:
   - Vite still warns about large example chunks and a Rollup annotation in `ox`; build succeeds.
+
+## 2026-07-16 React SIWT Auth Prompt
+
+- Continued `Review/XRPL_PARITY_UPGRADE_PLAN.md` P1.3 / `Review/TRON_CONNECTKIT_MASTERPLAN.md` SIWT work.
+- Updated `@tron-wallet-kit/auth`:
+  - `TronAuthController` now has `destroy()`;
+  - controller listens to wallet connect/session restore/disconnect/stale/expired events and resets auth state.
+- Updated `@tron-wallet-kit/react`:
+  - `TronKitProvider` and `TronWalletProvider` accept `authenticationAdapter`, `authenticationOptions`, or `authenticationController`;
+  - provider renders a Sign-In with TRON prompt after wallet connect when auth is configured;
+  - exported `useTronAuth()` for custom auth UI.
+- Updated `examples/react-basic`:
+  - added disabled-by-default `Mock SIWT authentication` toggle;
+  - when enabled, the playground shows the auth prompt after wallet connect.
+- Updated docs:
+  - `packages/react/README.md`;
+  - `website/docs/frameworks/react.md`;
+  - `website/docs/auth/sign-in-with-tron.md`;
+  - `Review/XRPL_PARITY_UPGRADE_PLAN.md`.
+- Verification so far:
+  - `pnpm --filter @tron-wallet-kit/auth typecheck` passed;
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed;
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed;
+  - `pnpm --filter @tron-wallet-kit/auth test -- --run --reporter=dot` passed;
+  - `pnpm --filter @tron-wallet-kit/react build` passed;
+  - `pnpm --filter @tron-wallet-kit/examples build` passed;
+  - `pnpm --filter @tron-wallet-kit/website build` passed;
+  - `pnpm check:quality` passed.
+- Remaining:
+  - visual QA the React auth prompt with real wallets;
+  - decide later whether vanilla/client should also own an auth modal surface.

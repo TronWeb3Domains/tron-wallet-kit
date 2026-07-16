@@ -71,6 +71,9 @@ importers:
       '@tron-wallet-kit/adapter-walletconnect':
         specifier: workspace:*
         version: link:../packages/adapters/walletconnect
+      '@tron-wallet-kit/auth':
+        specifier: workspace:*
+        version: link:../packages/auth
       '@tron-wallet-kit/browser':
         specifier: workspace:*
         version: link:../packages/browser
@@ -194,6 +197,9 @@ importers:
 
   packages/react:
     dependencies:
+      '@tron-wallet-kit/auth':
+        specifier: workspace:*
+        version: link:../auth
       '@tron-wallet-kit/client':
         specifier: workspace:*
         version: link:../client
