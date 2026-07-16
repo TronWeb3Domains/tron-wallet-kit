@@ -40,9 +40,46 @@ export type TransactionRuntime = {
   triggerSmartContract: TriggerSmartContractExecutor;
 };
 
+export type WalletTransactionPreviewDetail = {
+  label: string;
+  value: string;
+};
+
+export type WalletTransactionPreview = {
+  summary: string;
+  title?: string;
+  details?: WalletTransactionPreviewDetail[];
+  raw?: unknown;
+};
+
+export type TransactionPreviewResolverContext = {
+  request: SignTransactionRequest;
+  transaction: TransactionPayload;
+  methodHint?: TronMethodHint;
+  description?: string;
+  defaultPreview: WalletTransactionPreview;
+};
+
+export type TransactionPreviewResolver = (
+  request: SignTransactionRequest,
+  context: TransactionPreviewResolverContext
+) => WalletTransactionPreview | void | Promise<WalletTransactionPreview | void>;
+
+export type TransactionPreviewConfig =
+  | TransactionPreviewResolver
+  | {
+      enabled?: boolean;
+      resolver?: TransactionPreviewResolver;
+    };
+
+export type TransactionRuntimeOptions = {
+  transactionPreview?: TransactionPreviewConfig;
+};
+
 const DEFAULT_CONTRACT_FEE_LIMIT_SUN = 100_000_000;
 
-export function createTransactionRuntime(manager: WalletManager): TransactionRuntime {
+export function createTransactionRuntime(manager: WalletManager, options: TransactionRuntimeOptions = {}): TransactionRuntime {
+  const previewResolver = resolvePreviewResolver(options.transactionPreview);
   const getTronWebForSession = async () => {
     const session = manager.getSession();
     return getSharedTronWeb(manager, session?.network, getEffectiveWalletId(manager));
@@ -121,6 +158,7 @@ export function createTransactionRuntime(manager: WalletManager): TransactionRun
     description?: string
   ): Promise<TxResult> => {
     const request = normalizeSignRequest(transactionOrRequest, methodHint);
+    await resolveTransactionPreview(request, description, previewResolver);
     const signed = await manager.signTransaction(request);
     const transaction = signed.signedTransaction ?? signed.transaction;
     if (!transaction) throw new WalletKitError("INVALID_TRANSACTION_SIGNATURE", "Wallet did not return a signed transaction.");
@@ -164,6 +202,83 @@ export function createTransactionRuntime(manager: WalletManager): TransactionRun
   };
 }
 
+export function createDefaultTransactionPreview(request: SignTransactionRequest, description?: string): WalletTransactionPreview {
+  const methodHint = request.methodHint;
+  const transaction = request.transaction;
+  const details: WalletTransactionPreviewDetail[] = [];
+  const addDetail = (label: string, value: unknown) => {
+    if (value === undefined || value === null || value === "") return;
+    details.push({ label, value: String(value) });
+  };
+
+  if (methodHint === "transferTrx") {
+    addDetail("To", transaction.to);
+    addDetail("Amount", formatSunLikeValue(transaction.amountSun));
+    addDetail("From", transaction.from);
+    return {
+      title: "Transfer TRX",
+      summary: description ?? buildTransferSummary("TRX", transaction.amountSun, transaction.to),
+      ...(details.length > 0 ? { details } : {}),
+      raw: transaction
+    };
+  }
+
+  if (methodHint === "transferTrc20") {
+    addDetail("Contract", transaction.contractAddress);
+    addDetail("To", transaction.to);
+    addDetail("Amount", transaction.amount);
+    return {
+      title: "Transfer TRC20",
+      summary: description ?? buildTransferSummary("TRC20", transaction.amount, transaction.to),
+      ...(details.length > 0 ? { details } : {}),
+      raw: transaction
+    };
+  }
+
+  if (methodHint === "triggerSmartContract") {
+    addDetail("Contract", transaction.contractAddress);
+    addDetail("Function", transaction.functionSelector ?? transaction.function);
+    addDetail("Fee limit", transaction.feeLimit ?? getNestedValue(transaction, ["raw_data", "fee_limit"]));
+    return {
+      title: "Smart contract",
+      summary: description ?? buildContractSummary(transaction),
+      ...(details.length > 0 ? { details } : {}),
+      raw: transaction
+    };
+  }
+
+  return {
+    title: "Transaction",
+    summary: description ?? "Review and sign this TRON transaction.",
+    raw: transaction
+  };
+}
+
+async function resolveTransactionPreview(
+  request: SignTransactionRequest,
+  description: string | undefined,
+  resolver: TransactionPreviewResolver | undefined
+): Promise<WalletTransactionPreview> {
+  const transaction = request.transaction;
+  const defaultPreview = createDefaultTransactionPreview(request, description);
+  if (!resolver) return defaultPreview;
+  const resolved = await resolver(request, {
+    request,
+    transaction,
+    ...(request.methodHint ? { methodHint: request.methodHint } : {}),
+    ...(description ? { description } : {}),
+    defaultPreview
+  });
+  return resolved ?? defaultPreview;
+}
+
+function resolvePreviewResolver(config: TransactionPreviewConfig | undefined): TransactionPreviewResolver | undefined {
+  if (!config) return undefined;
+  if (typeof config === "function") return config;
+  if (config.enabled === false) return undefined;
+  return config.resolver;
+}
+
 function normalizeTriggerRequest(request: TriggerSmartContractRequest, fallbackIssuerAddress: string | undefined): Required<Pick<TriggerSmartContractRequest, "contractAddress" | "functionSelector">> & {
   options?: Record<string, unknown>;
   parameters?: unknown[];
@@ -187,6 +302,43 @@ function normalizeTriggerRequest(request: TriggerSmartContractRequest, fallbackI
     ...(issuerAddress ? { issuerAddress } : {}),
     ...(request.description ? { description: request.description } : {})
   };
+}
+
+function buildTransferSummary(symbol: string, amount: unknown, to: unknown): string {
+  const formattedAmount = formatSunLikeValue(amount);
+  const target = typeof to === "string" && to.length > 0 ? ` to ${shortenMiddle(to)}` : "";
+  return `Transfer ${formattedAmount} ${symbol}${target}.`;
+}
+
+function buildContractSummary(transaction: TransactionPayload): string {
+  const functionSelector = transaction.functionSelector ?? transaction.function;
+  if (typeof functionSelector === "string" && functionSelector.length > 0) {
+    return `Call ${functionSelector}.`;
+  }
+  return "Call a TRON smart contract.";
+}
+
+function formatSunLikeValue(value: unknown): string {
+  if (typeof value !== "string" && typeof value !== "number" && typeof value !== "bigint") return "";
+  const raw = typeof value === "bigint" ? value.toString() : String(value);
+  if (!/^\d+$/.test(raw)) return raw;
+  const whole = raw.length > 6 ? raw.slice(0, -6) : "0";
+  const fraction = raw.slice(-6).padStart(6, "0").replace(/0+$/, "");
+  return fraction.length > 0 ? `${whole}.${fraction}` : whole;
+}
+
+function shortenMiddle(value: string, start = 6, end = 6): string {
+  if (value.length <= start + end + 3) return value;
+  return `${value.slice(0, start)}...${value.slice(-end)}`;
+}
+
+function getNestedValue(source: unknown, path: string[]): unknown {
+  let current = source;
+  for (const key of path) {
+    if (!current || typeof current !== "object") return undefined;
+    current = (current as Record<string, unknown>)[key];
+  }
+  return current;
 }
 
 function normalizeSignRequest(transactionOrRequest: TransactionPayload | SignTransactionRequest, methodHint: TronMethodHint | undefined): SignTransactionRequest {

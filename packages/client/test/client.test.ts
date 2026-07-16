@@ -225,6 +225,53 @@ describe("client entrypoints", () => {
     expect(kit.manager.getTransactions()[0]?.methodHint).toBe("transferTrx");
   });
 
+  it("resolves transaction previews before signing and sending", async () => {
+    const previews: string[] = [];
+    (globalThis as Record<string, unknown>).__tronWalletKitTronWebForTest = {
+      trx: {
+        sendRawTransaction: async (transaction: Record<string, unknown>) => ({ txid: transaction.txID ?? "preview-hash" })
+      },
+      transactionBuilder: {
+        sendTrx: async (to: string, amountSun: number, from?: string) => ({
+          txID: "preview-trx-hash",
+          raw_data_hex: "raw",
+          to,
+          amountSun,
+          from
+        }),
+        triggerSmartContract: async () => ({
+          result: { result: true },
+          transaction: {
+            txID: "preview-contract-hash",
+            contractAddress: "T4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            functionSelector: "transfer(address,uint256)"
+          }
+        })
+      },
+      setAddress: () => undefined,
+      contract: () => ({ at: async () => ({}) })
+    };
+    const kit = createWalletKit({
+      adapters: [createMockAdapter()],
+      transactionPreview: async (_request, context) => {
+        previews.push(`${context.methodHint}:${context.defaultPreview.summary}`);
+      }
+    });
+
+    await kit.manager.connect("mock");
+    await kit.transferTrx({ to: "T3AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", amountSun: 1_500_000 });
+    await kit.triggerSmartContract({
+      contractAddress: "T4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      functionSelector: "transfer(address,uint256)",
+      parameters: []
+    });
+
+    expect(previews).toEqual([
+      "transferTrx:Transfer 1.5 TRX to T3AAAA...AAAAAA.",
+      "triggerSmartContract:Call transfer(address,uint256)."
+    ]);
+  });
+
   it("builds, signs, and broadcasts triggerSmartContract transactions", async () => {
     const calls = {
       triggerSmartContract: [] as unknown[][]

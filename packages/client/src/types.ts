@@ -25,6 +25,7 @@ import type {
 import type { ResolvedWalletUiConfig, ThemeConfig, WalletButton, WalletModal, WalletToast, WalletUiConfig } from "@tron-wallet-kit/ui";
 import type { TronWalletCatalogItem } from "@tron-wallet-kit/ui";
 import type { InjectedStrategy } from "./adapters/injected-strategy";
+import type { TransactionPreviewConfig, TransactionPreviewResolver, WalletTransactionPreview } from "./transactions";
 import type { WalletDescriptor } from "./wallets/types";
 
 export type { WalletConnectAdapterOptions, WalletConnectNetworkName };
@@ -69,6 +70,7 @@ export type WalletClientConfig = Omit<WalletManagerConfig, "adapters" | "network
     useBrowserStorage?: boolean;
     identity?: WalletClientIdentityConfig;
     balance?: WalletClientBalanceConfig;
+    transactionPreview?: TransactionPreviewConfig;
     tronWeb?: {
       fullHost?: string;
       apiKey?: string;
@@ -90,6 +92,8 @@ export type TronWeb3AdapterBridgeConfig = {
   capabilities?: Partial<WalletCapabilities>;
   signMessageMode?: "string" | "messageObject";
 };
+
+export type { TransactionPreviewConfig, TransactionPreviewResolver, WalletTransactionPreview };
 
 export type InjectedTronProvider = {
   tronWeb?: {

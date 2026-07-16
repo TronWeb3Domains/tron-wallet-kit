@@ -135,7 +135,7 @@ export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
     if (config.connectButton?.target) button?.mount(config.connectButton.target);
   }
 
-  const transactionRuntime = createTransactionRuntime(manager);
+  const transactionRuntime = createTransactionRuntime(manager, config.transactionPreview ? { transactionPreview: config.transactionPreview } : {});
   const submit = (methodHint: TronMethodHint, transaction: TransactionPayload, description?: string) =>
     transactionRuntime.signAndSendTransaction({ methodHint, transaction }, methodHint, description);
 

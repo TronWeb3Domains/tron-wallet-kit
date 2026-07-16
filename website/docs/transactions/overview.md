@@ -46,6 +46,24 @@ const signed = await kit.signTransaction(tx);
 await kit.sendRawTransaction(signed.transaction);
 ```
 
+## Preview before signing
+
+`transactionPreview` lets the host app show a clear summary before the wallet prompt opens. The
+resolver receives a default preview for TRX transfers, TRC-20 transfers, smart-contract calls, and a
+raw fallback for unknown transactions.
+
+```ts
+const kit = createWalletKit({
+  metadata: { name: "My TRON dApp" },
+  transactionPreview: async (_request, context) => {
+    const preview = context.defaultPreview;
+    console.log(preview.title, preview.summary, preview.details);
+  },
+});
+```
+
+Throw from the resolver to cancel signing before the wallet request is sent.
+
 ## Sign vs send
 
 | Method | What it does |

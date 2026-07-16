@@ -62,6 +62,13 @@ Ref: `xrplWalletKit/packages/ui/src/types.ts`, `.../button.ts`.
 **GasFree** Phase-2 confirmation step (TIP-712 amount/receiver/maxFee/provider). Do this
 before GasFree send so both share one preview surface.
 
+**Implementation status (2026-07-16):**
+- Runtime hook completed in `packages/client/src/transactions.ts`.
+- Public config added as `transactionPreview` on `WalletClientConfig`.
+- Default previewers added for `transferTrx`, `transferTrc20`, `triggerSmartContract`, and raw fallback.
+- Client tests cover resolver execution before signing.
+- Remaining: dedicated kit-owned confirmation UI/modal surface. Current hook lets host apps show their own confirmation UI or throw to cancel before the wallet prompt.
+
 ### 2. Client-side transaction history store
 
 **What XRPL has:** `WalletTransactionStore` — per `account+network`, capped at `max`

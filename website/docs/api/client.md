@@ -99,6 +99,22 @@ await kit.voteWitness({ votes: [{ witnessAddress: "T...", voteCount: 3 }] });
 
 See [Transactions](/docs/transactions/overview) for the full list and error handling.
 
+## Transaction preview
+
+`transactionPreview` runs before `signAndSendTransaction`, `transferTrx`, `transferTrc20`, and
+`triggerSmartContract` ask the wallet to sign. The kit creates a default human-readable preview and
+passes it to your resolver.
+
+```ts
+const kit = createWalletKit({
+  metadata: { name: "My dApp" },
+  transactionPreview: async (request, context) => {
+    console.log(context.defaultPreview.summary);
+    // Open your own confirmation UI here, or throw to cancel signing.
+  }
+});
+```
+
 ## Building transactions manually
 
 ```ts

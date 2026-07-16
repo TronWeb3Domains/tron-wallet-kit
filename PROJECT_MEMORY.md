@@ -5047,3 +5047,31 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - P2 docs;
   - P2 quality gates and breakpoint;
   - optional Vue/Nuxt docs/examples later.
+
+## 2026-07-16 XRPL Parity P1.1 Transaction Preview Runtime
+
+- Committed baseline before implementation:
+  - commit `51eaa30` (`chore: checkpoint app metadata and parity docs`).
+- Implemented first step of `Review/XRPL_PARITY_UPGRADE_PLAN.md` P1.1:
+  - added `WalletTransactionPreview`;
+  - added `TransactionPreviewResolver`;
+  - added `transactionPreview` to `WalletClientConfig`;
+  - wired preview resolution before `manager.signTransaction()` in the client transaction runtime.
+- Added default preview builders for:
+  - `transferTrx`;
+  - `transferTrc20`;
+  - `triggerSmartContract`;
+  - raw fallback transactions.
+- Added client regression coverage:
+  - preview resolver runs before signing;
+  - resolver receives TRON-native default summaries for TRX transfer and smart-contract call.
+- Docs updated:
+  - `packages/client/README.md`;
+  - `website/docs/api/client.md`;
+  - `website/docs/transactions/overview.md`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed with 72 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+- Remaining:
+  - build kit-owned confirmation UI/modal surface on top of the runtime hook;
+  - proceed to P1.2 durable transaction history store.
