@@ -5235,3 +5235,16 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Remaining:
   - visual QA of the confirmation dialog in `react-basic`/website flows;
   - decide whether to add a dedicated React example action for preview confirmation.
+
+## 2026-07-16 React Basic Transaction Preview Toggle
+
+- Added a `Transaction preview confirmation` toggle to `examples/react-basic`.
+- The playground now passes `ui.transactionPreview` into `getDefaultConfig`:
+  - enabled by default;
+  - `Continue` / `Cancel` labels for the built-in confirmation dialog.
+- Existing `Sign and send TRX` and `Sign and execute` buttons now exercise the built-in transaction confirmation flow directly.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed;
+  - `pnpm --filter @tron-wallet-kit/examples build` passed.
+- Note:
+  - Vite still warns about large example chunks and a Rollup annotation in `ox`; build succeeds.

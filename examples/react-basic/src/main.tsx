@@ -31,6 +31,7 @@ function ExampleApp() {
   const [showBalance, setShowBalance] = useState(true);
   const [resolveIdentity, setResolveIdentity] = useState(true);
   const [showRecentTransactions, setShowRecentTransactions] = useState(true);
+  const [transactionPreviewEnabled, setTransactionPreviewEnabled] = useState(true);
   const [walletLayout, setWalletLayout] = useState<WalletLayout>("list");
   const [featuredMode, setFeaturedMode] = useState<FeaturedMode>("installed-first");
   const [featuredPreset, setFeaturedPreset] = useState<FeaturedPreset>("recommended");
@@ -67,12 +68,17 @@ function ExampleApp() {
       showRecentTransactions,
       walletList,
       modal: { subtitle: "" },
-      accountPanel: { mode: accountPanelMode === "modal" ? "modal" : "inline", showRecentTransactions }
+      accountPanel: { mode: accountPanelMode === "modal" ? "modal" : "inline", showRecentTransactions },
+      transactionPreview: {
+        enabled: transactionPreviewEnabled,
+        confirmLabel: "Continue",
+        cancelLabel: "Cancel"
+      }
     },
     autoReconnect: false,
     storageKey: "react-basic-session-v2",
     useBrowserStorage: true
-  }), [accountPanelMode, resolveIdentity, showRecentTransactions, themeName, walletList]);
+  }), [accountPanelMode, resolveIdentity, showRecentTransactions, themeName, transactionPreviewEnabled, walletList]);
 
   return (
     <TronKitProvider
@@ -85,6 +91,7 @@ function ExampleApp() {
         showBalance={showBalance}
         resolveIdentity={resolveIdentity}
         showRecentTransactions={showRecentTransactions}
+        transactionPreviewEnabled={transactionPreviewEnabled}
         walletLayout={walletLayout}
         featuredMode={featuredMode}
         featuredPreset={featuredPreset}
@@ -96,6 +103,7 @@ function ExampleApp() {
         onShowBalanceChange={setShowBalance}
         onResolveIdentityChange={setResolveIdentity}
         onShowRecentTransactionsChange={setShowRecentTransactions}
+        onTransactionPreviewEnabledChange={setTransactionPreviewEnabled}
         onWalletLayoutChange={setWalletLayout}
         onFeaturedModeChange={setFeaturedMode}
         onFeaturedPresetChange={setFeaturedPreset}
@@ -113,6 +121,7 @@ type ExampleWorkspaceProps = {
   showBalance: boolean;
   resolveIdentity: boolean;
   showRecentTransactions: boolean;
+  transactionPreviewEnabled: boolean;
   walletLayout: WalletLayout;
   featuredMode: FeaturedMode;
   featuredPreset: FeaturedPreset;
@@ -124,6 +133,7 @@ type ExampleWorkspaceProps = {
   onShowBalanceChange: (showBalance: boolean) => void;
   onResolveIdentityChange: (resolveIdentity: boolean) => void;
   onShowRecentTransactionsChange: (showRecentTransactions: boolean) => void;
+  onTransactionPreviewEnabledChange: (enabled: boolean) => void;
   onWalletLayoutChange: (layout: WalletLayout) => void;
   onFeaturedModeChange: (mode: FeaturedMode) => void;
   onFeaturedPresetChange: (preset: FeaturedPreset) => void;
@@ -424,6 +434,10 @@ function ExampleWorkspace(props: ExampleWorkspaceProps) {
               <label>
                 <input aria-label="Show recent transactions" type="checkbox" checked={props.showRecentTransactions} onChange={(event) => props.onShowRecentTransactionsChange(event.target.checked)} />
                 <span>Show recent transactions</span>
+              </label>
+              <label>
+                <input aria-label="Transaction preview confirmation" type="checkbox" checked={props.transactionPreviewEnabled} onChange={(event) => props.onTransactionPreviewEnabledChange(event.target.checked)} />
+                <span>Transaction preview confirmation</span>
               </label>
               <label>
                 <input aria-label="Show unavailable wallets" type="checkbox" checked={props.showUnavailableWallets} onChange={(event) => props.onShowUnavailableWalletsChange(event.target.checked)} />
