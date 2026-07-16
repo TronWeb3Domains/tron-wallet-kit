@@ -48,7 +48,7 @@ export class WalletManager {
   private autoReconnectPromise: Promise<WalletSession | null> | undefined;
 
   constructor(readonly config: WalletManagerConfig = {}) {
-    this.appName = config.appName;
+    this.appName = config.appName ?? config.metadata?.name;
     this.registry = new NetworkRegistry(config.networks);
     this.storage = config.storage ?? new MemoryWalletStorage();
     this.storageKey = config.storageKey ?? "session";

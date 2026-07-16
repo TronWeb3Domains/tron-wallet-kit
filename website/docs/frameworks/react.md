@@ -15,7 +15,12 @@ Wrap your app in `TronKitProvider` and drop a `TronConnectButton` anywhere insid
 import { getDefaultConfig, TronKitProvider, TronConnectButton } from "@tron-wallet-kit/react";
 
 const config = getDefaultConfig({
-  appName: "My TRON dApp",
+  metadata: {
+    name: "My TRON dApp",
+    description: "Wallet connection for My TRON dApp",
+    url: window.location.origin,
+    icons: [`${window.location.origin}/icon.png`],
+  },
   network: "mainnet",
   walletConnectProjectId: import.meta.env.VITE_WC_PROJECT_ID, // optional
 });
@@ -36,11 +41,13 @@ account modal, toast, `.trx` identity, TRX balance).
 
 | Option | Type | Default | Notes |
 |---|---|---|---|
-| `appName` | `string` | — | Required. Shown in WalletConnect metadata. |
+| `metadata` | `{ name?, description?, url?, icons? }` | `{ name: "TRON dApp" }` | App identity shown in WalletConnect and future auth prompts. |
 | `network` | `"mainnet" \| "shasta" \| "nile"` | `"mainnet"` | Active TRON network. |
 | `walletConnectProjectId` | `string` | — | Enables the WalletConnect QR flow. Omit to hide WC. |
 | `walletConnectNetwork` | `string` | follows `network` | Override the WC chain if needed. |
 | `ui`, `identity`, `balance`, … | — | — | Any `createWalletKit` option is accepted and merged. |
+
+`appName` is still accepted as a shorthand for `metadata.name`.
 
 ### `TronKitProvider` props
 

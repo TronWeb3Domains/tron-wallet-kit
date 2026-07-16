@@ -26,7 +26,12 @@ import {
 } from "@tron-wallet-kit/react";
 
 const config = getDefaultConfig({
-  appName: "My TRON dApp",
+  metadata: {
+    name: "My TRON dApp",
+    description: "Wallet connection for My TRON dApp",
+    url: window.location.origin,
+    icons: [`${window.location.origin}/icon.png`]
+  },
   network: "mainnet",
   walletConnectProjectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID
 });
@@ -43,6 +48,8 @@ createRoot(document.getElementById("root")!).render(<App />);
 ```
 
 `walletConnectProjectId` is optional. If it is omitted, WalletConnect is not shown in the default wallet list.
+
+`metadata` identifies your dApp in WalletConnect and future auth prompts. `appName` still works as a shorthand for `metadata.name`.
 
 ## Exports
 
@@ -99,6 +106,20 @@ const dark = darkTheme({
 ```
 
 The factories generate TRON Wallet Kit theme config on top of the `--twk-*` token system.
+
+System-adaptive themes are supported at the provider:
+
+```tsx
+<TronKitProvider
+  config={config}
+  theme={{
+    light: lightTheme({ accentColor: "#0988f0" }),
+    dark: darkTheme({ accentColor: "#00e5a8" })
+  }}
+>
+  <TronConnectButton />
+</TronKitProvider>
+```
 
 ## Status
 

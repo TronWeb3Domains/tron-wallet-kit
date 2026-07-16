@@ -355,6 +355,7 @@ describe("wallet kit surfaces", () => {
     });
     expect(connected).toContain("alice.trx");
     expect(connected).toContain("(12.5 TRX)");
+    expect(connected).toContain('aria-label="Open account"');
     expect(connected).toContain("twk-button-chevron");
     expect(connected).toContain("twk-button-pending");
     expect(connected).toContain('data-variant="pill"');
@@ -367,6 +368,7 @@ describe("wallet kit surfaces", () => {
     });
     expect(loading).toContain("twk-skeleton-name");
     expect(loading).toContain("twk-skeleton-balance");
+    expect(loading).toContain("TRX balance");
   });
 
   it("renders TRON featured wallets with TronLink first and WalletConnect last", () => {
@@ -1227,7 +1229,7 @@ describe("wallet kit surfaces", () => {
         title: "Connect TRON",
       },
       walletList: {
-        layout: "grid",
+        layout: "card",
       },
       toast: true,
     });
@@ -1270,8 +1272,8 @@ describe("wallet kit surfaces", () => {
 
   it("resolves built-in locales and app label overrides", () => {
     const viConfig = resolveWalletUiConfig({ locale: "vi" });
-    expect(viConfig.labels.connectModal.title).toBe("Connect wallet");
-    expect(viConfig.modal.title).toBe("Connect wallet");
+    expect(viConfig.labels.connectModal.title).toBe("Connect Wallet");
+    expect(viConfig.modal.title).toBe("Connect Wallet");
 
     const overridden = resolveWalletUiConfig({
       locale: "vi",
@@ -1284,7 +1286,7 @@ describe("wallet kit surfaces", () => {
     });
     expect(overridden.modal.title).toBe("Connect TRON");
     expect(overridden.labels.connectModal.tryAgain).toBe("Retry");
-    expect(overridden.labels.connectModal.qrCode).toBe("QR CODE");
+    expect(overridden.labels.connectModal.qrCode).toBe("QR code");
 
     const html = createConnectModalHtml({
       labels: overridden.labels.connectModal,
@@ -1297,7 +1299,7 @@ describe("wallet kit surfaces", () => {
         },
       ],
     });
-    expect(html).toContain("Connect wallet");
+    expect(html).toContain("Connect Wallet");
     expect(html).toContain("All wallets");
     expect(html).toContain("QR CODE");
   });

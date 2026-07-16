@@ -1,8 +1,8 @@
 import { en } from "./en";
-import { vi } from "./vi";
+import { zh } from "./zh";
 import type { WalletKitLabelPack, WalletUiLabels } from "../types";
 
-export const BUILTIN_LOCALES = { en, vi } as const;
+export const BUILTIN_LOCALES = { en, zh } as const;
 export type BuiltinLocaleId = keyof typeof BUILTIN_LOCALES;
 
 export function resolveLabelPack(locale?: string, overrides?: WalletUiLabels): WalletKitLabelPack {
@@ -25,4 +25,4 @@ export function resolveLabelPack(locale?: string, overrides?: WalletUiLabels): W
   };
 }
 
-export { en, vi };
+export { en, zh };

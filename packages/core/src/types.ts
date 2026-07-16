@@ -201,6 +201,13 @@ export interface WalletStorage {
   removeItem(key: string): void | Promise<void>;
 }
 
+export interface WalletKitAppMetadata {
+  name?: string;
+  description?: string;
+  url?: string;
+  icons?: string[];
+}
+
 export const WALLET_STORAGE_VERSION = 1 as const;
 
 export interface StoredWalletSessionEnvelope {
@@ -210,7 +217,15 @@ export interface StoredWalletSessionEnvelope {
 }
 
 export interface WalletManagerConfig {
+  metadata?: WalletKitAppMetadata;
+  /** @deprecated Prefer `metadata.name`. */
   appName?: string;
+  /** @deprecated Prefer `metadata.description`. */
+  appDescription?: string;
+  /** @deprecated Prefer `metadata.url`. */
+  appUrl?: string;
+  /** @deprecated Prefer `metadata.icons`. */
+  appIcons?: string[];
   network?: WalletNetwork | WalletNetworkId;
   networks?: WalletNetwork[];
   storage?: WalletStorage;

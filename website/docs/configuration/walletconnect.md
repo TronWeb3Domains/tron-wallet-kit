@@ -1,7 +1,7 @@
 # WalletConnect
 
-WalletConnect gives mobile wallets a QR / deep-link connection. It's optional — the kit works with
-injected wallets without it — but enabling it unlocks Klever, Bitget, and other mobile wallets.
+WalletConnect gives mobile wallets a QR / deep-link connection. It is optional: the kit works with
+injected wallets without it, but enabling it unlocks Klever, Bitget, and other mobile wallets.
 
 ## 1. Get a project id
 
@@ -17,14 +17,22 @@ package.
 
 ```tsx
 const config = getDefaultConfig({
-  appName: "My TRON dApp",
+  metadata: {
+    name: "My TRON dApp",
+    description: "Wallet connection for My TRON dApp",
+    url: window.location.origin,
+    icons: [`${window.location.origin}/icon.png`],
+  },
   network: "mainnet",
   walletConnectProjectId: import.meta.env.VITE_WC_PROJECT_ID,
 });
 ```
 
-That's all — WalletConnect now appears in the connect modal with a QR flow. Omit the id and it is
+That's all: WalletConnect now appears in the connect modal with a QR flow. Omit the id and it is
 simply hidden.
+
+The `metadata` object is passed to WalletConnect so the wallet can show the correct dApp name, URL,
+and icon during approval.
 
 ## Network
 
@@ -32,12 +40,16 @@ WalletConnect follows the kit `network` (`mainnet` by default). Override only if
 WalletConnect chain:
 
 ```tsx
-getDefaultConfig({ appName, network: "mainnet", walletConnectNetwork: "mainnet" });
+getDefaultConfig({
+  metadata: { name: "My TRON dApp" },
+  network: "mainnet",
+  walletConnectNetwork: "mainnet",
+});
 ```
 
 ## Rendering your own QR
 
-If you don't use the default modal, capture the URI and render your own QR:
+If you do not use the default modal, capture the URI and render your own QR:
 
 ```ts
 import { createWalletConnectAdapter } from "@tron-wallet-kit/adapter-walletconnect";
@@ -45,6 +57,12 @@ import { createWalletConnectAdapter } from "@tron-wallet-kit/adapter-walletconne
 const walletConnect = createWalletConnectAdapter({
   projectId: process.env.WC_PROJECT_ID!,
   network: "mainnet",
+  appMetadata: {
+    name: "My TRON dApp",
+    description: "Wallet connection for My TRON dApp",
+    url: window.location.origin,
+    icons: [`${window.location.origin}/icon.png`],
+  },
   onUri(uri) {
     // render `uri` as a QR, or deep-link on mobile
   },
@@ -53,10 +71,10 @@ const walletConnect = createWalletConnectAdapter({
 
 ## How the session is negotiated
 
-The kit requests a **minimal required namespace** — only `tron_signTransaction` — and puts
+The kit requests a **minimal required namespace**: only `tron_signTransaction`. It puts
 `tron_signMessage` plus the `accountsChanged` / `chainChanged` events in the **optional** namespace.
-This is deliberate: a wallet must reject a proposal it can't fully satisfy, and some TRON wallets
-don't implement every method. Keeping the required set minimal is what makes the QR work across the
+This is deliberate: a wallet must reject a proposal it cannot fully satisfy, and some TRON wallets
+do not implement every method. Keeping the required set minimal is what makes the QR work across the
 widest range of wallets.
 
 ::: trx Bundle note

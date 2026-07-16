@@ -83,7 +83,10 @@ focus ring, spinner trail, QR foreground/background, and the portal scrim blur.
 
 ## Theme builder
 
-Adjust the accent, radius, font, and mode below, watch the modal preview update, and copy the
-exported config straight into your `TronKitProvider`.
+Use the interactive **[theme builder](/docs/theme-builder)** to tune colors, radius, font, and
+layout with a live modal preview on desktop and mobile, then copy the generated config. The React
+equivalent uses the theme factories:
 
-<ThemeBuilder />
+- `lightTheme(...)` for fixed light mode.
+- `darkTheme(...)` for fixed dark mode.
+- `theme={{ light, dark }}` for system-adaptive mode.

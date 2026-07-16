@@ -82,3 +82,24 @@
 
 /* Feature cards on home tighten to brand */
 .VPFeature .icon { background: var(--vp-c-brand-soft) !important; }
+
+/* ── Prevent VitePress .vp-doc styles from bleeding into the injected kit DOM ──
+   The wallet modal renders inside the docs content, and its title is an <h2
+   class="twk-title">, so `.vp-doc h2` was adding a border-top (the stray line),
+   plus margins/padding/letter-spacing. Reset docs typography inside any kit root. */
+.vp-doc [data-twk-root] :is(h1, h2, h3, h4, h5, h6),
+.vp-doc .twk-title,
+[data-twk-root] :is(h1, h2, h3, h4, h5, h6) {
+  border: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  letter-spacing: normal !important;
+  line-height: inherit;
+}
+.vp-doc [data-twk-root] p { margin: 0; }
+.vp-doc [data-twk-root] a { font-weight: inherit; text-decoration: none; }
+.vp-doc [data-twk-root] a:hover { text-decoration: none; }
+.vp-doc [data-twk-root] ul,
+.vp-doc [data-twk-root] ol,
+.vp-doc [data-twk-root] li { margin: 0; padding: 0; list-style: none; }
+.vp-doc [data-twk-root] hr { display: none; }

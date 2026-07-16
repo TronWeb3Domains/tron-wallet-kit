@@ -15,10 +15,17 @@ export type TronWalletProviderProps = WalletClientConfig & {
 export type TronKitProviderProps = {
   config?: WalletClientConfig;
   kit?: WalletKit;
-  theme?: ThemeConfig;
+  theme?: TronKitProviderTheme;
   children?: ReactNode;
   clearStoredSessionOnAutoReconnectDisabled?: boolean;
 };
+
+export type AdaptiveThemeConfig = {
+  light: ThemeConfig;
+  dark: ThemeConfig;
+};
+
+export type TronKitProviderTheme = ThemeConfig | AdaptiveThemeConfig;
 
 export type ThemeFactoryOptions = Partial<ThemeConfig["tokens"]> & {
   accentColor?: string;
@@ -28,8 +35,9 @@ export type ThemeFactoryOptions = Partial<ThemeConfig["tokens"]> & {
   tokens?: ThemeConfig["tokens"];
 };
 
-export type DefaultTronKitConfig = Omit<WalletClientConfig, "network" | "walletConnectNetwork" | "walletConnectProjectId"> & {
-  appName: string;
+export type DefaultTronKitConfig = Omit<WalletClientConfig, "network" | "walletConnectNetwork" | "walletConnectProjectId" | "appName"> & {
+  /** @deprecated Prefer `metadata.name` for production integrations. */
+  appName?: string;
   network?: WalletNetworkId | WalletClientConfig["network"];
   walletConnectProjectId?: string;
   walletConnectNetwork?: WalletClientConfig["walletConnectNetwork"];
@@ -126,6 +134,7 @@ type WalletButtonAccountPanelModel = {
 
 const WalletKitContext = createContext<WalletKit | null>(null);
 const AccountModalContext = createContext<InternalAccountModalState>({ accountModalOpen: false });
+const ThemeContext = createContext<ThemeConfig | undefined>(undefined);
 
 export function getDefaultConfig(config: DefaultTronKitConfig): WalletClientConfig {
   const walletConnectProjectId = config.walletConnectProjectId?.trim();
@@ -136,9 +145,10 @@ export function getDefaultConfig(config: DefaultTronKitConfig): WalletClientConf
     network: _network,
     ...baseConfig
   } = config;
+  const appName = config.appName ?? config.metadata?.name;
   const resolved: WalletClientConfig = {
     ...baseConfig,
-    appName: config.appName,
+    ...(appName ? { appName } : {}),
     network,
     useBrowserStorage: config.useBrowserStorage ?? true,
     autoReconnect: config.autoReconnect ?? false,
@@ -228,21 +238,57 @@ function resolveFactoryFont(fontStack: ThemeFactoryOptions["fontStack"]): string
   return undefined;
 }
 
+function useResolvedProviderTheme(theme: TronKitProviderTheme | undefined): ThemeConfig | undefined {
+  const prefersDark = usePrefersDarkMode();
+  return useMemo(() => {
+    if (!theme) return undefined;
+    if (isAdaptiveTheme(theme)) return prefersDark ? theme.dark : theme.light;
+    return theme;
+  }, [prefersDark, theme]);
+}
+
+function isAdaptiveTheme(theme: TronKitProviderTheme): theme is AdaptiveThemeConfig {
+  return typeof theme === "object" && theme !== null && "light" in theme && "dark" in theme;
+}
+
+function usePrefersDarkMode(): boolean {
+  const [prefersDark, setPrefersDark] = useState(() => {
+    if (typeof globalThis.matchMedia !== "function") return false;
+    return globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
+
+  useEffect(() => {
+    if (typeof globalThis.matchMedia !== "function") return undefined;
+    const media = globalThis.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => setPrefersDark(media.matches);
+    onChange();
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", onChange);
+      return () => media.removeEventListener("change", onChange);
+    }
+    media.addListener?.(onChange);
+    return () => media.removeListener?.(onChange);
+  }, []);
+
+  return prefersDark;
+}
+
 export function TronKitProvider(props: TronKitProviderProps) {
   const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const theme = useResolvedProviderTheme(props.theme);
   const config = useMemo<WalletClientConfig>(() => {
     const base = props.config ?? {};
-    if (!props.theme) return base;
+    if (!theme) return base;
     const themedUi = {
       ...base.ui,
-      ...props.theme
+      ...theme
     };
-    if (props.theme.tokens) themedUi.customTheme = props.theme.tokens;
+    if (theme.tokens) themedUi.customTheme = theme.tokens;
     return {
       ...base,
       ui: themedUi
     };
-  }, [props.config, props.theme]);
+  }, [props.config, theme]);
 
   const accountModal = useMemo<InternalAccountModalState>(
     () => ({
@@ -258,15 +304,19 @@ export function TronKitProvider(props: TronKitProviderProps) {
     AccountModalContext.Provider,
     { value: accountModal },
     createElement(
-      TronWalletProvider,
-      {
-        ...config,
-        ...(props.kit ? { kit: props.kit } : {}),
-        ...(props.clearStoredSessionOnAutoReconnectDisabled !== undefined
-          ? { clearStoredSessionOnAutoReconnectDisabled: props.clearStoredSessionOnAutoReconnectDisabled }
-          : {})
-      },
-      props.children
+      ThemeContext.Provider,
+      { value: theme },
+      createElement(
+        TronWalletProvider,
+        {
+          ...config,
+          ...(props.kit ? { kit: props.kit } : {}),
+          ...(props.clearStoredSessionOnAutoReconnectDisabled !== undefined
+            ? { clearStoredSessionOnAutoReconnectDisabled: props.clearStoredSessionOnAutoReconnectDisabled }
+            : {})
+        },
+        props.children
+      )
     )
   );
 }
@@ -463,21 +513,20 @@ export function useWalletCapabilities(): WalletCapabilities | null {
 export function WalletButton(props: WalletButtonProps) {
   const kit = useWalletKit();
   const accountModal = useContext(AccountModalContext);
+  const providerTheme = useContext(ThemeContext);
   useWalletKitStyles();
   const session = useWalletSession();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const [uncontrolledAccountOpen, setUncontrolledAccountOpen] = useState(false);
-  const controlledAccountOpen = props.accountPanelOpen ?? (accountModal.setAccountModalOpen ? accountModal.accountModalOpen : undefined);
-  const accountOpen = controlledAccountOpen ?? uncontrolledAccountOpen;
+  const accountOpen = props.accountPanelOpen ?? uncontrolledAccountOpen;
   const setAccountOpen = useCallback(
     (next: boolean | ((open: boolean) => boolean)) => {
       const resolved = typeof next === "function" ? next(accountOpen) : next;
-      if (props.accountPanelOpen === undefined && !accountModal.setAccountModalOpen) setUncontrolledAccountOpen(resolved);
-      if (props.accountPanelOpen === undefined) accountModal.setAccountModalOpen?.(resolved);
+      if (props.accountPanelOpen === undefined) setUncontrolledAccountOpen(resolved);
       props.onAccountPanelOpenChange?.(resolved);
     },
-    [accountModal, accountOpen, props.accountPanelOpen, props.onAccountPanelOpenChange]
+    [accountOpen, props.accountPanelOpen, props.onAccountPanelOpenChange]
   );
   const [accountPanelView, setAccountPanelView] = useState<"account" | "address-qr" | "tx-history">("account");
   const [identity, setIdentity] = useState<TronIdentity | undefined>();
@@ -611,7 +660,7 @@ export function WalletButton(props: WalletButtonProps) {
 
   useEffect(() => {
     if (!accountOpen) return;
-    const mode = props.accountPanelMode ?? "dropdown";
+    const mode = props.accountPanelMode ?? (kit.uiConfig.accountPanel.mode === "modal" ? "modal" : "dropdown");
     if (mode === "modal" && typeof document !== "undefined") {
       previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       const previousOverflow = document.body.style.overflow;
@@ -624,11 +673,11 @@ export function WalletButton(props: WalletButtonProps) {
       };
     }
     return undefined;
-  }, [accountOpen, accountPanelView, props.accountPanelMode]);
+  }, [accountOpen, accountPanelView, kit.uiConfig.accountPanel.mode, props.accountPanelMode]);
 
   useEffect(() => {
     if (!accountOpen) return;
-    const mode = props.accountPanelMode ?? "dropdown";
+    const mode = props.accountPanelMode ?? (kit.uiConfig.accountPanel.mode === "modal" ? "modal" : "dropdown");
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target;
       if (target instanceof Node && rootRef.current?.contains(target)) return;
@@ -651,13 +700,14 @@ export function WalletButton(props: WalletButtonProps) {
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [accountOpen, props.accountPanelMode]);
+  }, [accountOpen, kit.uiConfig.accountPanel.mode, props.accountPanelMode]);
 
   const handleClick = (event: MouseEvent<HTMLDivElement>) => {
+    const liveSession = kit.manager.getSession();
     const target = event.target instanceof Element ? event.target : null;
     const action = target?.closest("[data-twk-action]")?.getAttribute("data-twk-action");
-    if (action === "copy" && session) {
-      void copyText(session.account.address).then((copied) => {
+    if (action === "copy" && liveSession) {
+      void copyText(liveSession.account.address).then((copied) => {
         if (!copied) return;
         setCopyState("copied");
         globalThis.setTimeout(() => setCopyState("idle"), 1400);
@@ -692,21 +742,25 @@ export function WalletButton(props: WalletButtonProps) {
     const panelWrap = target?.closest(".twk-button-panel-overlay, .twk-button-panel");
     if (panelWrap) {
       if (target && !target.closest(".twk-account-panel")) {
+        event.preventDefault();
+        event.stopPropagation();
         setAccountOpen(false);
         setAccountPanelView("account");
       }
       return;
     }
-    if (props.onClick) {
-      props.onClick();
-      return;
-    }
-    if (session) {
+    if (liveSession) {
+      event.preventDefault();
+      event.stopPropagation();
       setAccountOpen((open) => {
         const nextOpen = !open;
         if (!nextOpen) setAccountPanelView("account");
         return nextOpen;
       });
+      return;
+    }
+    if (props.onClick) {
+      props.onClick();
       return;
     }
     kit.openModal();
@@ -716,7 +770,7 @@ export function WalletButton(props: WalletButtonProps) {
     ref: rootRef,
     className: "twk-root",
     "data-twk-root": "true",
-    style: useThemeStyle(props.theme),
+    style: useThemeStyle(props.theme ?? providerTheme),
     onClick: handleClick,
     dangerouslySetInnerHTML: { __html: `${html}${panelHtml}` }
   });
@@ -725,21 +779,19 @@ export function WalletButton(props: WalletButtonProps) {
 export function TronConnectButton(props: TronConnectButtonProps) {
   const accountModal = useContext(AccountModalContext);
   const accountStatus = props.accountStatus ?? "full";
-  const chainStatus = props.chainStatus ?? "none";
   const { accountStatus: _accountStatus, chainStatus: _chainStatus, ...walletButtonProps } = props;
   const buttonProps: WalletButtonProps = {
     ...walletButtonProps,
     accountPanelMode: props.accountPanelMode ?? "modal",
     onAccountPanelOpenChange: (open) => {
-      accountModal.setAccountModalOpen?.(open);
+      if (props.accountPanelOpen !== undefined) accountModal.setAccountModalOpen?.(open);
       props.onAccountPanelOpenChange?.(open);
     },
     showAdapterIcon: props.showAdapterIcon ?? accountStatus !== "address",
     showBalance: props.showBalance ?? accountStatus === "full",
-    showChevron: props.showChevron ?? chainStatus !== "none"
+    showChevron: props.showChevron ?? true
   };
-  const controlledOpen = props.accountPanelOpen ?? (accountModal.setAccountModalOpen ? accountModal.accountModalOpen : undefined);
-  if (controlledOpen !== undefined) buttonProps.accountPanelOpen = controlledOpen;
+  if (props.accountPanelOpen !== undefined) buttonProps.accountPanelOpen = props.accountPanelOpen;
   return createElement(WalletButton, buttonProps);
 }
 
@@ -819,6 +871,7 @@ function getFocusablePanelControls(panel: HTMLElement): HTMLElement[] {
 
 export function ConnectModal(props: ConnectModalProps) {
   const kit = useWalletKit();
+  const providerTheme = useContext(ThemeContext);
   useWalletKitStyles();
   const session = useWalletSession();
   const [availability, setAvailability] = useState<Record<string, WalletAvailability>>({});
@@ -871,13 +924,14 @@ export function ConnectModal(props: ConnectModalProps) {
   return createElement("div", {
     className: "twk-root",
     "data-twk-root": "true",
-    style: useThemeStyle(props.theme),
+    style: useThemeStyle(props.theme ?? providerTheme),
     dangerouslySetInnerHTML: { __html: html }
   });
 }
 
 export function AccountPanel(props: AccountPanelProps) {
   const kit = useWalletKit();
+  const providerTheme = useContext(ThemeContext);
   useWalletKitStyles();
   const session = useWalletSession();
   const account = props.account ?? session?.account;
@@ -899,7 +953,7 @@ export function AccountPanel(props: AccountPanelProps) {
   return createElement("div", {
     className: "twk-root",
     "data-twk-root": "true",
-    style: useThemeStyle(props.theme),
+    style: useThemeStyle(props.theme ?? providerTheme),
     dangerouslySetInnerHTML: { __html: html }
   });
 }

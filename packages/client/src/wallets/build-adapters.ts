@@ -33,6 +33,10 @@ function buildAdapter(wallet: WalletDescriptor, config: DefaultAdaptersConfig): 
       return createWalletConnectAdapter({
         projectId: config.walletConnectProjectId,
         ...config.walletconnect,
+        appMetadata: {
+          ...(config.metadata ?? {}),
+          ...(config.walletconnect?.appMetadata ?? {})
+        },
         ...(walletConnectIcon ? { metadata: { ...config.walletconnect?.metadata, icon: walletConnectIcon } } : {}),
         ...(config.walletConnectNetwork ? { network: config.walletConnectNetwork } : {}),
         ...(config.onWalletConnectUri ? { onUri: config.onWalletConnectUri } : {})

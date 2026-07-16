@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite --host 127.0.0.1 --port 5174",
-    "dev:https": "vite --mode https --host 127.0.0.1 --port 5174",
+    "dev": "vite --host 127.0.0.1 --port 5174 --strictPort",
+    "dev:https": "vite --mode https --host 127.0.0.1 --port 5174 --strictPort",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

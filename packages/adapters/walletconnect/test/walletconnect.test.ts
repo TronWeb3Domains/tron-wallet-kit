@@ -2,12 +2,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createWalletConnectAdapter, type WalletConnectWalletLike } from "../src/index";
 
 const walletConnectMock = vi.hoisted(() => ({
-  connectPayloads: [] as unknown[]
+  connectPayloads: [] as unknown[],
+  initPayloads: [] as unknown[]
 }));
 
 vi.mock("@walletconnect/sign-client", () => ({
   default: {
-    init: vi.fn(async () => ({
+    init: vi.fn(async (payload: unknown) => {
+      walletConnectMock.initPayloads.push(payload);
+      return {
       connect: vi.fn(async (payload: unknown) => {
         walletConnectMock.connectPayloads.push(payload);
         return {
@@ -24,7 +27,8 @@ vi.mock("@walletconnect/sign-client", () => ({
       on: vi.fn(),
       request: vi.fn(),
       session: { getAll: () => [] }
-    }))
+      };
+    })
   }
 }));
 
@@ -61,6 +65,7 @@ function createMockWallet(overrides: Partial<WalletConnectWalletLike> = {}) {
 describe("WalletConnectAdapter", () => {
   beforeEach(() => {
     walletConnectMock.connectPayloads.length = 0;
+    walletConnectMock.initPayloads.length = 0;
   });
 
   it("requires projectId and exposes object capabilities", () => {
@@ -130,6 +135,30 @@ describe("WalletConnectAdapter", () => {
           chains: ["tron:0x2b6653dc"],
           events: ["accountsChanged", "chainChanged"]
         }
+      }
+    });
+  });
+
+  it("passes app metadata to WalletConnect SignClient", async () => {
+    const adapter = createWalletConnectAdapter({
+      projectId: "project",
+      appMetadata: {
+        name: "TRX Domains",
+        description: "Manage .trx names",
+        url: "https://trxdomains.xyz",
+        icons: ["https://trxdomains.xyz/icon.png"]
+      }
+    });
+
+    await adapter.connect();
+
+    expect(walletConnectMock.initPayloads[0]).toMatchObject({
+      projectId: "project",
+      metadata: {
+        name: "TRX Domains",
+        description: "Manage .trx names",
+        url: "https://trxdomains.xyz",
+        icons: ["https://trxdomains.xyz/icon.png"]
       }
     });
   });

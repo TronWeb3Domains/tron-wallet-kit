@@ -287,18 +287,28 @@ Done:
   - `ConnectModal`;
   - `AccountPanel`.
 - Added React tests for `getDefaultConfig`, `TronKitProvider`, `TronConnectButton`, and theme factory exports.
+- Added a hook-driven custom UI test covering:
+  - `useTronAccount`;
+  - `useTronConnect`;
+  - `useTronDisconnect`;
+  - `useTronBalance`;
+  - `useSignMessage`;
+  - `useTrxName`;
+  - `useConnectModal`;
+  - `useAccountModal`.
 
 Verified:
 
 - `pnpm --filter @tron-wallet-kit/react typecheck`
-- `pnpm --filter @tron-wallet-kit/react test -- --run --reporter=dot`
+- `pnpm --filter @tron-wallet-kit/react test -- --run --reporter=dot` (8 tests)
 - `pnpm --filter @tron-wallet-kit/react build`
+- `pnpm --filter @tron-wallet-kit/examples typecheck`
 
 Still open:
 
-- Add deeper hook tests with connect/disconnect/sign/balance state transitions.
 - Confirm `useAccountModal` behavior in the live `react-basic` example.
 - Add custom-connect-UI example that uses hooks only.
+- `examples/react-basic` now uses `getDefaultConfig`, `TronKitProvider`, `TronConnectButton`, and `useTronKit` while retaining its existing QA controls.
 
 ### Phase 2 — Theme Factories
 
@@ -313,12 +323,19 @@ Done:
   - `borderRadius`;
   - `fontStack`;
   - direct `tokens` override.
+- Added provider support for system-adaptive themes:
+  - `theme={{ light: lightTheme(), dark: darkTheme() }}`;
+  - React-rendered `WalletButton`, `ConnectModal`, and `AccountPanel` inherit the provider theme unless a local `theme` prop is passed.
+- Added token-map tests for `lightTheme()` / `darkTheme()` shortcut output via `createThemeStyleProperties`.
+- Updated the website theme builder to export snippets that match the SDK API:
+  - fixed light mode: `lightTheme({...})`;
+  - fixed dark mode: `darkTheme({...})`;
+  - system mode: `{ light: lightTheme({...}), dark: darkTheme({...}) }`;
+  - includes `accentColorForeground`.
 
 Still open:
 
-- Add system-adaptive `{ light, dark }` provider theme support.
-- Add snapshot tests for generated token maps.
-- Align the future website theme builder output with the factory input shape.
+- Live visual QA of the website theme builder in browser.
 
 ### Phase 3 — Website & Docs — Owner: **Claude**  **(priority)**
 Author the full IA in §6 under `website/`. Exit: React + HTML/CDN quick-starts runnable from docs

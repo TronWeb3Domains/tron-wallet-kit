@@ -13,8 +13,13 @@ pnpm add @tron-wallet-kit/browser@beta
 ```html
 <script src="https://cdn.jsdelivr.net/npm/@tron-wallet-kit/browser@beta/dist/tron-wallet-kit.iife.min.js"></script>
 <script>
-  const kit = TronWalletKit.createTronWalletKit({
-    appName: "My TRON dApp",
+  const kit = TronWalletKit.createBrowserKit({
+    metadata: {
+      name: "My TRON dApp",
+      description: "Wallet connection for My TRON dApp",
+      url: window.location.origin,
+      icons: [window.location.origin + "/icon.png"]
+    },
     network: "mainnet",
     walletConnectProjectId: "YOUR_WALLETCONNECT_PROJECT_ID"
   });
@@ -29,6 +34,8 @@ The browser package emits:
 - `dist/tron-wallet-kit.iife.min.js`
 
 WalletConnect still requires your own WalletConnect Cloud project ID.
+
+For legacy pages, `appName` still works as a shorthand for `metadata.name`.
 
 ## Status
 

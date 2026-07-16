@@ -71,11 +71,11 @@ export type ThemeConfig = {
   tokens?: Partial<ThemeTokens>;
 };
 
-export type WalletListLayout = "list" | "card" | "grid";
+export type WalletListLayout = "list" | "card";
 export type FeaturedWalletMode = "manual" | "installed-first" | "installed-only";
 export type AccountPanelMode = "inline" | "modal";
 export type ToastPosition = "bottom-right" | "bottom-left" | "bottom-center";
-export type WalletKitLocale = "en" | "vi" | (string & {});
+export type WalletKitLocale = "en" | "zh" | (string & {});
 export type WalletEnvironmentKind = "desktop-extension" | "mobile-in-app" | "mobile-browser";
 
 export type WalletEnvironment = {

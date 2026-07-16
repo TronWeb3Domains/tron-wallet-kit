@@ -24,7 +24,7 @@ Pass an explicit list, or disable specific wallets, through the config:
 
 ```ts
 const config = getDefaultConfig({
-  appName: "My dApp",
+  metadata: { name: "My dApp" },
   // Only these, in this order:
   wallets: ["tronlink", "okx", "tokenpocket", "walletconnect"],
   // Or keep the defaults but hide some:

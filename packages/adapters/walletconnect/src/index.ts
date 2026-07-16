@@ -15,6 +15,7 @@ import {
   type WalletAccount,
   type WalletAdapter,
   type WalletCapabilities,
+  type WalletKitAppMetadata,
   type WalletMetadata,
   type WalletNetwork
 } from "@tron-wallet-kit/core";
@@ -39,7 +40,7 @@ export type WalletConnectWalletFactoryOptions = {
   projectId: string;
   network: string;
   relayUrl?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: WalletKitAppMetadata;
   methods?: string[];
   events?: string[];
   allWallets?: "SHOW" | "HIDE" | "ONLY_MOBILE";
@@ -57,7 +58,7 @@ export type WalletConnectAdapterOptions = {
   network?: WalletConnectNetworkName | string;
   relayUrl?: string;
   walletFactory?: WalletConnectWalletFactory;
-  appMetadata?: Record<string, unknown>;
+  appMetadata?: WalletKitAppMetadata;
   methods?: string[];
   events?: string[];
   allWallets?: "SHOW" | "HIDE" | "ONLY_MOBILE";
@@ -95,7 +96,7 @@ export class WalletConnectAdapter implements WalletAdapter {
 
   private readonly walletFactory: WalletConnectWalletFactory;
   private readonly relayUrl: string | undefined;
-  private readonly appMetadata: Record<string, unknown> | undefined;
+  private readonly appMetadata: WalletKitAppMetadata | undefined;
   private readonly allWallets: "SHOW" | "HIDE" | "ONLY_MOBILE";
   private wallet: WalletConnectWalletLike | undefined;
   private account: WalletAccount | undefined;
@@ -387,7 +388,7 @@ class LiteWalletConnectWallet implements WalletConnectWalletLike {
   }
 }
 
-function normalizeWalletConnectMetadata(metadata: Record<string, unknown> | undefined): {
+function normalizeWalletConnectMetadata(metadata: WalletKitAppMetadata | undefined): {
   name: string;
   description: string;
   url: string;

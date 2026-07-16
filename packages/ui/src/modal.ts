@@ -572,7 +572,7 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
         const wasHidden = root.hidden;
         lastFocusedElement = documentRef.activeElement instanceof HTMLElement ? documentRef.activeElement : null;
         root.hidden = false;
-        refreshAvailability({ resetTransient: true });
+        if (wasHidden) refreshAvailability({ resetTransient: true });
         if (wasHidden) config.modal.onModalOpen();
       }
     },

@@ -4576,7 +4576,474 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/react test -- --run --reporter=dot` passed with 5 tests.
 - Remaining:
-  - finish full masterplan Phase 2 system-adaptive theme object support;
+  - finish Phase 2 snapshot tests for generated token maps;
   - expand hook tests beyond SSR/static render;
   - add transaction/read helper docs once API names are finalized;
   - later run full workspace `lint/typecheck/test/build` before release commit.
+
+## 2026-07-15 ConnectKit Masterplan Phase 2 Theme Follow-up
+
+- Committed the beta release/docs/ConnectKit API snapshot:
+  - commit `adb9e80` (`chore: prepare beta release docs and connectkit api`).
+- Started website dev server:
+  - `http://127.0.0.1:5174/`;
+  - verified HTTP status `200`.
+- Added system-adaptive provider theme support:
+  - `theme={{ light: lightTheme(), dark: darkTheme() }}`;
+  - provider theme now flows to React-rendered `WalletButton`, `ConnectModal`, and `AccountPanel`;
+  - local `theme` props still override provider theme.
+- Updated `examples/react-basic` to use the masterplan API:
+  - `getDefaultConfig`;
+  - `TronKitProvider`;
+  - `TronConnectButton`;
+  - `useTronKit`.
+- Updated root and React README with adaptive theme snippets.
+- Updated `Review/TRON_CONNECTKIT_MASTERPLAN.md` implementation status.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react test -- --run --reporter=dot` passed with 6 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react build` passed.
+  - `pnpm --filter @tron-wallet-kit/website build` passed.
+  - `http://127.0.0.1:5174/docs/frameworks/react` returned HTTP 200.
+- Remaining:
+  - run live QA on `examples/react-basic`;
+  - add deeper hook state-transition tests;
+  - add token-map snapshot tests;
+  - run full workspace gates before the next release commit.
+
+## 2026-07-15 Local HTTPS Server Split
+
+- Standardized local dev ports:
+  - examples/test app: `https://127.0.0.1:5174/react-basic/`;
+  - website/docs: `https://127.0.0.1:5175/`.
+- Updated examples dev scripts to use `--strictPort` so the test app cannot silently move to another port.
+- Updated website dev script to port `5175` with `--strictPort`.
+- Added `@vitejs/plugin-basic-ssl` to the website dev dependencies and VitePress config so website dev runs over HTTPS.
+- Restarted local servers:
+  - examples listener: `127.0.0.1:5174`;
+  - website listener: `127.0.0.1:5175`.
+- Verification:
+  - `curl.exe -k -I https://127.0.0.1:5174/react-basic/` returned `HTTP/1.1 200 OK`.
+  - `curl.exe -k -I https://127.0.0.1:5175/` returned `HTTP/1.1 200 OK`.
+
+## 2026-07-15 ConnectKit Masterplan Hook And Theme Tests
+
+- Continued `Review/TRON_CONNECTKIT_MASTERPLAN.md` SDK work.
+- Added React contract tests for hook-driven custom UI:
+  - connects a mock wallet with no default built-in adapters;
+  - renders account status/address/name/balance from hooks;
+  - verifies `useTronConnect`, `useTronDisconnect`, `useConnectModal`, `useAccountModal`, and `useSignMessage` are available for custom UI.
+- Added theme factory token-map tests:
+  - `lightTheme` shortcut output for accent, accent foreground, radius, and color scheme;
+  - `darkTheme` shortcut output for accent, radius, token override, and color scheme.
+- Updated `Review/TRON_CONNECTKIT_MASTERPLAN.md` implementation status:
+  - Phase 1 now records hook-driven UI test coverage;
+  - Phase 2 now records token-map test coverage.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react test -- --run --reporter=dot` passed with 8 tests.
+  - `pnpm --filter @tron-wallet-kit/react build` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+- Remaining:
+  - live QA `useAccountModal` / account panel behavior in `react-basic`;
+  - add a visible custom-connect-UI example if needed for docs/demo;
+  - align future website theme builder output with the factory input shape;
+  - run full workspace gates before the next commit.
+
+## 2026-07-15 Theme Builder API Alignment
+
+- Continued Phase 2 theming work from `Review/TRON_CONNECTKIT_MASTERPLAN.md`.
+- Updated `website/.vitepress/theme/components/ThemeBuilder.vue`:
+  - added `accentColorForeground`;
+  - changed default mode to `system`;
+  - export snippet now matches the React SDK API;
+  - fixed light mode exports `lightTheme({...})`;
+  - fixed dark mode exports `darkTheme({...})`;
+  - system mode exports `{ light: lightTheme({...}), dark: darkTheme({...}) }` for `TronKitProvider`.
+- Updated website theming docs to describe the three output modes.
+- Updated local demo links to the split HTTPS setup:
+  - example app: `https://127.0.0.1:5174/react-basic/`;
+  - website remains `https://127.0.0.1:5175/`.
+- Updated `Review/TRON_CONNECTKIT_MASTERPLAN.md` implementation status.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/website build` passed.
+  - `curl.exe -k -I https://127.0.0.1:5175/docs/configuration/theming` returned `HTTP/1.1 200 OK`.
+  - `curl.exe -k -I https://127.0.0.1:5174/react-basic/` returned `HTTP/1.1 200 OK`.
+- Remaining:
+  - browser visual QA of the theme builder;
+  - live QA of account modal behavior in `react-basic`;
+  - full workspace gates before commit.
+
+## 2026-07-15 Vanilla Button Account Panel Fix
+
+- Reviewed `Review/VANILLA_BUTTON_ACCOUNT_PANEL_FIX.md` and confirmed the diagnosis:
+  - `packages/ui/src/button.ts` always opened the connect modal on click;
+  - connected label ignored `session.account.domain` / `displayName`;
+  - vanilla/browser button had no account-detail refresh hook for balance/identity.
+- Updated `packages/ui/src/button.ts`:
+  - disconnected click still opens the connect modal;
+  - connected click toggles the account panel instead of reopening the connect modal;
+  - account panel supports copy address, address QR, recent transaction/history view, and disconnect;
+  - connected label now prefers `domain ?? displayName ?? shortenAddress(address)`;
+  - button can show balance skeleton while account details refresh.
+- Updated `packages/client/src/kit.ts`:
+  - extracted `refreshBalance` and `refreshIdentity` as reusable functions;
+  - passed `refreshAccountDetails` into the vanilla button controller;
+  - respected `connectButton.showBalance`.
+- Rebuilt browser IIFE and copied the new bundles into `examples/public/vendor`:
+  - `tron-wallet-kit.iife.js`;
+  - `tron-wallet-kit.iife.min.js`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot` passed with 43 tests.
+  - `pnpm --filter @tron-wallet-kit/browser build` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+- Remaining:
+  - live QA in the website Playground / HTML-CDN flow after connecting a real wallet;
+  - verify `.trx` and balance appear once refresh completes;
+  - verify connected click opens account panel in vanilla/browser button.
+
+## 2026-07-15 Connected Button Chevron And Website Identity Config
+
+- Re-checked the reviewer feedback against the real code paths instead of assuming one button implementation:
+  - React `TronConnectButton` already uses `WalletButton` and account panel logic;
+  - vanilla/browser `createWalletButton` is the controller used by website Vue/VitePress demos;
+  - website demos were missing `identity: { enabled: true }`.
+- Updated React `TronConnectButton`:
+  - connected chevron now defaults to visible even when `chainStatus="none"`;
+  - `chainStatus` remains available for future network-display behavior but no longer hides the account dropdown affordance.
+- Added regression coverage:
+  - connected `TronConnectButton` with hidden chain status still renders the chevron;
+  - connected button still shows session identity/display name and TRX balance.
+- Updated website demo/playground config:
+  - enabled `.trx` identity resolution in `ConnectDemo.vue`;
+  - enabled `.trx` identity resolution in `PlaygroundWidget.vue`;
+  - kept `connectButton.showBalance: true`.
+- Rebuilt browser IIFE and copied refreshed bundles to:
+  - `examples/public/vendor/`;
+  - `website/public/`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react test -- --run --reporter=dot` passed with 9 tests.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot` passed with 43 tests.
+  - `pnpm --filter @tron-wallet-kit/browser typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser build` passed.
+  - `pnpm --filter @tron-wallet-kit/website build` passed.
+- Remaining:
+  - live QA on `https://127.0.0.1:5174/react-basic/` after connecting a real wallet;
+  - live QA on `https://127.0.0.1:5175/` / playground to confirm `.trx`, balance, chevron, and connected-click account panel behavior.
+
+## 2026-07-15 Account Panel Modal Default And Wallet Layout Type Cleanup
+
+- Fixed connected-button behavior across React and browser/vanilla paths:
+  - React `WalletButton` now handles connected account-panel toggling before any custom `onClick`, so connected clicks do not fall back into connect flow.
+  - Browser/vanilla `createWalletButton` now supports `accountPanelMode`.
+  - `createWalletKit` passes `ui.accountPanel.mode` into the browser/vanilla button.
+  - Default remains modal because `resolveWalletUiConfig().accountPanel.mode` defaults to `modal`; only `inline` maps to dropdown.
+- Fixed website playground runtime:
+  - kept `.trx` identity enabled;
+  - changed the IIFE cache key so the website reloads the updated bundle instead of an older cached script.
+- Cleaned SDK type mismatch:
+  - removed `"grid"` from `WalletListLayout`;
+  - removed `"grid"` alias handling in config and modal view normalization;
+  - updated tests to use `"card"`.
+- Mobile sheet breakpoint:
+  - raised modal/sheet breakpoint from `420px` to `480px` to cover large phones.
+- Rebuilt browser IIFE and copied refreshed bundles to:
+  - `examples/public/vendor/`;
+  - `website/public/`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot` passed with 43 tests.
+  - `pnpm --filter @tron-wallet-kit/react test -- --run --reporter=dot` passed with 9 tests.
+  - `pnpm --filter @tron-wallet-kit/browser build` passed.
+  - `pnpm --filter @tron-wallet-kit/website build` passed.
+  - `curl.exe -k -I https://127.0.0.1:5174/react-basic/` returned `HTTP/1.1 200 OK`.
+  - `curl.exe -k -I https://127.0.0.1:5175/` returned `HTTP/1.1 200 OK`.
+- Remaining:
+  - live browser QA with a real connected wallet to confirm account panel opens as modal on React Basic and website playground;
+  - live website `.trx` check after connecting an address with reverse identity.
+
+## 2026-07-15 Connected Click Regression And Identity Rate Limit Guard
+
+- Followed up on the connected-button regression introduced around `Review/VANILLA_BUTTON_ACCOUNT_PANEL_FIX.md`.
+- React button:
+  - synchronized account-panel mode resolution across render, body-lock/focus, and keyboard-trap effects;
+  - default mode now consistently follows `kit.uiConfig.accountPanel.mode`, which defaults to `modal`.
+- Client identity refresh:
+  - added in-flight de-duplication per `network:address`, so concurrent `refreshIdentity()` calls share one resolver request;
+  - added rate-limit cooldown when resolver errors include `429`, `Too Many Requests`, or `rate limit`;
+  - kept normal missing identity results uncached so a later retry can still resolve a newly available `.trx`;
+  - clears identity in-flight and cooldown maps on `kit.destroy()`.
+- Added client tests:
+  - concurrent identity refreshes call the resolver once;
+  - rate-limited identity refresh enters cooldown and avoids immediate duplicate calls.
+- Rebuilt browser IIFE and copied refreshed bundles to:
+  - `examples/public/vendor/`;
+  - `website/public/`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed with 69 tests.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react test -- --run --reporter=dot` passed with 9 tests.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot` passed with 43 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser build` passed.
+  - `pnpm --filter @tron-wallet-kit/website build` passed.
+  - `curl.exe -k -I https://127.0.0.1:5174/react-basic/` returned `HTTP/1.1 200 OK`.
+  - `curl.exe -k -I https://127.0.0.1:5175/` returned `HTTP/1.1 200 OK`.
+- Remaining:
+  - live QA: after connecting, click the connected button and confirm account panel opens as modal, not the connect wallet modal;
+  - live QA: `.trx` should stop spamming Trongrid under repeated renders; if Trongrid already rate-limited the browser/IP, wait for cooldown or test with a TronGrid API key.
+
+## 2026-07-15 Connected Flow Guards And WalletConnect Project ID Defaults
+
+- Fixed follow-up connected flow regressions:
+  - React `WalletButton` connected clicks now stop propagation/default before toggling the account panel, so a connected click cannot fall through to the connect modal branch.
+  - Browser/vanilla `createWalletButton` connected clicks now apply the same event guard before toggling the account panel.
+  - `createWalletModal.open()` now refreshes wallet availability only when transitioning from hidden to visible, avoiding in-modal state resets while a connecting/QR panel is already open.
+- Filled WalletConnect project ID fallback `a4109c95d50e5c136cdafaf9fc44c105` in:
+  - React Basic example;
+  - HTML CDN example;
+  - website connect demo;
+  - website playground;
+  - website theme builder.
+- Theme builder flow:
+  - uses the same WalletConnect project ID fallback;
+  - sets `modal.closeOnSelect: false` so selecting/connecting a wallet does not immediately collapse back to the wallet list during preview flows;
+  - bumped the browser bundle cache key for local QA.
+- Rebuilt browser IIFE and copied refreshed bundles to:
+  - `examples/public/vendor/`;
+  - `website/public/`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react test -- --run --reporter=dot` passed with 9 tests.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot` passed with 43 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed with 69 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/browser build` passed.
+  - `pnpm --filter @tron-wallet-kit/website build` passed.
+  - `curl.exe -k -I https://127.0.0.1:5174/react-basic/` returned `HTTP/1.1 200 OK`.
+  - `curl.exe -k -I https://127.0.0.1:5175/` returned `HTTP/1.1 200 OK`.
+- Remaining:
+  - live QA with a real connected wallet is still required because the regression depends on wallet extension state;
+  - if a tab keeps showing the old connected-click behavior, hard refresh the React Basic and website tabs to invalidate cached dev/IIFE bundles.
+
+## 2026-07-15 React Basic Connected Click Live Session Guard
+
+- Followed up after live QA still showed `react-basic` connected click reopening the connect flow.
+- Hardened React `WalletButton` click handling:
+  - reads `kit.manager.getSession()` at click-time;
+  - uses that live session for copy/account-panel branching;
+  - prevents stale React render/event closures from falling through to `kit.openModal()` while the manager is already connected.
+- Removed the default `AccountModalContext` controlled-state path from `WalletButton`:
+  - `WalletButton` now uses local open state by default;
+  - it only becomes controlled when an integrator explicitly passes `accountPanelOpen`;
+  - this prevents provider/context re-renders from resetting the connected button flow back to the connect modal.
+- Follow-up hardening:
+  - removed the default `setAccountModalOpen` side effect from `WalletButton.setAccountOpen`;
+  - `TronConnectButton` now forwards account panel state to context only when `accountPanelOpen` is explicitly controlled;
+  - this prevents a connected button click from re-rendering the whole provider tree and clearing the visible connected state.
+- Restarted the examples HTTPS dev server on `5174`:
+  - old listener was stopped;
+  - new listener is active on `127.0.0.1:5174`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react test -- --run --reporter=dot` passed with 9 tests.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `curl.exe -k -I https://127.0.0.1:5174/react-basic/` returned `HTTP/1.1 200 OK`.
+  - confirmed Vite serves the new React source containing `accountOpen = props.accountPanelOpen ?? uncontrolledAccountOpen` and `liveSession = kit.manager.getSession()`.
+  - confirmed Vite serves the follow-up source where default `setAccountOpen` only calls `setUncontrolledAccountOpen` and does not call `setAccountModalOpen`.
+- Remaining:
+  - live QA with the actual wallet extension: after connected, clicking the connect button should open the account panel modal and must not reopen the wallet list.
+
+## 2026-07-15 Theme Builder Connected Flow Fix
+
+- Fixed website theme builder preview flow:
+  - the preview connect button now uses the real `createWalletButton` controller instead of static `createWalletButtonHtml`;
+  - the button is mounted against the same kit manager and modal controller as the preview modal;
+  - after wallet connect succeeds, the modal closes and the button re-renders to connected state;
+  - clicking the connected preview button now opens the account panel through the real button controller.
+- Extended `createWalletButton` controller options:
+  - added `size`;
+  - added `variant`;
+  - controller render passes both through to `createWalletButtonHtml`.
+- Theme builder modal behavior:
+  - changed preview modal `closeOnSelect` back to `true`, because a successful connect should return control to the connect button/account button state.
+- Rebuilt and copied browser IIFE bundles to:
+  - `examples/public/vendor/`;
+  - `website/public/`.
+- Restarted website dev server:
+  - `https://127.0.0.1:5175/` is active.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot` passed with 43 tests.
+  - `pnpm --filter @tron-wallet-kit/website build` passed.
+  - `pnpm --filter @tron-wallet-kit/browser build` passed.
+  - `curl.exe -k -I https://127.0.0.1:5175/` returned `HTTP/1.1 200 OK`.
+  - `curl.exe -k -I https://127.0.0.1:5174/react-basic/` returned `HTTP/1.1 200 OK`.
+- Remaining:
+  - live QA with a real extension wallet in the theme builder: connect should close the connecting panel and update the preview button to connected.
+
+## 2026-07-15 Theme Builder Mobile Sheet And Inline Account Panel
+
+- Fixed theme builder mobile preview behavior:
+  - mobile preview connect modal is forced to dock as a bottom sheet inside the phone frame;
+  - mobile `modalmount` now covers the full phone frame instead of only the area below the preview button;
+  - preview button stays on its own layer above the mobile modal mount.
+- Follow-up for blank mobile preview:
+  - forced the mobile phone frame to use block layout instead of flex for the overlay layer;
+  - gave mobile `modalmount`, nested `.twk-root`, and `.twk-overlay` explicit absolute `inset: 0`, width, height, and min-height;
+  - kept the preview button on a higher z-index layer while the modal layer fills the full phone screen.
+- Fixed mobile account panel behavior:
+  - when the theme builder device mode is `mobile`, the preview connect button uses `accountPanelMode: "dropdown"`;
+  - this keeps account panel inline inside the preview instead of opening a second modal/popup over an already inline/mobile modal preview.
+- Follow-up for account panel presentation:
+  - theme builder preview button now uses `accountPanelMode: "dropdown"` on both desktop and mobile so account panel does not open as a popup modal in the preview;
+  - mobile dropdown panel is positioned absolute below the button so it no longer pushes/jumps the button position;
+  - mobile modal sheet override now forces the rendered `.twk-modal` display box inside the phone frame.
+- Follow-up for button jump:
+  - theme builder `.tbx-btnwrap` now has stable `min-height` and `position: relative`;
+  - dropdown account panel is absolutely positioned under the button for both desktop and mobile preview;
+  - this prevents account panel open/close from changing the button wrapper height and moving the connected button.
+- Follow-up for mobile bottom-sheet account panel:
+  - mobile preview now overrides the account panel to bottom-sheet positioning regardless of dropdown/modal mode;
+  - mobile `.tbx-btnwrap` and nested `.twk-root` are static so the panel anchors to the phone frame instead of the button wrapper;
+  - mobile account panel uses `bottom: 0`, full-width, top-rounded sheet styling and no longer pushes the button.
+- Follow-up for address QR sub-view:
+  - theme-builder preview overrides dropdown header hiding for `data-twk-account-view="address-qr"` and `tx-history`;
+  - back and close controls now remain visible in QR/history sub-views even though the normal account summary dropdown hides its header.
+- Follow-up for broken QR header layout:
+  - corrected the theme-builder QR/history header override to restore the kit's flex header layout;
+  - back/title/close now use `display: flex`, centered header main area, and original spacing instead of a raw grid override.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/website build` passed.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `curl.exe -k -I https://127.0.0.1:5175/` returned `HTTP/1.1 200 OK`.
+- Remaining:
+  - visual QA in the live theme builder mobile mode to confirm the sheet is visually docked to the bottom and connected account panel stays inline.
+
+## 2026-07-15 Website Docs Route And API Alignment
+
+- Audited VitePress docs against current kit APIs and route behavior.
+- Renamed the public no-build browser docs route:
+  - old route file `website/docs/frameworks/html-cdn.md` removed;
+  - new route file `website/docs/frameworks/cdn-iife.md` added;
+  - internal website links now point to `/docs/frameworks/cdn-iife` to avoid `html` slug rewrite confusion.
+- Added missing docs pages already referenced by sidebar:
+  - `website/docs/configuration/wallet-list.md`;
+  - `website/docs/api/errors.md`.
+- Updated docs to match current kit configuration:
+  - `connect-button.md` now documents React `accountPanelMode` and vanilla `ui.accountPanel.mode`;
+  - `client.md` now documents current `WalletKit` modal/session helpers, transaction helpers, and canonical `functionSelector` usage;
+  - `quick-start.md`, `vanilla.md`, and `introduction.md` now reference the CDN / IIFE route and use clean ASCII copy.
+- Verification:
+  - `rg -n "html-cdn|/docs/frameworks/html|HTML / CDN|\.html" website -g "*.md" -g "*.ts" -g "*.vue"` returned no matches;
+  - `pnpm --filter @tron-wallet-kit/website build` passed;
+  - `curl.exe -k -I https://127.0.0.1:5175/docs/frameworks/cdn-iife` returned `HTTP/1.1 200 OK`.
+- Remaining:
+  - root-level `docs/HTML_CDN_USAGE.md` still uses the legacy title, but it is not a VitePress route; revisit when cleaning legacy docs.
+
+## 2026-07-16 XRPL Kit App Metadata Parity Proposal
+
+- Audited `C:\Users\PC\OneDrive\Develop\VibeCode\xrplWalletKit` for app metadata patterns.
+- Key XRPL pattern:
+  - `metadata: { name, description, url, icons }` is the preferred config;
+  - legacy aliases `appName`, `appDescription`, `appUrl`, `appIcons` remain supported;
+  - normalized metadata flows into WalletConnect/AppKit.
+- TRON Kit current gap:
+  - public config primarily exposes `appName`;
+  - WalletConnect adapter has `appMetadata`, but client does not resolve/pass a first-class app metadata object centrally.
+- Added proposal file:
+  - `Review/APP_METADATA_AND_XRPL_PARITY_PROPOSAL.md`.
+- Recommended next implementation:
+  - add `WalletKitAppMetadata`;
+  - add metadata resolver in client;
+  - pass normalized metadata to WalletConnect;
+  - keep `appName` and alias fields for compatibility;
+  - update React/browser examples and docs to prefer `metadata`.
+
+## 2026-07-16 App Metadata Implementation
+
+- Implemented first-class app metadata support:
+  - added `WalletKitAppMetadata` in core;
+  - added `metadata`, `appDescription`, `appUrl`, and `appIcons` compatibility fields to manager/client config;
+  - `WalletManager` now falls back to `metadata.name` when `appName` is not provided.
+- Added client metadata resolver:
+  - `packages/client/src/app-metadata.ts`;
+  - resolution order matches proposal: metadata fields first, legacy aliases second, safe defaults last.
+- WalletConnect metadata flow:
+  - `createDefaultAdapters()` resolves metadata once;
+  - `buildAdapters()` passes normalized metadata to the WalletConnect adapter as `appMetadata`;
+  - WalletConnect adapter/factory types now use `WalletKitAppMetadata`;
+  - SignClient init receives the dApp `name`, `description`, `url`, and `icons`.
+- React integration:
+  - `getDefaultConfig()` now accepts metadata-only config;
+  - `appName` remains supported as a shorthand alias.
+- Docs updated:
+  - root README;
+  - `packages/client/README.md`;
+  - `packages/browser/README.md`;
+  - website quick start, client API, WalletConnect, React/Next/Vanilla/CDN guides;
+  - added `website/docs/configuration/app-metadata.md`;
+  - sidebar now includes Configuration -> App metadata.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/core typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed with 71 tests.
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/react test -- --run --reporter=dot` passed with 9 tests.
+  - `pnpm --filter @tron-wallet-kit/adapter-walletconnect typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/adapter-walletconnect test -- --run --reporter=dot` passed with 10 tests.
+  - `pnpm --filter @tron-wallet-kit/website build` passed.
+  - `curl.exe -k -I https://127.0.0.1:5175/docs/configuration/app-metadata` returned `HTTP/1.1 200 OK`.
+- Remaining:
+  - examples still use `appName` in a few local test/demo configs; they continue to work as alias, but can be migrated in a later docs/examples cleanup.
+
+## 2026-07-16 App Metadata Follow-up
+
+- Continued `Review/APP_METADATA_AND_XRPL_PARITY_PROPOSAL.md`.
+- Completed remaining Phase 2 / P2 docs work:
+  - `examples/react-basic` now uses `metadata` in `getDefaultConfig`;
+  - `examples/html-cdn` now passes `metadata` to `createBrowserKit`;
+  - `packages/react/README.md` and `packages/next/README.md` now teach `metadata` first;
+  - `packages/core/README.md` documents `WalletKitAppMetadata` and direct `WalletManager` usage;
+  - `packages/ui/README.md` documents catalog-agnostic UI and clarifies metadata belongs in client/react;
+  - `packages/auth/README.md` documents using the same metadata for Sign-In with TRON prompts.
+- Rerun checks:
+  - `rg -n "appName:|appDescription:|appUrl:|appIcons:" examples packages/react/README.md packages/next/README.md packages/core/README.md packages/ui/README.md packages/auth/README.md packages/client/README.md packages/browser/README.md README.md website -g "*.md" -g "*.ts" -g "*.tsx" -g "*.html"` returned no matches.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/auth typecheck` passed.
+
+## 2026-07-16 XRPL Parity Upgrade Plan Review
+
+- Read new backlog spec:
+  - `Review/XRPL_PARITY_UPGRADE_PLAN.md`.
+- Main conclusions:
+  - TRON Kit is already ahead of XRPL on React hooks, default config, theme factories, token-driven theming, theme presets, transaction runtime, CI, and mobile bottom-sheet baseline.
+  - XRPL still has useful features to port selectively:
+    - transaction preview resolver before wallet prompts;
+    - durable transaction history store for recent transactions;
+    - higher-level auth adapter/controller state machine;
+    - broader docs;
+    - static quality gates with `knip`, `jscpd`, and `dependency-cruiser`;
+    - larger mobile bottom-sheet breakpoint.
+- Suggested implementation order from the spec:
+  - P1.1 transaction preview;
+  - P1.2 transaction store;
+  - P1.3 auth adapter/controller;
+  - P2 docs;
+  - P2 quality gates and breakpoint;
+  - optional Vue/Nuxt docs/examples later.

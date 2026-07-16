@@ -1,9 +1,9 @@
 import { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { TronWalletProvider, WalletButton, useWalletKit, useWalletSession, useWalletStatus } from "@tron-wallet-kit/react";
+import { TronConnectButton, TronKitProvider, getDefaultConfig, useTronKit, useWalletSession, useWalletStatus } from "@tron-wallet-kit/react";
 import { createQrDataUrl, createThemeStyleProperties, createTransactionToastContainerHtml, getThemeNames, type ThemeName, type WalletListConfig } from "@tron-wallet-kit/ui";
 
-const walletConnectProjectId = ((import.meta as ImportMeta & { env?: { VITE_WALLETCONNECT_PROJECT_ID?: string } }).env?.VITE_WALLETCONNECT_PROJECT_ID) || "";
+const walletConnectProjectId = ((import.meta as ImportMeta & { env?: { VITE_WALLETCONNECT_PROJECT_ID?: string } }).env?.VITE_WALLETCONNECT_PROJECT_ID) || "a4109c95d50e5c136cdafaf9fc44c105";
 const kitFontFamily = 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 
 type ButtonVariant = "default" | "pill" | "minimal";
@@ -46,29 +46,38 @@ function ExampleApp() {
       sortAvailableFirst: true
     };
   }, [allWalletsPreset, featuredMode, featuredPreset, showUnavailableWallets, walletLayout]);
+  const config = useMemo(() => getDefaultConfig({
+    metadata: {
+      name: "TRON Wallet Kit React Basic",
+      description: "Local TRON Wallet Kit React playground.",
+      url: typeof window !== "undefined" ? window.location.origin : "https://trxdomains.xyz",
+      icons: typeof window !== "undefined" ? [`${window.location.origin}/favicon.ico`] : []
+    },
+    walletConnectProjectId,
+    network: "mainnet",
+    walletConnectNetwork: "mainnet",
+    identity: {
+      enabled: resolveIdentity,
+      failSilently: true,
+      cacheTtlMs: 10 * 60 * 1000
+    },
+    ui: {
+      themeName,
+      toast: true,
+      showRecentTransactions,
+      walletList,
+      modal: { subtitle: "" },
+      accountPanel: { mode: accountPanelMode === "modal" ? "modal" : "inline", showRecentTransactions }
+    },
+    autoReconnect: false,
+    storageKey: "react-basic-session-v2",
+    useBrowserStorage: true
+  }), [accountPanelMode, resolveIdentity, showRecentTransactions, themeName, walletList]);
 
   return (
-    <TronWalletProvider
-      walletConnectProjectId={walletConnectProjectId}
-      network="mainnet"
-      walletConnectNetwork="mainnet"
-      identity={{
-        enabled: resolveIdentity,
-        failSilently: true,
-        cacheTtlMs: 10 * 60 * 1000
-      }}
-      ui={{
-        themeName,
-        toast: true,
-        showRecentTransactions,
-        walletList,
-        modal: { subtitle: "" },
-        accountPanel: { mode: accountPanelMode === "modal" ? "modal" : "inline", showRecentTransactions }
-      }}
-      autoReconnect={false}
+    <TronKitProvider
+      config={config}
       clearStoredSessionOnAutoReconnectDisabled
-      storageKey="react-basic-session-v2"
-      useBrowserStorage
     >
       <ExampleWorkspace
         accountPanelMode={accountPanelMode}
@@ -94,7 +103,7 @@ function ExampleApp() {
         onShowUnavailableWalletsChange={setShowUnavailableWallets}
         onThemeChange={setThemeName}
       />
-    </TronWalletProvider>
+    </TronKitProvider>
   );
 }
 
@@ -124,7 +133,7 @@ type ExampleWorkspaceProps = {
 };
 
 function ExampleWorkspace(props: ExampleWorkspaceProps) {
-  const kit = useWalletKit();
+  const kit = useTronKit();
   const session = useWalletSession();
   const status = useWalletStatus();
   const [log, setLog] = useState("Ready.");
@@ -294,7 +303,7 @@ function ExampleWorkspace(props: ExampleWorkspaceProps) {
               <small>TRON mainnet</small>
             </div>
             <div className="kit-connect">
-              <WalletButton
+              <TronConnectButton
                 accountPanelMode={props.accountPanelMode}
                 showBalance={props.showBalance}
                 showRecentTransactions={props.showRecentTransactions}

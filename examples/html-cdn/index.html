@@ -73,7 +73,7 @@
 
     <script src="/vendor/tron-wallet-kit.iife.min.js"></script>
     <script>
-      const walletConnectProjectId = window.WALLETCONNECT_PROJECT_ID || "";
+      const walletConnectProjectId = window.WALLETCONNECT_PROJECT_ID || "a4109c95d50e5c136cdafaf9fc44c105";
       const walletRoot = document.getElementById("wallet-root");
       const stateLog = document.getElementById("state-log");
       const actionLog = document.getElementById("action-log");
@@ -85,6 +85,12 @@
       let themeName = themeSelect.value;
       const kit = TronWalletKit.createBrowserKit({
         root: walletRoot,
+        metadata: {
+          name: "TRON Wallet Kit HTML/CDN Example",
+          description: "Local TRON Wallet Kit browser bundle playground.",
+          url: window.location.origin,
+          icons: [window.location.origin + "/favicon.ico"]
+        },
         theme: { themeName },
         walletConnectProjectId,
         walletConnectNetwork: "mainnet",

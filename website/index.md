@@ -10,8 +10,8 @@ hero:
       text: Get started
       link: /docs/quick-start
     - theme: alt
-      text: Live demo
-      link: http://127.0.0.1:5173/
+      text: Live Playground
+      link: /docs/playground
     - theme: alt
       text: Introduction
       link: /docs/introduction
@@ -31,14 +31,12 @@ features:
     details: Mobile QR flow, loaded only when needed — TronLink, OKX, Bitget, Klever, and more.
 ---
 
-<div style="max-width: 960px; margin: 40px auto 0; padding: 0 24px;">
-
 ## Three lines to a great connect experience
 
 ```tsx
 import { getDefaultConfig, TronKitProvider, TronConnectButton } from "@tron-wallet-kit/react";
 
-const config = getDefaultConfig({ appName: "My TRON dApp" });
+const config = getDefaultConfig({ metadata: { name: "My TRON dApp" } });
 
 export function App() {
   return (
@@ -52,5 +50,3 @@ export function App() {
 TRON Wallet Kit is a product-grade wallet UX layer for TRON — think ConnectKit or RainbowKit, but
 TRON-native. It sits on top of the TRON wallet ecosystem (and `tronweb3/tronwallet-adapter` for
 hardware and MetaMask), so you focus on your dApp, not wallet plumbing.
-
-</div>

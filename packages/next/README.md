@@ -18,7 +18,12 @@ Wallet detection must run only in the browser. In Next.js App Router, put wallet
 import { TronKitProvider, TronConnectButton, getDefaultConfig } from "@tron-wallet-kit/react";
 
 const config = getDefaultConfig({
-  appName: "My TRON dApp",
+  metadata: {
+    name: "My TRON dApp",
+    description: "Wallet connection for My TRON dApp",
+    url: "https://my-tron-app.example",
+    icons: ["https://my-tron-app.example/icon.png"]
+  },
   network: "mainnet",
   walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
 });

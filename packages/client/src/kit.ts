@@ -18,30 +18,13 @@ export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
   const uiConfig = resolveWalletUiConfig(ui);
   const modal = createWalletModal({ manager, ui });
   const buttonTheme = toThemeConfig(config.ui);
-  const button = config.connectButton
-    ? createWalletButton({
-        manager,
-        modal,
-        ...(buttonTheme ? { theme: buttonTheme } : {}),
-        ...(config.connectButton.label ? { label: config.connectButton.label } : {}),
-        ...(config.connectButton.connectedLabel ? { connectedLabel: config.connectButton.connectedLabel } : {})
-      })
-    : null;
-  const toast = config.ui?.toast ? createWalletToast({ manager, ui }) : null;
   const identityResolver = resolveIdentityResolver(config.identity, manager);
   const identityCache = new Map<string, { identity: TronIdentity | undefined; expiresAt: number }>();
+  const identityInFlight = new Map<string, Promise<TronIdentity | undefined>>();
+  const identityCooldown = new Map<string, number>();
   const identityCacheTtlMs = config.identity?.cacheTtlMs ?? 10 * 60 * 1000;
+  const identityRateLimitCooldownMs = Math.min(2 * 60 * 1000, Math.max(30 * 1000, identityCacheTtlMs / 5));
   const balanceResolver = config.balance?.enabled === false ? undefined : (config.balance?.resolver ?? createDefaultTrxBalanceResolver());
-
-  if (typeof document !== "undefined") {
-    modal.mount();
-    toast?.mount();
-    if (config.connectButton?.target) button?.mount(config.connectButton.target);
-  }
-
-  const transactionRuntime = createTransactionRuntime(manager);
-  const submit = (methodHint: TronMethodHint, transaction: TransactionPayload, description?: string) =>
-    transactionRuntime.signAndSendTransaction({ methodHint, transaction }, methodHint, description);
   const getRefreshTargetSession = (session: NonNullable<ReturnType<typeof manager.getSession>>) => {
     const latest = manager.getSession();
     if (!latest) return null;
@@ -54,6 +37,107 @@ export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
     const walletId = session.metadata?.walletId;
     return typeof walletId === "string" && walletId.length > 0 ? walletId : session.adapterId;
   };
+  const refreshBalance = async () => {
+    const session = manager.getSession();
+    if (!session || !balanceResolver) return session?.balance;
+    try {
+      const result = await balanceResolver(session.account, { network: session.network, walletId: getEffectiveWalletId(session) });
+      const balance = normalizeBalance(result);
+      const latest = getRefreshTargetSession(session);
+      if (!latest) return undefined;
+      if (!balance) return latest.balance;
+      await manager.setSession({ ...latest, balance, updatedAt: Date.now() });
+      return balance;
+    } catch (error) {
+      if (config.balance?.failSilently !== false) return getRefreshTargetSession(session)?.balance;
+      throw error;
+    }
+  };
+  const refreshIdentity = async () => {
+    const session = manager.getSession();
+    const account = session?.account;
+    if (!session || !account || !identityResolver) return undefined;
+    const key = `${session.network.id}:${account.address}`;
+    const cached = identityCache.get(key);
+    if (cached && cached.expiresAt > Date.now()) {
+      const latest = getRefreshTargetSession(session);
+      if (cached.identity && latest) {
+        await manager.setSession({
+          ...latest,
+          account: {
+            ...latest.account,
+            ...(cached.identity.domain ? { domain: cached.identity.domain } : {}),
+            ...(cached.identity.displayName ? { displayName: cached.identity.displayName } : {}),
+            ...(cached.identity.avatar ? { avatar: cached.identity.avatar } : {})
+          },
+          updatedAt: Date.now()
+        });
+      }
+      return cached.identity;
+    }
+    const cooldownUntil = identityCooldown.get(key);
+    if (cooldownUntil && cooldownUntil > Date.now()) return undefined;
+    const inFlight = identityInFlight.get(key);
+    if (inFlight) return inFlight;
+    try {
+      const request = (async () => {
+        try {
+          const identity = await identityResolver(account, { network: session.network, walletId: getEffectiveWalletId(session) });
+          if (identity) identityCache.set(key, { identity, expiresAt: Date.now() + identityCacheTtlMs });
+          const latest = getRefreshTargetSession(session);
+          if (!latest) return identity;
+          if (identity) {
+            await manager.setSession({
+              ...latest,
+              account: {
+                ...latest.account,
+                ...(identity.domain ? { domain: identity.domain } : {}),
+                ...(identity.displayName ? { displayName: identity.displayName } : {}),
+                ...(identity.avatar ? { avatar: identity.avatar } : {})
+              },
+              updatedAt: Date.now()
+            });
+          }
+          return identity;
+        } catch (error) {
+          if (isRateLimitError(error)) identityCooldown.set(key, Date.now() + identityRateLimitCooldownMs);
+          throw error;
+        } finally {
+          identityInFlight.delete(key);
+        }
+      })();
+      identityInFlight.set(key, request);
+      return await request;
+    } catch (error) {
+      if (config.identity?.failSilently !== false) return undefined;
+      throw error;
+    }
+  };
+  const button = config.connectButton
+    ? createWalletButton({
+        manager,
+        modal,
+        ...(buttonTheme ? { theme: buttonTheme } : {}),
+        ...(config.connectButton.label ? { label: config.connectButton.label } : {}),
+        ...(config.connectButton.connectedLabel ? { connectedLabel: config.connectButton.connectedLabel } : {}),
+        ...(config.connectButton.showBalance !== undefined ? { showBalance: config.connectButton.showBalance } : {}),
+        accountPanelMode: uiConfig.accountPanel.mode === "inline" ? "dropdown" : "modal",
+        refreshAccountDetails: async () => {
+          await Promise.allSettled([refreshIdentity(), refreshBalance()]);
+        }
+      })
+    : null;
+  const toast = config.ui?.toast ? createWalletToast({ manager, ui }) : null;
+
+  if (typeof document !== "undefined") {
+    modal.mount();
+    toast?.mount();
+    if (config.connectButton?.target) button?.mount(config.connectButton.target);
+  }
+
+  const transactionRuntime = createTransactionRuntime(manager);
+  const submit = (methodHint: TronMethodHint, transaction: TransactionPayload, description?: string) =>
+    transactionRuntime.signAndSendTransaction({ methodHint, transaction }, methodHint, description);
 
   return {
     manager,
@@ -73,72 +157,15 @@ export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
       modal.destroy();
       manager.destroy();
       identityCache.clear();
+      identityInFlight.clear();
+      identityCooldown.clear();
     },
     openModal: () => modal.open(),
     closeModal: () => modal.close(),
     disconnect: () => manager.disconnect(),
-    refreshBalance: async () => {
-      const session = manager.getSession();
-      if (!session || !balanceResolver) return session?.balance;
-      try {
-        const result = await balanceResolver(session.account, { network: session.network, walletId: getEffectiveWalletId(session) });
-        const balance = normalizeBalance(result);
-        const latest = getRefreshTargetSession(session);
-        if (!latest) return undefined;
-        if (!balance) return latest.balance;
-        await manager.setSession({ ...latest, balance, updatedAt: Date.now() });
-        return balance;
-      } catch (error) {
-        if (config.balance?.failSilently !== false) return getRefreshTargetSession(session)?.balance;
-        throw error;
-      }
-    },
+    refreshBalance,
     refreshAccount: async () => manager.getAccount(),
-    refreshIdentity: async () => {
-      const session = manager.getSession();
-      const account = session?.account;
-      if (!session || !account || !identityResolver) return undefined;
-      const key = `${session.network.id}:${account.address}`;
-      const cached = identityCache.get(key);
-      if (cached && cached.expiresAt > Date.now()) {
-        const latest = getRefreshTargetSession(session);
-        if (cached.identity && latest) {
-          await manager.setSession({
-            ...latest,
-            account: {
-              ...latest.account,
-              ...(cached.identity.domain ? { domain: cached.identity.domain } : {}),
-              ...(cached.identity.displayName ? { displayName: cached.identity.displayName } : {}),
-              ...(cached.identity.avatar ? { avatar: cached.identity.avatar } : {})
-            },
-            updatedAt: Date.now()
-          });
-        }
-        return cached.identity;
-      }
-      try {
-        const identity = await identityResolver(account, { network: session.network, walletId: getEffectiveWalletId(session) });
-        if (identity) identityCache.set(key, { identity, expiresAt: Date.now() + identityCacheTtlMs });
-        const latest = getRefreshTargetSession(session);
-        if (!latest) return identity;
-        if (identity) {
-          await manager.setSession({
-            ...latest,
-            account: {
-              ...latest.account,
-              ...(identity.domain ? { domain: identity.domain } : {}),
-              ...(identity.displayName ? { displayName: identity.displayName } : {}),
-              ...(identity.avatar ? { avatar: identity.avatar } : {})
-            },
-            updatedAt: Date.now()
-          });
-        }
-        return identity;
-      } catch (error) {
-        if (config.identity?.failSilently !== false) return undefined;
-        throw error;
-      }
-    },
+    refreshIdentity,
     getSession: manager.getSession.bind(manager),
     signMessage: (request) => manager.signMessage(request),
     signTransaction: (transaction) => manager.signTransaction(transaction),
@@ -173,4 +200,15 @@ export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
     undelegateResource: (request) => submit("undelegateResource", { to: request.to, amountSun: String(request.amountSun), resource: request.resource }, request.description),
     voteWitness: (request) => submit("voteWitness", { votes: request.votes }, request.description)
   };
+}
+
+function isRateLimitError(error: unknown): boolean {
+  const value = error as { message?: unknown; status?: unknown; response?: { status?: unknown }; code?: unknown };
+  const text = [
+    typeof value?.message === "string" ? value.message : "",
+    typeof value?.code === "string" ? value.code : "",
+    typeof value?.status === "number" ? String(value.status) : "",
+    typeof value?.response?.status === "number" ? String(value.response.status) : ""
+  ].join(" ");
+  return /\b429\b|too many requests|rate limit/i.test(text);
 }

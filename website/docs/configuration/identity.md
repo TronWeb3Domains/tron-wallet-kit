@@ -1,34 +1,38 @@
 # Identity
 
-TRON Wallet Kit resolves wallet identity from TRX Domains by calling the TRX Domains smart contract directly. Resolution is **mainnet-only** (other networks resolve to no identity, without error) and reuses the kit's shared TronWeb instance.
+TRON Wallet Kit resolves a wallet's TRX Domains name so the account reads as `alice.trx` instead of a
+raw address. Resolution is **mainnet-only** (other networks resolve to no identity, without error) and
+reuses the kit's shared TronWeb instance. It's on by default in `getDefaultConfig`.
 
-Identity resolution lives in the client layer. Adapters return TRON addresses; the client can optionally enrich the connected account with the wallet's default TRX Domains name (any TLD — `.trx`, `.sun`, `.usdd`, …) and metadata. UI components only render the normalized `account.domain` / `account.displayName` fields.
+Identity lives in the client layer: adapters return TRON addresses, and the client optionally enriches
+the connected account with its default TRX Domains name (any TLD — `.trx`, `.sun`, `.usdd`, …) plus
+metadata. UI renders the normalized `account.domain` / `account.displayName`.
 
 ## React
 
+Identity is enabled by `getDefaultConfig`, so the connect button and account panel show the name
+automatically. Read it directly with `useTrxName`:
+
 ```tsx
-import { createWalletKit } from "@tron-wallet-kit/client";
-import { TronWalletProvider, WalletButton } from "@tron-wallet-kit/react";
+import { useTrxName, useTronAccount } from "@tron-wallet-kit/react";
 
-const kit = createWalletKit({
-  identity: { enabled: true },
-});
-
-export function App() {
+function Profile() {
+  const { address } = useTronAccount();
+  const { name, avatar } = useTrxName();
   return (
-    <TronWalletProvider kit={kit} ui={{ themeName: "tron" }}>
-      <WalletButton />
-    </TronWalletProvider>
+    <span>
+      {avatar && <img src={avatar} width={20} alt="" />}
+      {name ?? address}
+    </span>
   );
 }
 ```
 
-## Client
+## Configuration
 
 ```ts
-import { createWalletKit } from "@tron-wallet-kit/client";
-
-const kit = createWalletKit({
+const config = getDefaultConfig({
+  metadata: { name: "My dApp" },
   identity: {
     enabled: true,
     metadataKeys: ["avatar", "website"],
@@ -36,10 +40,14 @@ const kit = createWalletKit({
 });
 ```
 
-## Custom Resolver
+## Custom resolver
+
+Use a custom resolver when your app already has a TRX Domains cache, a profile API, or a server-side
+lookup:
 
 ```ts
-const kit = createWalletKit({
+const config = getDefaultConfig({
+  metadata: { name: "My dApp" },
   identity: {
     enabled: true,
     resolver: async (account) => {
@@ -49,4 +57,8 @@ const kit = createWalletKit({
 });
 ```
 
-Use a custom resolver when an app already has a TRX Domains cache, profile API, or server-side lookup.
+## Disable it
+
+```ts
+getDefaultConfig({ metadata: { name: "My dApp" }, identity: { enabled: false } });
+```

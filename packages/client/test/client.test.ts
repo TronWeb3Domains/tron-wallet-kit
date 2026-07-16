@@ -9,6 +9,7 @@ import {
   createTronWeb3AdapterBridge,
   createWalletClient,
   createWalletKit,
+  resolveAppMetadata,
   getSharedTronWeb,
   WALLET_ICONS
 } from "../src/index";
@@ -156,6 +157,44 @@ describe("client entrypoints", () => {
       network: { id: "nile" }
     });
     expect(manager.getAccount()?.address).toBe("T2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+  });
+
+  it("resolves app metadata with metadata preferred over legacy aliases", () => {
+    expect(
+      resolveAppMetadata({
+        metadata: {
+          name: "TRX Domains",
+          description: "Primary description",
+          url: "https://trxdomains.xyz",
+          icons: [" https://trxdomains.xyz/icon.png "]
+        },
+        appName: "Legacy App",
+        appDescription: "Legacy description",
+        appUrl: "https://legacy.example",
+        appIcons: ["https://legacy.example/icon.png"]
+      })
+    ).toEqual({
+      name: "TRX Domains",
+      description: "Primary description",
+      url: "https://trxdomains.xyz",
+      icons: ["https://trxdomains.xyz/icon.png"]
+    });
+  });
+
+  it("uses legacy app metadata aliases when metadata is not provided", () => {
+    expect(
+      resolveAppMetadata({
+        appName: "Legacy TRON App",
+        appDescription: "Legacy wallet connection",
+        appUrl: "https://legacy.example",
+        appIcons: ["https://legacy.example/icon.png"]
+      })
+    ).toEqual({
+      name: "Legacy TRON App",
+      description: "Legacy wallet connection",
+      url: "https://legacy.example",
+      icons: ["https://legacy.example/icon.png"]
+    });
   });
 
   it("creates a kit with TRON-native transaction helpers", async () => {
@@ -358,6 +397,52 @@ describe("client entrypoints", () => {
       account: { domain: "alice.trx", displayName: "Alice" },
       balance: { formatted: "42", symbol: "TRX" }
     });
+  });
+
+  it("deduplicates concurrent identity refresh requests", async () => {
+    let calls = 0;
+    let resolveIdentity: ((value: { domain: string; displayName: string }) => void) | undefined;
+    const identityPromise = new Promise<{ domain: string; displayName: string }>((resolve) => {
+      resolveIdentity = resolve;
+    });
+    const kit = createWalletKit({
+      adapters: [createMockAdapter()],
+      identity: {
+        enabled: true,
+        resolver: async () => {
+          calls += 1;
+          return identityPromise;
+        }
+      }
+    });
+
+    await kit.manager.connect("mock");
+    const first = kit.refreshIdentity();
+    const second = kit.refreshIdentity();
+    resolveIdentity?.({ domain: "alice.trx", displayName: "Alice" });
+
+    await expect(first).resolves.toMatchObject({ domain: "alice.trx" });
+    await expect(second).resolves.toMatchObject({ domain: "alice.trx" });
+    expect(calls).toBe(1);
+  });
+
+  it("cooldowns identity refresh after rate limit errors", async () => {
+    let calls = 0;
+    const kit = createWalletKit({
+      adapters: [createMockAdapter()],
+      identity: {
+        enabled: true,
+        resolver: async () => {
+          calls += 1;
+          throw new Error("429 Too Many Requests");
+        }
+      }
+    });
+
+    await kit.manager.connect("mock");
+    await expect(kit.refreshIdentity()).resolves.toBeUndefined();
+    await expect(kit.refreshIdentity()).resolves.toBeUndefined();
+    expect(calls).toBe(1);
   });
 
   it("does not cache a missing identity result from the first refresh", async () => {

@@ -185,7 +185,7 @@ function createWalletCollectionHtml(wallets: readonly WalletOptionViewModel[], l
 }
 
 function resolveWalletListLayout(config: ConnectModalViewModel["walletList"]): "list" | "card" {
-  return config?.layout === "card" || config?.layout === "grid" ? "card" : "list";
+  return config?.layout === "card" ? "card" : "list";
 }
 
 function createWalletStatusIndicatorHtml(wallet: WalletOptionViewModel, labels: ConnectModalLabels, isConnecting: boolean): string {

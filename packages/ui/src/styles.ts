@@ -1554,7 +1554,7 @@ ${selector} .twk-toast-link:hover, ${selector} .twk-toast-dismiss:hover { backgr
   ${selector} .twk-toast, ${selector} .twk-toast-spinner, ${selector} .twk-action-spin, ${selector} .twk-connecting-ring-accent, ${selector} .twk-tx-icon::before, ${selector} .twk-skeleton::after, ${selector} .twk-qr-skeleton::after, ${selector} .twk-wallet-row, ${selector} .twk-wallet-card { animation: none; }
   ${selector} .twk-close, ${selector} .twk-back, ${selector} .twk-action, ${selector} .twk-address-qr-action, ${selector} .twk-tx-header-link, ${selector} .twk-wallet-row, ${selector} .twk-wallet-card, ${selector} .twk-search-trigger, ${selector} .twk-connect-button { transition: none; }
 }
-@media (max-width: 420px) {
+@media (max-width: 480px) {
   ${selector} .twk-overlay {
     align-items: end;
     padding: max(12px, env(safe-area-inset-top)) 0 0;

@@ -1,5 +1,6 @@
 export * from "./types";
 export * from "./client";
+export * from "./app-metadata";
 export * from "./kit";
 export * from "./balance";
 export * from "./identity";

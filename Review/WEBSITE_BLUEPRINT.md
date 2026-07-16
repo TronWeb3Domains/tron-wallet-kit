@@ -178,10 +178,16 @@ pnpm --filter <examples-package-name> dev
 ```
 
 Notes for Codex:
-- **Add the kit as a website dependency** so live embeds (`ConnectDemo`, `ThemeBuilder`) can import
-  it: add `"@tron-wallet-kit/react": "workspace:*"` to `website/package.json` and `pnpm install`.
-  Until this lands, the docs pages render fine (they are markdown), but the live component embeds are
-  deferred. Claude has written all the markdown pages that do NOT need the SDK.
+- **Add the client package as a website dependency** so the live connect embed works. The docs are
+  Vue (VitePress) and `@tron-wallet-kit/react` is React — they don't mix — so `ConnectDemo.vue` uses
+  the **framework-agnostic `@tron-wallet-kit/client`** (DOM-based `createWalletKit`). Add
+  `"@tron-wallet-kit/client": "workspace:*"` to `website/package.json`, `pnpm install`, then in
+  `.vitepress/theme/index.ts` register the staged component
+  (`import ConnectDemo from "./components/ConnectDemo.vue"; app.component("ConnectDemo", ConnectDemo)`)
+  and replace the `LIVE-CONNECT-DEMO` comment in `demo.md` with `<ClientOnly><ConnectDemo /></ClientOnly>`.
+  `ThemeBuilder` needs no SDK and is already live. Until the client dep lands, all markdown pages and
+  the theme builder render fine; only the live connect button is deferred.
+- Expose `VITE_WC_PROJECT_ID` for the site so `ConnectDemo` can offer WalletConnect (optional).
 - Keep **both** servers up while Claude iterates: `5174` (docs) and `5173` (examples/demo).
 - Rebuild the changed package (`pnpm --filter @tron-wallet-kit/react build`) when the SDK surface
   changes so the site's live components pick it up. OneDrive file-watching can lag — a dev restart

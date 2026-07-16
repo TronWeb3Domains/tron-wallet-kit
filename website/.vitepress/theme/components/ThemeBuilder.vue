@@ -2,9 +2,10 @@
 import { computed, ref } from "vue";
 
 const accent = ref("#ef0027");
+const accentForeground = ref("#ffffff");
 const radius = ref<"none" | "small" | "medium" | "large">("medium");
 const font = ref<"system" | "rounded">("system");
-const mode = ref<"light" | "dark">("light");
+const mode = ref<"light" | "dark" | "system">("system");
 const copied = ref(false);
 
 const radiusPx: Record<string, string> = { none: "0px", small: "8px", medium: "12px", large: "18px" };
@@ -13,21 +14,40 @@ const fontStack: Record<string, string> = {
   rounded: '"Nunito", ui-rounded, system-ui, sans-serif',
 };
 
-const surface = computed(() => (mode.value === "light" ? "#ffffff" : "#17181c"));
-const rowBg = computed(() => (mode.value === "light" ? "#f7f7f8" : "#0e0f12"));
-const textColor = computed(() => (mode.value === "light" ? "#1a1a1e" : "#f2f2f4"));
-const mutedColor = computed(() => (mode.value === "light" ? "#6b6b72" : "#9a9aa2"));
-const borderColor = computed(() => (mode.value === "light" ? "#ececef" : "#26272c"));
+const previewMode = computed(() => (mode.value === "dark" ? "dark" : "light"));
+const surface = computed(() => (previewMode.value === "light" ? "#ffffff" : "#17181c"));
+const rowBg = computed(() => (previewMode.value === "light" ? "#f7f7f8" : "#0e0f12"));
+const textColor = computed(() => (previewMode.value === "light" ? "#1a1a1e" : "#f2f2f4"));
+const mutedColor = computed(() => (previewMode.value === "light" ? "#6b6b72" : "#9a9aa2"));
+const borderColor = computed(() => (previewMode.value === "light" ? "#ececef" : "#26272c"));
 
 const exportSnippet = computed(() => {
-  const fn = mode.value === "light" ? "lightTheme" : "darkTheme";
-  return `import { ${fn} } from "@tron-wallet-kit/react";
-
-const theme = ${fn}({
+  const options = `{
   accentColor: "${accent.value}",
+  accentColorForeground: "${accentForeground.value}",
   borderRadius: "${radius.value}",
   fontStack: "${font.value}",
-});`;
+}`;
+  if (mode.value === "system") {
+    return `import { TronKitProvider, darkTheme, lightTheme } from "@tron-wallet-kit/react";
+
+const theme = {
+  light: lightTheme(${options}),
+  dark: darkTheme(${options}),
+};
+
+<TronKitProvider config={config} theme={theme}>
+  <TronConnectButton />
+</TronKitProvider>`;
+  }
+  const fn = mode.value === "light" ? "lightTheme" : "darkTheme";
+  return `import { TronKitProvider, ${fn} } from "@tron-wallet-kit/react";
+
+const theme = ${fn}(${options});
+
+<TronKitProvider config={config} theme={theme}>
+  <TronConnectButton />
+</TronKitProvider>`;
 });
 
 function copy() {
@@ -46,6 +66,12 @@ function copy() {
           <input type="text" v-model="accent" class="tb-hex" />
         </span>
       </label>
+      <label>Accent foreground
+        <span class="tb-color">
+          <input type="color" v-model="accentForeground" />
+          <input type="text" v-model="accentForeground" class="tb-hex" />
+        </span>
+      </label>
       <label>Radius
         <select v-model="radius">
           <option value="none">none</option>
@@ -62,6 +88,7 @@ function copy() {
       </label>
       <label>Mode
         <select v-model="mode">
+          <option value="system">system</option>
           <option value="light">light</option>
           <option value="dark">dark</option>
         </select>
@@ -100,7 +127,7 @@ function copy() {
         </div>
         <button
           class="tb-cta"
-          :style="{ background: accent, borderRadius: radiusPx[radius] }"
+          :style="{ background: accent, borderRadius: radiusPx[radius], color: accentForeground }"
         >Get started</button>
       </div>
     </div>

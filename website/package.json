@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "build": "vitepress build",
-    "dev": "vitepress dev --host 127.0.0.1 --port 5174",
+    "dev": "vitepress dev --host 127.0.0.1 --port 5175 --strictPort",
     "preview": "vitepress preview --host 127.0.0.1 --port 4174"
   },
   "devDependencies": {
+    "@vitejs/plugin-basic-ssl": "^2.1.0",
     "vitepress": "^1.6.4"
   }
 }

@@ -26,7 +26,7 @@ You get:
 |---|---|
 | `@tron-wallet-kit/react` | React provider, `TronConnectButton`, and hooks. Start here for React. |
 | `@tron-wallet-kit/client` | Framework-agnostic kit (`createWalletKit`) for vanilla apps. |
-| `@tron-wallet-kit/browser` | IIFE bundle for plain HTML / CDN drop-in. |
+| `@tron-wallet-kit/browser` | IIFE bundle for plain CDN / script-tag drop-in. |
 | `@tron-wallet-kit/core` | Headless wallet contracts, session, and errors. |
 | `@tron-wallet-kit/ui` | DOM modal, account panel, and theme tokens (no framework). |
 | `@tron-wallet-kit/adapter-*` | TronLink, WalletConnect, and the tronweb3 bridge. |

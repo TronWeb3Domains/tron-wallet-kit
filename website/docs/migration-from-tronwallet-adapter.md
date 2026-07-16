@@ -21,7 +21,7 @@ const adapters = [new TronLinkAdapter(), new WalletConnectAdapter({ ... })];
 // After — TRON Wallet Kit
 import { getDefaultConfig, TronKitProvider, TronConnectButton } from "@tron-wallet-kit/react";
 
-const config = getDefaultConfig({ appName: "My dApp", walletConnectProjectId: WC });
+const config = getDefaultConfig({ metadata: { name: "My dApp" }, walletConnectProjectId: WC });
 
 <TronKitProvider config={config}>
   <TronConnectButton />

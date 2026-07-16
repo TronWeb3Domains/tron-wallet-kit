@@ -14,7 +14,12 @@ pnpm add @tron-wallet-kit/client@beta
 import { createWalletKit } from "@tron-wallet-kit/client";
 
 const kit = createWalletKit({
-  appName: "My TRON dApp",
+  metadata: {
+    name: "My TRON dApp",
+    description: "Wallet connection for My TRON dApp",
+    url: window.location.origin,
+    icons: [`${window.location.origin}/icon.png`]
+  },
   network: "mainnet",
   walletConnectProjectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID,
   ui: { themeName: "light", toast: true }
@@ -24,6 +29,10 @@ kit.openModal();
 ```
 
 If `walletConnectProjectId` is omitted, the WalletConnect adapter is not created.
+
+`metadata` is used by WalletConnect and future auth prompts to identify the dApp. Legacy aliases
+(`appName`, `appDescription`, `appUrl`, `appIcons`) are still accepted, but new integrations should
+prefer `metadata`.
 
 ## Common APIs
 

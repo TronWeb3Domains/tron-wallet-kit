@@ -738,14 +738,14 @@ var TronWalletKit = (() => {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
       exports.delay = void 0;
-      function delay2(timeout) {
+      function delay4(timeout) {
         return new Promise((resolve) => {
           setTimeout(() => {
             resolve(true);
           }, timeout);
         });
       }
-      exports.delay = delay2;
+      exports.delay = delay4;
     }
   });
 
@@ -59601,6 +59601,7 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
     backIcon: () => backIcon,
     buildAdapters: () => buildAdapters,
     buildCatalog: () => buildCatalog,
+    buildCatalogItem: () => buildCatalogItem,
     checkIcon: () => checkIcon,
     closeIcon: () => closeIcon,
     configureSharedTronWeb: () => configureSharedTronWeb,
@@ -59620,6 +59621,7 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
     createDefaultWalletUiConfig: () => createDefaultWalletUiConfig,
     createElementFromHtml: () => createElementFromHtml,
     createFallbackWalletAdapter: () => createFallbackWalletAdapter,
+    createInjectedContext: () => createInjectedContext,
     createInjectedTronAdapter: () => createInjectedTronAdapter,
     createQrDataUrl: () => createQrDataUrl,
     createStyledQrDataUrl: () => createStyledQrDataUrl,
@@ -59646,6 +59648,8 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
     createWalletModal: () => createWalletModal,
     createWalletToast: () => createWalletToast,
     cssVariableNames: () => cssVariableNames,
+    defaultInjectedSignMessage: () => defaultInjectedSignMessage,
+    defaultInjectedSignTransaction: () => defaultInjectedSignTransaction,
     defineWallet: () => defineWallet,
     en: () => en2,
     ensureWalletKitStyles: () => ensureWalletKitStyles,
@@ -59662,6 +59666,7 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
     getThemeNames: () => getThemeNames,
     getTronWalletRegistryItem: () => getTronWalletRegistryItem,
     getWalletIcon: () => getWalletIcon,
+    isTronAddress: () => isTronAddress,
     isWalletDescriptor: () => isWalletDescriptor,
     linkIcon: () => linkIcon,
     logoutIcon: () => logoutIcon,
@@ -59688,12 +59693,22 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
     sendIcon: () => sendIcon,
     shortenAddress: () => shortenAddress,
     sortWalletsByAvailability: () => sortWalletsByAvailability,
+    standardInjected: () => standardInjected,
     statusErrorIcon: () => statusErrorIcon,
+    strategyFromLegacyConfig: () => strategyFromLegacyConfig,
     themePresets: () => themePresets,
     toThemeConfig: () => toThemeConfig,
-    vi: () => vi,
     walletIcon: () => walletIcon,
-    walletIcons: () => walletIcons
+    walletIcons: () => walletIcons,
+    withAcquireAddressDefaults: () => withAcquireAddressDefaults,
+    withAddressPoll: () => withAddressPoll,
+    withEthRequest: () => withEthRequest,
+    withEvents: () => withEvents,
+    withMarker: () => withMarker,
+    withPreferInjectedAddress: () => withPreferInjectedAddress,
+    withRequestMethods: () => withRequestMethods,
+    withSignMode: () => withSignMode,
+    zh: () => zh
   });
 
   // ../core/src/adapter.ts
@@ -60203,10 +60218,6 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
       this.pendingAbortController = new AbortController();
       this.events.emit("connecting", { adapterId });
       try {
-        const available = await adapter2.isAvailable?.();
-        if (available === false) {
-          throw createWalletError.walletNotAvailable(adapter2.metadata.name);
-        }
         const network = this.registry.resolve(options.network ?? this.config.network);
         const signal = options.signal ?? this.pendingAbortController.signal;
         const connectOptions = { ...options, network, signal };
@@ -60678,231 +60689,12 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
   }
 
   // ../core/src/wallet-registry.ts
-  var TRON_WALLET_REGISTRY = [
-    {
-      id: "tronlink",
-      name: "TronLink",
-      enabled: true,
-      group: "featured",
-      transport: "extension",
-      platforms: ["extension", "mobile"],
-      homepage: "https://www.tronlink.org/",
-      providerPaths: ["tronLink", "tron", "tronWeb"],
-      conflictMarkers: ["isTronLink", "org.tronlink.www"],
-      mobileDeepLink: { scheme: "tronlinkoutside", urlTemplate: "tronlinkoutside://pull.activity?param={encodedParams}" },
-      upstreamPackage: "@tronweb3/tronwallet-adapter-tronlink"
-    },
-    {
-      id: "tokenpocket",
-      name: "TokenPocket",
-      enabled: true,
-      group: "popular",
-      transport: "extension",
-      platforms: ["extension", "mobile"],
-      homepage: "https://www.tokenpocket.pro/",
-      providerPaths: ["tokenpocket.tron", "tokenpocket.tronWeb", "tronWeb"],
-      conflictMarkers: ["tokenpocket", "TIP6963"],
-      mobileDeepLink: { scheme: "tpdapp", urlTemplate: "tpdapp://open?params={encodedParams}" },
-      supportsWalletConnect: true,
-      upstreamPackage: "@tronweb3/tronwallet-adapter-tokenpocket"
-    },
-    {
-      id: "okx",
-      name: "OKX Wallet",
-      enabled: true,
-      group: "popular",
-      transport: "extension",
-      platforms: ["extension", "mobile"],
-      homepage: "https://www.okx.com/web3",
-      providerPaths: ["okxwallet.tronLink"],
-      mobileDeepLink: { scheme: "okx", urlTemplate: "okx://wallet/dapp/url?dappUrl={encodedUrl}" },
-      upstreamPackage: "@tronweb3/tronwallet-adapter-okxwallet"
-    },
-    {
-      id: "bitget",
-      name: "Bitget Wallet",
-      enabled: true,
-      group: "popular",
-      transport: "extension",
-      platforms: ["extension", "mobile"],
-      homepage: "https://web3.bitget.com/",
-      providerPaths: ["bitkeep.tronLink", "bitkeep.tron"],
-      conflictMarkers: ["isBitKeep"],
-      mobileDeepLink: { scheme: "https", urlTemplate: "https://bkcode.vip?action=dapp&url={encodedUrl}" },
-      upstreamPackage: "@tronweb3/tronwallet-adapter-bitkeep"
-    },
-    {
-      id: "trust",
-      name: "Trust Wallet",
-      enabled: true,
-      group: "popular",
-      transport: "extension",
-      platforms: ["extension", "mobile"],
-      homepage: "https://trustwallet.com/",
-      providerPaths: ["trustwallet.tronLink", "trustwallet.tron"],
-      conflictMarkers: ["Trust"],
-      mobileDeepLink: { scheme: "https", urlTemplate: "https://link.trustwallet.com/open_url?url={encodedUrl}" },
-      supportsWalletConnect: true,
-      upstreamPackage: "@tronweb3/tronwallet-adapter-trust"
-    },
-    {
-      id: "metamask",
-      name: "MetaMask",
-      enabled: true,
-      group: "popular",
-      transport: "extension",
-      platforms: ["extension"],
-      homepage: "https://metamask.io/",
-      providerPaths: ["ethereum"],
-      conflictMarkers: ["isMetaMask"],
-      mobileDeepLink: { scheme: "metamask", urlTemplate: "https://metamask.app.link/dapp/{encodedHostAndPath}" },
-      upstreamPackage: "@tronweb3/tronwallet-adapter-metamask-tron"
-    },
-    {
-      id: "gate",
-      name: "Gate Wallet",
-      enabled: true,
-      group: "popular",
-      transport: "extension",
-      platforms: ["extension"],
-      homepage: "https://www.gate.io/web3",
-      providerPaths: ["gatewallet.tron", "gatewallet.tronLink"],
-      conflictMarkers: ["GateApp"],
-      mobileDeepLink: { scheme: "https", urlTemplate: "https://gate.onelink.me/Hls0/web3" },
-      upstreamPackage: "@tronweb3/tronwallet-adapter-gatewallet"
-    },
-    {
-      id: "foxwallet",
-      name: "FoxWallet",
-      enabled: true,
-      group: "popular",
-      transport: "mobile",
-      platforms: ["mobile"],
-      homepage: "https://foxwallet.com/",
-      providerPaths: ["foxwallet.tronLink"],
-      mobileDeepLink: { scheme: "foxwallet", urlTemplate: "foxwallet://dapp?url={encodedUrl}" },
-      upstreamPackage: "@tronweb3/tronwallet-adapter-foxwallet"
-    },
-    {
-      id: "bybit",
-      name: "Bybit Wallet",
-      enabled: true,
-      group: "popular",
-      transport: "extension",
-      platforms: ["extension", "mobile"],
-      homepage: "https://www.bybit.com/web3",
-      providerPaths: ["bybitWallet.tronLink", "bybitWallet.tron"],
-      conflictMarkers: ["bybit_app"],
-      mobileDeepLink: { scheme: "bybitapp" },
-      upstreamPackage: "@tronweb3/tronwallet-adapter-bybit"
-    },
-    {
-      id: "imtoken",
-      name: "imToken",
-      enabled: true,
-      group: "popular",
-      transport: "mobile",
-      platforms: ["mobile"],
-      homepage: "https://token.im/",
-      providerPaths: ["imToken", "tronWeb"],
-      mobileDeepLink: { scheme: "imtokenv2", urlTemplate: "imtokenv2://navigate/DappView?url={encodedUrl}" },
-      upstreamPackage: "@tronweb3/tronwallet-adapter-imtoken"
-    },
-    {
-      id: "tomo",
-      name: "Tomo Wallet",
-      enabled: true,
-      group: "popular",
-      transport: "mobile",
-      platforms: ["mobile"],
-      homepage: "https://tomo.inc/"
-    },
-    {
-      id: "binance",
-      name: "Binance Web3 Wallet",
-      enabled: true,
-      group: "popular",
-      transport: "extension",
-      platforms: ["extension", "mobile"],
-      homepage: "https://www.binance.com/en/web3wallet",
-      providerPaths: ["binancew3w.tron", "binancew3w.tronLink"],
-      conflictMarkers: ["isBinance"],
-      mobileDeepLink: { scheme: "bnc" },
-      supportsWalletConnect: true,
-      upstreamPackage: "@tronweb3/tronwallet-adapter-binance"
-    },
-    {
-      id: "safepal",
-      name: "SafePal",
-      enabled: true,
-      group: "popular",
-      transport: "extension",
-      platforms: ["extension", "mobile"],
-      homepage: "https://www.safepal.com/",
-      downloadUrl: "https://www.safepal.com/download?product=2",
-      providerPaths: ["SafePalHook"],
-      conflictMarkers: ["SafePalHook", "sfpPlatform"],
-      supportsWalletConnect: true
-    },
-    {
-      id: "guarda",
-      name: "Guarda",
-      enabled: true,
-      group: "popular",
-      transport: "extension",
-      platforms: ["extension"],
-      homepage: "https://guarda.com/",
-      providerPaths: ["guarda.tron", "guarda"],
-      upstreamPackage: "@tronweb3/tronwallet-adapter-guarda"
-    },
-    {
-      id: "backpack",
-      name: "Backpack",
-      enabled: true,
-      group: "popular",
-      transport: "extension",
-      platforms: ["extension"],
-      homepage: "https://backpack.app/",
-      providerPaths: ["backpack.tron", "backpack.tronLink"],
-      conflictMarkers: ["isBackpack"],
-      upstreamPackage: "@tronweb3/tronwallet-adapter-backpack"
-    },
-    {
-      id: "onekey",
-      name: "OneKey",
-      enabled: true,
-      group: "popular",
-      transport: "extension",
-      platforms: ["extension"],
-      homepage: "https://onekey.so/",
-      providerPaths: ["$onekey.tron", "$onekey.tronLink"],
-      upstreamPackage: "@tronweb3/tronwallet-adapter-onekey"
-    },
-    {
-      id: "ledger",
-      name: "Ledger",
-      enabled: true,
-      group: "hardware",
-      transport: "hardware",
-      platforms: ["hardware"],
-      homepage: "https://www.ledger.com/"
-    },
-    {
-      id: "walletconnect",
-      name: "WalletConnect",
-      enabled: true,
-      group: "featured",
-      transport: "walletconnect",
-      platforms: ["mobile"],
-      homepage: "https://walletconnect.com/",
-      supportsWalletConnect: true
-    }
-  ];
-  function getTronWalletRegistryItem(walletId) {
-    return TRON_WALLET_REGISTRY.find((wallet) => wallet.id === walletId);
+  var TRON_WALLET_REGISTRY = [];
+  function getTronWalletRegistryItem(_walletId) {
+    return void 0;
   }
   function getEnabledTronWalletRegistryItems() {
-    return TRON_WALLET_REGISTRY.filter((wallet) => wallet.enabled);
+    return TRON_WALLET_REGISTRY;
   }
 
   // ../adapters/tronwallet-bridge/src/index.ts
@@ -60934,6 +60726,7 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
       adapterApiVersion: "1.1",
       metadata,
       capabilities,
+      detect: () => isTronwalletAdapterAvailable(inner),
       isAvailable: () => isTronwalletAdapterAvailable(inner),
       connect: async (connectOptions = {}) => {
         cleanupEvents?.();
@@ -61071,6 +60864,10 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
       adapterApiVersion: "1.1",
       metadata,
       capabilities,
+      detect: async () => {
+        if (!adapter2) return false;
+        return Boolean(await Promise.resolve(adapter2.detect?.()).catch(() => false));
+      },
       isAvailable: async () => {
         try {
           const inner = await loadInner();
@@ -61241,6 +61038,10 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
       ...primary.adapterApiVersion ? { adapterApiVersion: primary.adapterApiVersion } : {},
       metadata: primary.metadata,
       capabilities: primary.capabilities,
+      detect: async () => {
+        if (await Promise.resolve(probe()).catch(() => false)) return true;
+        return Boolean(await Promise.resolve(primary.detect?.()).catch(() => false));
+      },
       isAvailable: async () => {
         if (await Promise.resolve(probe()).catch(() => false)) return true;
         return Boolean(await Promise.resolve(primary.isAvailable?.()).catch(() => false));
@@ -61270,6 +61071,10 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
       capabilities: {
         ...fallback.capabilities,
         ...primary.capabilities
+      },
+      detect: async () => {
+        if (await Promise.resolve(fallback.detect?.()).catch(() => false)) return true;
+        return Boolean(await Promise.resolve(primary.detect?.()).catch(() => false));
       },
       isAvailable: async () => {
         if (await Promise.resolve(fallback.isAvailable?.()).catch(() => false)) return true;
@@ -61323,170 +61128,6 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
     if (!ethereum) return false;
     if (ethereum.isMetaMask && !ethereum.overrideIsMetaMask) return true;
     return Boolean(ethereum.providers?.some((provider) => provider.isMetaMask));
-  }
-  function getGuardaInjectedProvider() {
-    const guarda2 = safeGetProperty(globalThis, "guarda");
-    if (!guarda2 || typeof guarda2 !== "object") return void 0;
-    const wallet = guarda2;
-    const walletTronWeb = safeGetProperty(wallet, "tronWeb");
-    const tron = safeGetProperty(wallet, "tron");
-    if (isInjectedTronProvider(tron)) {
-      const provider = cloneInjectedProvider(tron);
-      if (!provider.tronWeb && walletTronWeb) provider.tronWeb = walletTronWeb;
-      return provider;
-    }
-    if (isInjectedTronProvider(wallet)) return cloneInjectedProvider(wallet);
-    return void 0;
-  }
-  function getBitgetInjectedProvider() {
-    const globals = globalThis;
-    const bitkeep = safeGetProperty(globals, "bitkeep");
-    if (bitkeep && typeof bitkeep === "object") {
-      let mergeParentTronWeb2 = function(value) {
-        if (!isInjectedTronProvider(value)) return void 0;
-        const provider2 = cloneInjectedProvider(value);
-        if (!provider2.tronWeb && walletTronWeb) provider2.tronWeb = walletTronWeb;
-        return provider2;
-      };
-      var mergeParentTronWeb = mergeParentTronWeb2;
-      const wallet = bitkeep;
-      const walletTronWeb = safeGetProperty(wallet, "tronWeb");
-      const provider = mergeParentTronWeb2(safeGetProperty(wallet, "tronLink")) ?? mergeParentTronWeb2(safeGetProperty(wallet, "tron")) ?? mergeParentTronWeb2(wallet);
-      if (provider) return provider;
-    }
-    const globalTronLink = safeGetProperty(globals, "tronLink");
-    if (safeGetProperty(globals, "isBitKeep") && isInjectedTronProvider(globalTronLink)) {
-      const provider = cloneInjectedProvider(globalTronLink);
-      const globalTronWeb = safeGetProperty(globals, "tronWeb");
-      if (!provider.tronWeb && globalTronWeb) provider.tronWeb = globalTronWeb;
-      return provider;
-    }
-    return void 0;
-  }
-  function getBinanceInjectedProvider() {
-    const globals = globalThis;
-    const binancew3w = safeGetProperty(globals, "binancew3w");
-    if (!binancew3w || typeof binancew3w !== "object") return void 0;
-    const wallet = binancew3w;
-    const tron = safeGetProperty(wallet, "tron");
-    if (!tron || typeof tron !== "object") return void 0;
-    const provider = tron;
-    const getAccount = safeGetProperty(provider, "getAccount");
-    const getChainId = safeGetProperty(provider, "getChainId");
-    const signMessageV2 = safeGetProperty(provider, "signMessageV2");
-    const signTransaction2 = safeGetProperty(provider, "signTransaction");
-    if (typeof getAccount !== "function") return void 0;
-    const trx = {};
-    if (typeof getChainId === "function") {
-      trx.getBlockByNumber = async () => {
-        const chainId = String(await getChainId.call(provider));
-        const suffix = chainId.startsWith("0x") ? chainId.slice(2).slice(-8) : "";
-        return { blockID: `${"0".repeat(56)}${suffix}` };
-      };
-    }
-    if (typeof signMessageV2 === "function") {
-      trx.signMessageV2 = (message) => signMessageV2.call(provider, message);
-    }
-    if (typeof signTransaction2 === "function") {
-      trx.sign = (transaction) => signTransaction2.call(provider, transaction);
-    }
-    return {
-      request: async ({ method, params }) => {
-        if (method === "tron_requestAccounts" || method === "eth_requestAccounts") {
-          const account = await getAccount.call(provider);
-          const address = extractInjectedAddress(account);
-          return address ? [address] : account;
-        }
-        if (method === "tron_signMessage" && typeof signMessageV2 === "function") {
-          const message = typeof params === "object" && params !== null && "message" in params ? params.message : params;
-          return signMessageV2.call(provider, String(message ?? ""));
-        }
-        if (method === "tron_signTransaction" && typeof signTransaction2 === "function") {
-          const transaction = typeof params === "object" && params !== null && "transaction" in params ? params.transaction : params;
-          return signTransaction2.call(provider, transaction);
-        }
-        return void 0;
-      },
-      tronWeb: {
-        trx
-      }
-    };
-  }
-  function getSafePalInjectedProvider() {
-    const globals = globalThis;
-    const safePalHook = safeGetProperty(globals, "SafePalHook");
-    const tronWeb = safeGetProperty(globals, "tronWeb");
-    if (!safePalHook || typeof safePalHook !== "object") return void 0;
-    if (!tronWeb || typeof tronWeb !== "object") return void 0;
-    const hook = safePalHook;
-    const request2 = safeGetProperty(hook, "request");
-    const provider = {
-      tronWeb: createSafePalTronWeb(tronWeb, hook)
-    };
-    if (typeof request2 === "function") {
-      provider.request = async (args) => {
-        const result = await request2.call(hook, args);
-        provider.tronWeb = createSafePalTronWeb(tronWeb, hook);
-        if (args.method === "tron_requestAccounts" || args.method === "eth_requestAccounts") {
-          const address = extractInjectedAddress(result) ?? getDefaultBase58Address(safeGetProperty(hook, "defaultAddress"));
-          return typeof address === "string" ? [address] : result;
-        }
-        return result;
-      };
-    }
-    return provider;
-  }
-  function getFoxWalletInjectedProvider() {
-    const foxwallet2 = safeGetProperty(globalThis, "foxwallet");
-    if (!foxwallet2 || typeof foxwallet2 !== "object") return void 0;
-    const wallet = foxwallet2;
-    const walletRequest = safeGetProperty(wallet, "request");
-    const walletTronWeb = safeGetProperty(wallet, "tronWeb");
-    return mergeFoxWalletProvider(safeGetProperty(wallet, "tronLink")) ?? mergeFoxWalletProvider(safeGetProperty(wallet, "tron")) ?? mergeFoxWalletProvider(wallet);
-    function mergeFoxWalletProvider(value) {
-      if (!value || typeof value !== "object") return void 0;
-      const source = value;
-      const sourceRequest = safeGetProperty(source, "request");
-      const sourceTronWeb = safeGetProperty(source, "tronWeb");
-      const provider = {};
-      if (typeof sourceRequest === "function") {
-        provider.request = sourceRequest.bind(source);
-      } else if (typeof walletRequest === "function") {
-        provider.request = walletRequest.bind(wallet);
-      }
-      if (typeof sourceTronWeb === "object" && sourceTronWeb !== null) {
-        provider.tronWeb = sourceTronWeb;
-      } else if (typeof walletTronWeb === "object" && walletTronWeb !== null) {
-        provider.tronWeb = walletTronWeb;
-      }
-      return provider.request || provider.tronWeb ? provider : void 0;
-    }
-  }
-  function getGateInjectedProvider() {
-    const gatewallet = safeGetProperty(globalThis, "gatewallet");
-    if (!gatewallet || typeof gatewallet !== "object") return void 0;
-    const wallet = gatewallet;
-    const walletRequest = safeGetProperty(wallet, "request");
-    const walletTronWeb = safeGetProperty(wallet, "tronWeb");
-    const tronLink = safeGetProperty(wallet, "tronLink");
-    const provider = mergeGateProvider(safeGetProperty(wallet, "tron")) ?? mergeGateProvider(tronLink) ?? mergeGateProvider(wallet);
-    if (provider) return provider;
-    if (tronLink && typeof tronLink === "object" && walletTronWeb) return { tronWeb: walletTronWeb };
-    return void 0;
-    function mergeGateProvider(value) {
-      if (!isInjectedTronProvider(value)) return void 0;
-      const provider2 = cloneInjectedProvider(value);
-      if (!provider2.request && typeof walletRequest === "function") {
-        provider2.request = walletRequest.bind(wallet);
-      }
-      if (!provider2.tronWeb && walletTronWeb) provider2.tronWeb = walletTronWeb;
-      return provider2;
-    }
-  }
-  async function hasGateInjectedMarker() {
-    const gatewallet = safeGetProperty(globalThis, "gatewallet");
-    if (!gatewallet || typeof gatewallet !== "object") return false;
-    return Boolean(safeGetProperty(gatewallet, "tronLink"));
   }
   function getInjectedTronProvider(paths) {
     for (const path of paths) {
@@ -61582,19 +61223,6 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
       return void 0;
     }
   }
-  function createSafePalTronWeb(tronWeb, hook) {
-    const source = tronWeb;
-    const defaultAddress = safeGetProperty(source, "defaultAddress") ?? safeGetProperty(hook, "defaultAddress");
-    const trx = safeGetProperty(source, "trx");
-    const normalized = {};
-    if (typeof defaultAddress === "object" && defaultAddress !== null) {
-      normalized.defaultAddress = defaultAddress;
-    }
-    if (typeof trx === "object" && trx !== null) {
-      normalized.trx = trx;
-    }
-    return normalized;
-  }
   function getDefaultBase58Address(defaultAddress) {
     if (typeof defaultAddress !== "object" || defaultAddress === null) return void 0;
     const base582 = safeGetProperty(defaultAddress, "base58");
@@ -61616,134 +61244,223 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
     return void 0;
   }
 
-  // ../client/src/adapters/injected.ts
-  function createInjectedTronAdapter(config) {
-    let provider;
-    let connectedNetwork;
-    const metadata = {
-      id: config.id,
-      name: config.name,
-      ...config.icon ? { icon: config.icon } : {},
-      ...config.homepage ? { homepage: config.homepage } : {},
-      ...config.downloadUrl ?? config.homepage ? { downloadUrl: config.downloadUrl ?? config.homepage } : {},
-      type: "extension",
-      group: "popular",
-      platforms: config.platforms ?? ["extension"],
-      description: `${config.name} TRON browser extension adapter.`,
-      ...config.metadata
-    };
-    const resolveProvider = () => {
-      try {
-        return config.provider?.() ?? getInjectedTronProvider(config.providerPaths);
-      } catch {
-        return void 0;
-      }
-    };
-    const resolveAvailability = async () => {
-      if (resolveProvider()) return true;
-      try {
-        return Boolean(await config.availabilityProbe?.());
-      } catch {
-        return false;
-      }
-    };
-    return {
-      adapterApiVersion: "1.1",
-      metadata,
-      capabilities: {
-        connect: true,
-        disconnect: true,
-        signMessage: true,
-        signTransaction: true
-      },
-      isAvailable: async () => {
-        if (await resolveAvailability()) return true;
-        if (!config.availabilityTimeoutMs || config.availabilityTimeoutMs <= 0) return false;
-        return waitForAvailability(resolveAvailability, config.availabilityTimeoutMs);
-      },
-      connect: async (options = {}) => {
-        const nextProvider = resolveProvider();
-        if (!nextProvider) throw new WalletKitError("WALLET_NOT_FOUND", `${metadata.name} provider was not found.`);
-        let address = config.preferInjectedAddress ? readInjectedAddress(nextProvider) ?? readInjectedAddressFromPaths(config.providerPaths) : void 0;
-        if (!address) address = await acquireInjectedAddress(nextProvider, resolveProvider, config);
-        if (!address) {
-          debugGateAddressFailure(config);
-          throw new WalletKitError("CONNECTION_FAILED", `${metadata.name} did not return an address.`);
-        }
-        const activeProvider = resolveProvider() ?? nextProvider;
-        const network = typeof options.network === "object" && options.network ? options.network : await resolveInjectedNetwork(activeProvider, connectedNetwork);
-        provider = activeProvider;
-        connectedNetwork = network;
-        return {
-          account: {
-            address,
-            network,
-            networkType: network.networkType,
-            activationStatus: "unknown",
-            ...activeProvider.tronWeb?.defaultAddress?.hex ? { hexAddress: activeProvider.tronWeb.defaultAddress.hex } : {}
-          },
-          network,
-          raw: activeProvider
-        };
-      },
-      disconnect: async () => {
-        provider = void 0;
-        connectedNetwork = void 0;
-      },
-      signMessage: async ({ message }) => {
-        const activeProvider = provider ?? resolveProvider();
-        if (!activeProvider) throw new WalletKitError("NO_SESSION", `${metadata.name} is not connected.`);
-        const signature = await signInjectedMessage(activeProvider, message, config.signMessageMode);
-        if (!signature) throw new WalletKitError("SIGN_MESSAGE_FAILED", `${metadata.name} did not return a signature.`);
-        return { signatureKind: "signature", signature, proof: signature, raw: signature };
-      },
-      signTransaction: async ({ transaction }) => {
-        const activeProvider = provider ?? resolveProvider();
-        if (!activeProvider) throw new WalletKitError("NO_SESSION", `${metadata.name} is not connected.`);
-        const signedTransaction = normalizeSignedTransaction(await activeProvider.tronWeb?.trx?.sign?.(transaction)) ?? await activeProvider.request?.({ method: "tron_signTransaction", params: { transaction } });
-        if (!signedTransaction) throw new WalletKitError("SIGN_TRANSACTION_FAILED", `${metadata.name} did not return a signed transaction.`);
-        return { transaction: signedTransaction, signedTransaction, signed: true, raw: signedTransaction };
-      }
-    };
-  }
-  var DEFAULT_ADDRESS_TIMEOUT_MS = 6e4;
-  var DEFAULT_ADDRESS_SETTLE_MS = 700;
-  async function waitForAvailability(resolveAvailability, timeoutMs) {
-    const deadline = Date.now() + timeoutMs;
-    while (Date.now() < deadline) {
-      await delay(100);
-      if (await resolveAvailability()) return true;
+  // ../client/src/injected/eip6963.ts
+  var REQUEST_EVENTS = ["eip6963:requestProvider", "TIP6963:requestProvider"];
+  var ANNOUNCE_EVENTS = ["eip6963:announceProvider", "TIP6963:announceProvider"];
+  var DEFAULT_DISCOVERY_WINDOW_MS = 80;
+  var discovery;
+  var announcedProviders = /* @__PURE__ */ new Map();
+  async function hasAnnouncedWalletRdns(rdns = [], timeoutMs = DEFAULT_DISCOVERY_WINDOW_MS) {
+    if (rdns.length === 0) return false;
+    const normalized = new Set(rdns.map(normalizeRdns));
+    for (const key of normalized) {
+      if (announcedProviders.has(key)) return true;
     }
-    return resolveAvailability();
+    const providers2 = await discoverWalletProviders(timeoutMs);
+    for (const key of normalized) {
+      if (providers2.has(key)) return true;
+    }
+    return false;
   }
-  async function acquireInjectedAddress(nextProvider, resolveProvider, config) {
-    const readLive = () => {
-      const address = readInjectedAddress(resolveProvider()) ?? readInjectedAddressFromPaths(config.providerPaths) ?? readInjectedAddress(nextProvider);
-      return typeof address === "string" && address.length > 0 ? address : void 0;
+  function discoverWalletProviders(timeoutMs) {
+    if (discovery) return discovery;
+    const target = getEventTarget();
+    if (!target) return Promise.resolve(announcedProviders);
+    discovery = new Promise((resolve) => {
+      const listeners = [];
+      const cleanup = () => {
+        for (const { eventName, listener } of listeners) target.removeEventListener(eventName, listener);
+        listeners.length = 0;
+      };
+      const finish = () => {
+        cleanup();
+        resolve(new Map(announcedProviders));
+      };
+      const onAnnounce = (event) => {
+        const detail = readEventDetail(event);
+        const rdns = normalizeRdns(detail?.info?.rdns);
+        if (!rdns || !detail) return;
+        announcedProviders.set(rdns, detail);
+      };
+      for (const eventName of ANNOUNCE_EVENTS) {
+        target.addEventListener(eventName, onAnnounce);
+        listeners.push({ eventName, listener: onAnnounce });
+      }
+      for (const eventName of REQUEST_EVENTS) {
+        target.dispatchEvent(createEvent(eventName));
+      }
+      setTimeout(finish, timeoutMs);
+    });
+    return discovery;
+  }
+  function getEventTarget() {
+    const candidate = globalThis;
+    if (typeof candidate.addEventListener === "function" && typeof candidate.removeEventListener === "function" && typeof candidate.dispatchEvent === "function") {
+      return candidate;
+    }
+    return void 0;
+  }
+  function createEvent(eventName) {
+    if (typeof Event === "function") return new Event(eventName);
+    return { type: eventName };
+  }
+  function readEventDetail(event) {
+    const detail = event.detail;
+    if (!detail || typeof detail !== "object") return void 0;
+    return detail;
+  }
+  function normalizeRdns(rdns) {
+    return typeof rdns === "string" ? rdns.trim().toLowerCase() : "";
+  }
+
+  // ../client/src/adapters/injected-strategy.ts
+  var DEFAULT_ADDRESS_TIMEOUT_MS = 6e4;
+  var DEFAULT_ADDRESS_SETTLE_MS = 2500;
+  var TRON_ADDRESS_PATTERN = /^T[1-9A-HJ-NP-Za-km-z]{33}$/;
+  function standardInjected(opts) {
+    const strategy = {
+      detect: async () => {
+        if (await hasAnnouncedWalletRdns(opts.rdns).catch(() => false)) return true;
+        if (await Promise.resolve(opts.marker?.()).catch(() => false)) return true;
+        return Boolean(resolveProvider(opts));
+      },
+      connect: async (ctx) => {
+        const provider = resolveProvider(opts);
+        if (!provider) throw new WalletKitError("WALLET_NOT_FOUND", "Provider was not found.");
+        const address = await ctx.helpers.acquireAddress(toAcquireOptions(opts));
+        if (!address) throw new WalletKitError("CONNECTION_FAILED", "Wallet did not return an address.");
+        return { address, ...provider.tronWeb?.defaultAddress?.hex ? { hexAddress: provider.tronWeb.defaultAddress.hex } : {}, raw: provider };
+      }
     };
+    if (opts.signMessageMode) {
+      strategy.signMessage = (ctx, message) => signInjectedMessage(ctx.getProvider(), message, opts.signMessageMode);
+    }
+    return strategy;
+  }
+  function withRequestMethods(strategy, requestMethods) {
+    return withAcquireAddressDefaults(strategy, { requestMethods });
+  }
+  function withEthRequest(strategy) {
+    return withRequestMethods(strategy, ["eth_requestAccounts"]);
+  }
+  function withPreferInjectedAddress(strategy) {
+    return withAcquireAddressDefaults(strategy, { preferInjectedAddress: true });
+  }
+  function withAddressPoll(strategy, settleMsOrOptions) {
+    const defaults2 = typeof settleMsOrOptions === "number" ? { settleMs: settleMsOrOptions } : settleMsOrOptions;
+    return withAcquireAddressDefaults(strategy, defaults2);
+  }
+  function withSignMode(strategy, mode) {
+    return {
+      ...strategy,
+      signMessage: (ctx, message) => defaultInjectedSignMessage(ctx, message, mode)
+    };
+  }
+  function withMarker(strategy, detect2) {
+    return {
+      ...strategy,
+      detect: async () => Boolean(await Promise.resolve(detect2()).catch(() => false)) || Boolean(await Promise.resolve(strategy.detect()).catch(() => false))
+    };
+  }
+  function withEvents(strategy, names) {
+    const accountsChanged = normalizeEventNames(names.accountsChanged);
+    return accountsChanged.length > 0 ? withAcquireAddressDefaults(strategy, { accountChangeEventNames: accountsChanged }) : strategy;
+  }
+  function withAcquireAddressDefaults(strategy, defaults2) {
+    return {
+      ...strategy,
+      connect: (ctx) => strategy.connect(withAcquireDefaultsContext(ctx, defaults2))
+    };
+  }
+  function strategyFromLegacyConfig(config) {
+    return standardInjected({
+      providerPaths: config.providerPaths,
+      ...config.provider ? { provider: config.provider } : {},
+      ...config.availabilityProbe ? { marker: config.availabilityProbe } : {},
+      ...config.requestMethods ? { requestMethods: config.requestMethods } : {},
+      ...config.signMessageMode ? { signMessageMode: config.signMessageMode } : {},
+      ...config.addressTimeoutMs ? { addressTimeoutMs: config.addressTimeoutMs } : {},
+      ...config.addressSettleMs ? { addressSettleMs: config.addressSettleMs } : {},
+      ...config.accountChangeEventNames ? { accountChangeEventNames: config.accountChangeEventNames } : {},
+      ...config.accountChangeTimeoutMs ? { accountChangeTimeoutMs: config.accountChangeTimeoutMs } : {},
+      ...config.emptyAddressRetryDelayMs ? { emptyAddressRetryDelayMs: config.emptyAddressRetryDelayMs } : {},
+      ...config.emptyAddressRetryTimeoutMs ? { emptyAddressRetryTimeoutMs: config.emptyAddressRetryTimeoutMs } : {},
+      ...config.preferInjectedAddress ? { preferInjectedAddress: config.preferInjectedAddress } : {}
+    });
+  }
+  function createInjectedContext(config, options, connectedNetwork) {
+    const getProvider = () => resolveProvider(config);
+    const helpers = {
+      getProvider,
+      readDefaultAddress: () => readValidAddress(getProvider()) ?? readValidAddressFromPaths(config.providerPaths),
+      requestOnce: async (method, params) => getProvider()?.request?.({ method, params }),
+      acquireAddress: (opts) => acquireInjectedAddress(getProvider, config.providerPaths, opts),
+      resolveNetwork: async (fallback) => {
+        const provider = getProvider();
+        if (!provider) return fallback ?? connectedNetwork ?? resolveNetworkFallback();
+        return resolveInjectedNetwork(provider, fallback ?? connectedNetwork);
+      }
+    };
+    return { options, ...connectedNetwork ? { network: connectedNetwork } : {}, getProvider, helpers };
+  }
+  function withAcquireDefaultsContext(ctx, defaults2) {
+    return {
+      ...ctx,
+      helpers: {
+        ...ctx.helpers,
+        acquireAddress: (opts) => ctx.helpers.acquireAddress({ ...opts, ...defaults2 })
+      }
+    };
+  }
+  function normalizeEventNames(value) {
+    if (!value) return [];
+    return typeof value === "string" ? [value] : value;
+  }
+  async function defaultInjectedSignMessage(ctx, message, mode) {
+    return signInjectedMessage(ctx.getProvider(), message, mode);
+  }
+  async function defaultInjectedSignTransaction(ctx, transaction) {
+    const provider = ctx.getProvider();
+    const signedTransaction = normalizeSignedTransaction(await provider?.tronWeb?.trx?.sign?.(transaction)) ?? await provider?.request?.({ method: "tron_signTransaction", params: { transaction } });
+    return signedTransaction;
+  }
+  function isTronAddress(value) {
+    return typeof value === "string" && TRON_ADDRESS_PATTERN.test(value);
+  }
+  function resolveProvider(opts) {
+    try {
+      return opts.provider?.() ?? getInjectedTronProvider(opts.providerPaths ?? []);
+    } catch {
+      return void 0;
+    }
+  }
+  async function acquireInjectedAddress(resolveProvider2, providerPaths, opts = {}) {
+    const initialProvider = resolveProvider2();
+    if (!initialProvider) return void 0;
+    const readLive = () => readValidAddress(resolveProvider2()) ?? readValidAddressFromPaths(providerPaths) ?? readValidAddress(initialProvider);
     let userRejected;
     let requestedAddress;
     let requestSettled = false;
     let requestSettledAt = 0;
-    const eventWatcher = watchInjectedAccountEvents(resolveProvider, nextProvider, config);
-    void requestInjectedAddress(nextProvider, config.requestMethods).then((address) => {
-      requestedAddress = address;
+    const eventWatcher = watchInjectedAccountEvents(resolveProvider2, initialProvider, providerPaths, opts.accountChangeEventNames, opts.accountChangeTimeoutMs);
+    const immediate = opts.preferInjectedAddress ? readLive() : void 0;
+    if (immediate) return eventWatcher.close(immediate);
+    void requestInjectedAddress(initialProvider, opts.requestMethods).then((address) => {
+      if (isTronAddress(address)) requestedAddress = address;
     }).catch((error) => {
       if (error instanceof WalletKitError && error.code === "USER_REJECTED") userRejected = error;
     }).finally(() => {
       requestSettled = true;
       requestSettledAt = Date.now();
     });
-    const immediate = config.preferInjectedAddress ? readLive() : void 0;
-    if (immediate) return eventWatcher.close(immediate);
-    const deadline = Date.now() + (config.addressTimeoutMs ?? DEFAULT_ADDRESS_TIMEOUT_MS);
+    const deadline = Date.now() + (opts.timeoutMs ?? DEFAULT_ADDRESS_TIMEOUT_MS);
     while (Date.now() < deadline) {
       await delay(100);
       if (userRejected) {
         eventWatcher.close(void 0);
         throw userRejected;
       }
-      if (requestedAddress) return requestedAddress;
+      if (requestedAddress) return eventWatcher.close(requestedAddress);
       const eventAddress = eventWatcher.read();
       if (eventAddress) return eventWatcher.close(eventAddress);
       const live = readLive();
@@ -61751,48 +61468,33 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
       if (requestSettled && !requestedAddress) {
         const grace = readLive();
         if (grace) return eventWatcher.close(grace);
-        if (Date.now() - requestSettledAt >= (config.addressSettleMs ?? DEFAULT_ADDRESS_SETTLE_MS)) break;
+        if (Date.now() - requestSettledAt >= (opts.settleMs ?? DEFAULT_ADDRESS_SETTLE_MS)) break;
       }
     }
-    const fallback = requestedAddress ?? eventWatcher.read() ?? readLive() ?? await retryEmptyAddressRequest(readLive, resolveProvider, nextProvider, config);
+    const fallback = requestedAddress ?? eventWatcher.read() ?? readLive() ?? await retryEmptyAddressRequest(readLive, resolveProvider2, initialProvider, opts);
     return eventWatcher.close(fallback);
   }
-  function delay(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-  async function retryEmptyAddressRequest(readLive, resolveProvider, nextProvider, config) {
-    if (!config.emptyAddressRetryDelayMs && !config.emptyAddressRetryTimeoutMs) return void 0;
-    await delay(config.emptyAddressRetryDelayMs ?? 0);
+  async function retryEmptyAddressRequest(readLive, resolveProvider2, initialProvider, opts = {}) {
+    if (!opts.retryDelayMs && !opts.retryTimeoutMs) return void 0;
+    await delay(opts.retryDelayMs ?? 0);
     const liveBeforeRetry = readLive();
     if (liveBeforeRetry) return liveBeforeRetry;
-    const provider = resolveProvider() ?? nextProvider;
-    const timeoutMs = config.emptyAddressRetryTimeoutMs ?? 3e3;
     try {
-      const retryAddress = await withTimeout(requestInjectedAddress(provider, config.requestMethods), timeoutMs);
-      return retryAddress ?? readLive();
+      const retryAddress = await withTimeout(requestInjectedAddress(resolveProvider2() ?? initialProvider, opts.requestMethods), opts.retryTimeoutMs ?? 3e3);
+      return isTronAddress(retryAddress) ? retryAddress : readLive();
     } catch (error) {
       if (error instanceof WalletKitError && error.code === "USER_REJECTED") throw error;
       return readLive();
     }
   }
-  function withTimeout(promise, timeoutMs) {
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => resolve(void 0), timeoutMs);
-      promise.then((value) => resolve(value)).catch((error) => reject(error)).finally(() => clearTimeout(timer));
-    });
-  }
-  function watchInjectedAccountEvents(resolveProvider, nextProvider, config) {
-    const eventNames = config.accountChangeEventNames ?? [];
-    const timeoutMs = config.accountChangeTimeoutMs ?? 0;
+  function watchInjectedAccountEvents(resolveProvider2, initialProvider, providerPaths, eventNames = [], timeoutMs = 0) {
     let address;
     let timer;
-    const providers2 = [resolveProvider(), nextProvider].filter(Boolean);
+    const providers2 = [resolveProvider2(), initialProvider].filter(Boolean);
     const subscriptions = [];
     const cleanup = () => {
-      if (timer) {
-        clearTimeout(timer);
-        timer = void 0;
-      }
+      if (timer) clearTimeout(timer);
+      timer = void 0;
       while (subscriptions.length > 0) {
         const subscription = subscriptions.pop();
         try {
@@ -61808,13 +61510,13 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
     const listener = (...args) => {
       for (const arg of args) {
         const nextAddress = readInjectedAddressPayload(arg);
-        if (nextAddress) {
+        if (isTronAddress(nextAddress)) {
           address = nextAddress;
           cleanup();
           return;
         }
       }
-      const live = readInjectedAddress(resolveProvider()) ?? readInjectedAddressFromPaths(config.providerPaths);
+      const live = readValidAddress(resolveProvider2()) ?? readValidAddressFromPaths(providerPaths);
       if (live) {
         address = live;
         cleanup();
@@ -61840,10 +61542,19 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
     };
   }
   async function signInjectedMessage(provider, message, mode) {
+    if (!provider) return void 0;
     if (mode === "sign") return normalizeSignature(await provider.tronWeb?.trx?.sign?.(message));
     if (mode === "request") return requestOptionalString(provider, "tron_signMessage", { message });
     if (mode === "signMessageV2") return normalizeSignature(await provider.tronWeb?.trx?.signMessageV2?.(message));
     return normalizeSignature(await provider.tronWeb?.trx?.signMessageV2?.(message)) ?? await requestOptionalString(provider, "tron_signMessage", { message }) ?? normalizeSignature(await provider.tronWeb?.trx?.sign?.(message));
+  }
+  function readValidAddress(provider) {
+    const address = readInjectedAddress(provider);
+    return isTronAddress(address) ? address : void 0;
+  }
+  function readValidAddressFromPaths(providerPaths) {
+    const address = readInjectedAddressFromPaths(providerPaths);
+    return isTronAddress(address) ? address : void 0;
   }
   function normalizeSignature(signature) {
     return typeof signature === "string" && signature.length > 0 ? signature : void 0;
@@ -61851,25 +61562,116 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
   function normalizeSignedTransaction(transaction) {
     return typeof transaction === "object" && transaction !== null ? transaction : void 0;
   }
-  function debugGateAddressFailure(config) {
-    if (config.id !== "gate") return;
-    try {
-      if (globalThis.localStorage?.getItem("TWK_DEBUG_GATE") !== "1") return;
-      const gatewallet = globalThis.gatewallet;
-      console.warn("[TRON Wallet Kit] Gate did not return an address", sanitizeDebugValue(gatewallet));
-    } catch {
-    }
+  function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
-  function sanitizeDebugValue(value, depth = 0) {
-    if (depth > 3) return "[depth]";
-    if (typeof value === "function") return "[function]";
-    if (!value || typeof value !== "object") return value;
-    if (Array.isArray(value)) return value.slice(0, 5).map((entry) => sanitizeDebugValue(entry, depth + 1));
-    const output3 = {};
-    for (const key of Object.keys(value).slice(0, 40)) {
-      output3[key] = sanitizeDebugValue(value[key], depth + 1);
+  function withTimeout(promise, timeoutMs) {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => resolve(void 0), timeoutMs);
+      promise.then((value) => resolve(value)).catch((error) => reject(error)).finally(() => clearTimeout(timer));
+    });
+  }
+  function resolveNetworkFallback() {
+    return TRON_NILE;
+  }
+  function toAcquireOptions(opts) {
+    return {
+      ...opts.requestMethods ? { requestMethods: opts.requestMethods } : {},
+      ...opts.addressTimeoutMs ? { timeoutMs: opts.addressTimeoutMs } : {},
+      ...opts.addressSettleMs ? { settleMs: opts.addressSettleMs } : {},
+      ...opts.preferInjectedAddress ? { preferInjectedAddress: opts.preferInjectedAddress } : {},
+      ...opts.emptyAddressRetryDelayMs ? { retryDelayMs: opts.emptyAddressRetryDelayMs } : {},
+      ...opts.emptyAddressRetryTimeoutMs ? { retryTimeoutMs: opts.emptyAddressRetryTimeoutMs } : {},
+      ...opts.accountChangeEventNames ? { accountChangeEventNames: opts.accountChangeEventNames } : {},
+      ...opts.accountChangeTimeoutMs ? { accountChangeTimeoutMs: opts.accountChangeTimeoutMs } : {}
+    };
+  }
+
+  // ../client/src/adapters/injected.ts
+  function createInjectedTronAdapter(config) {
+    let connectedNetwork;
+    let strategyContext;
+    const strategy = config.strategy ?? strategyFromLegacyConfig(config);
+    const metadata = {
+      id: config.id,
+      name: config.name,
+      ...config.icon ? { icon: config.icon } : {},
+      ...config.homepage ? { homepage: config.homepage } : {},
+      ...config.downloadUrl ?? config.homepage ? { downloadUrl: config.downloadUrl ?? config.homepage } : {},
+      type: "extension",
+      group: "popular",
+      platforms: config.platforms ?? ["extension"],
+      description: `${config.name} TRON browser extension adapter.`,
+      ...config.metadata
+    };
+    const detect2 = () => Promise.resolve(strategy.detect()).then(Boolean).catch(() => false);
+    return {
+      adapterApiVersion: "1.1",
+      metadata,
+      capabilities: {
+        connect: true,
+        disconnect: true,
+        signMessage: true,
+        signTransaction: true
+      },
+      detect: detect2,
+      isAvailable: async () => {
+        if (await detect2()) return true;
+        if (!config.availabilityTimeoutMs || config.availabilityTimeoutMs <= 0) return false;
+        return waitForAvailability(detect2, config.availabilityTimeoutMs);
+      },
+      connect: async (options = {}) => {
+        const context = createInjectedContext(config, options, connectedNetwork);
+        const result = await strategy.connect(context);
+        if (!result.address) throw new WalletKitError("CONNECTION_FAILED", `${metadata.name} did not return an address.`);
+        const activeProvider = context.getProvider();
+        const hexAddress = result.hexAddress ?? activeProvider?.tronWeb?.defaultAddress?.hex;
+        const network = typeof options.network === "object" && options.network ? options.network : result.network ?? await context.helpers.resolveNetwork(connectedNetwork);
+        connectedNetwork = network;
+        strategyContext = createInjectedContext(config, options, connectedNetwork);
+        return {
+          account: {
+            address: result.address,
+            network,
+            networkType: network.networkType,
+            activationStatus: "unknown",
+            ...hexAddress ? { hexAddress } : {}
+          },
+          network,
+          raw: result.raw ?? activeProvider
+        };
+      },
+      disconnect: async () => {
+        connectedNetwork = void 0;
+        strategyContext = void 0;
+      },
+      signMessage: async ({ message }) => {
+        const context = strategyContext ?? createInjectedContext(config, {}, connectedNetwork);
+        const signature = strategy.signMessage ? await strategy.signMessage(context, message) : await defaultInjectedSignMessage(context, message, config.signMessageMode);
+        if (!signature) throw new WalletKitError("SIGN_MESSAGE_FAILED", `${metadata.name} did not return a signature.`);
+        return { signatureKind: "signature", signature, proof: signature, raw: signature };
+      },
+      signTransaction: async ({ transaction }) => {
+        const context = strategyContext ?? createInjectedContext(config, {}, connectedNetwork);
+        const signedTransaction = strategy.signTransaction ? await strategy.signTransaction(context, transaction) : await defaultInjectedSignTransaction(context, transaction);
+        if (!signedTransaction || typeof signedTransaction !== "object") {
+          throw new WalletKitError("SIGN_TRANSACTION_FAILED", `${metadata.name} did not return a signed transaction.`);
+        }
+        const transactionPayload = signedTransaction;
+        return { transaction: transactionPayload, signedTransaction: transactionPayload, signed: true, raw: transactionPayload };
+      }
+    };
+  }
+  async function waitForAvailability(resolveAvailability, timeoutMs) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      await delay2(100);
+      if (await resolveAvailability()) return true;
     }
-    return output3;
+    return resolveAvailability();
+  }
+  function delay2(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   // ../client/src/wallets/icons.generated.ts
@@ -80269,7 +80071,9 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
 
   // ../adapters/walletconnect/src/index.ts
   var DEFAULT_WALLETCONNECT_METHODS = ["tron_signMessage", "tron_signTransaction"];
+  var DEFAULT_WALLETCONNECT_REQUIRED_METHODS = ["tron_signTransaction"];
   var DEFAULT_WALLETCONNECT_EVENTS = ["accountsChanged", "chainChanged"];
+  var DEFAULT_WALLETCONNECT_APPROVAL_TIMEOUT_MS = 18e4;
   var WalletConnectAdapter = class {
     constructor(options = {}) {
       this.options = options;
@@ -80277,7 +80081,7 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
       this.relayUrl = options.relayUrl;
       this.appMetadata = options.appMetadata;
       this.allWallets = options.allWallets ?? "HIDE";
-      this.network = resolveWalletConnectNetwork(options.network ?? "nile");
+      this.network = resolveWalletConnectNetwork(options.network ?? "mainnet");
       this.metadata = {
         id: "walletconnect",
         name: "WalletConnect",
@@ -80310,8 +80114,12 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     wallet;
     account;
     network;
+    connectAttemptId = 0;
     isAvailable() {
       return Boolean(this.options.projectId);
+    }
+    detect() {
+      return this.isAvailable();
     }
     async connect(options = {}) {
       if (!this.options.projectId) {
@@ -80319,6 +80127,7 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
       }
       try {
         this.network = typeof options.network === "object" && options.network ? options.network : this.network;
+        this.connectAttemptId += 1;
         const wallet = await this.getOrCreateWallet(this.options.projectId, this.network);
         const onUri = options.onUri || this.options.onUri ? (uri) => {
           options.onUri?.(uri);
@@ -80342,10 +80151,15 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
       return { account: this.account, network: this.network, raw: this.wallet };
     }
     async disconnect() {
+      this.connectAttemptId += 1;
       const wallet = this.wallet;
       this.wallet = void 0;
       this.account = void 0;
       if (wallet) await wallet.disconnect();
+    }
+    async cancelPendingConnection() {
+      this.connectAttemptId += 1;
+      await this.cleanupHalfOpenSession();
     }
     async signMessage(request2) {
       try {
@@ -80441,17 +80255,28 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     address;
     async connect(options = {}) {
       const client = await this.getClient();
+      const existingTopics = new Set(getSignClientSessions(client).map((session2) => session2.topic));
       const { uri, approval } = await client.connect({
         requiredNamespaces: {
           tron: {
-            methods: this.options.methods ?? [...DEFAULT_WALLETCONNECT_METHODS],
+            methods: this.options.methods ?? [...DEFAULT_WALLETCONNECT_REQUIRED_METHODS],
+            chains: [this.options.network],
+            events: []
+          }
+        },
+        optionalNamespaces: {
+          tron: {
+            methods: getOptionalWalletConnectMethods(this.options.methods),
             chains: [this.options.network],
             events: this.options.events ?? [...DEFAULT_WALLETCONNECT_EVENTS]
           }
         }
       });
       if (uri) options.onUri?.(uri);
-      const session = await approval();
+      const session = await Promise.race([
+        approval(),
+        waitForApprovedSession(client, this.options.network, existingTopics, DEFAULT_WALLETCONNECT_APPROVAL_TIMEOUT_MS)
+      ]);
       const address = getSessionAddress(session, this.options.network);
       if (!address) throw new WalletKitError("CONNECTION_FAILED", "WalletConnect did not return an address.", session);
       this.session = session;
@@ -80539,11 +80364,24 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     const sessionStore = client.session;
     return sessionStore?.getAll?.() ?? [];
   }
+  async function waitForApprovedSession(client, chainId, existingTopics, timeoutMs) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      const session = getSignClientSessions(client).find((candidate) => !existingTopics.has(candidate.topic) && Boolean(getSessionAddress(candidate, chainId)));
+      if (session) return session;
+      await delay3(250);
+    }
+    throw new WalletKitError("REQUEST_TIMEOUT", "WalletConnect approval timed out.");
+  }
   function getSessionAddress(session, chainId) {
-    const accounts = session.namespaces?.tron?.accounts ?? [];
-    const account = accounts.find((candidate) => candidate.startsWith(`${chainId}:`)) ?? accounts[0];
+    const namespaces = Object.values(session.namespaces ?? {});
+    const accounts = namespaces.flatMap((namespace) => namespace.accounts ?? []);
+    const account = accounts.find((candidate) => candidate.startsWith(`${chainId}:`)) ?? accounts.find((candidate) => candidate.startsWith("tron:")) ?? accounts[0];
     const address = account?.split(":").pop();
     return address || void 0;
+  }
+  function delay3(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
   function normalizeWalletConnectResult(result) {
     if (typeof result === "string") {
@@ -80564,6 +80402,10 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     if (network === "shasta") return "tron:0x94a9059e";
     if (network === "nile") return "tron:0xcd8690dc";
     return network.startsWith("tron:") ? network : `tron:${network}`;
+  }
+  function getOptionalWalletConnectMethods(requiredMethods) {
+    const required = new Set(requiredMethods ?? DEFAULT_WALLETCONNECT_REQUIRED_METHODS);
+    return DEFAULT_WALLETCONNECT_METHODS.filter((method) => !required.has(method));
   }
   function resolveWalletConnectNetwork(network) {
     const chainId = toWalletConnectChainId(network).replace(/^tron:/, "");
@@ -80603,7 +80445,46 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     if (!(typeof cause === "object" && cause !== null)) return false;
     const message = "message" in cause ? String(cause.message) : "";
     const code2 = "code" in cause ? cause.code : void 0;
-    return code2 === 4001 || /user closed|user rejected|rejected/i.test(message);
+    return code2 === 4001 || /user closed|user rejected|user disconnected|user cancelled|user canceled/i.test(message);
+  }
+
+  // ../client/src/wallets/build-catalog.ts
+  function buildCatalog(wallets) {
+    return wallets.filter((wallet) => wallet.enabled !== false).map(buildCatalogItem);
+  }
+  function buildCatalogItem(wallet) {
+    const icon = wallet.icon ?? getWalletIcon(wallet.id);
+    const item = {
+      id: wallet.id,
+      name: wallet.name,
+      enabled: wallet.enabled ?? true,
+      group: wallet.group ?? "popular",
+      transport: resolveTransport(wallet),
+      platforms: wallet.platforms,
+      homepage: wallet.homepage,
+      downloadUrl: wallet.downloadUrl ?? wallet.homepage,
+      ...icon ? { icon } : {},
+      ...wallet.featured !== void 0 ? { featured: wallet.featured } : {},
+      ...wallet.mobileDeepLink ? { mobileDeepLink: wallet.mobileDeepLink } : {},
+      ...wallet.supportsWalletConnect ? { supportsWalletConnect: wallet.supportsWalletConnect } : {}
+    };
+    const providerPaths = resolveProviderPaths(wallet);
+    if (providerPaths) item.providerPaths = providerPaths;
+    if (wallet.conflictMarkers) item.conflictMarkers = wallet.conflictMarkers;
+    if (wallet.integration === "walletconnect") item.badge = { label: "", tone: "qr" };
+    return item;
+  }
+  function resolveProviderPaths(wallet) {
+    if (wallet.providerPaths) return wallet.providerPaths;
+    if (wallet.integration === "injected") return wallet.detect?.providerPaths;
+    if (wallet.integration === "tronweb3-bridge") return wallet.injectedFallback?.providerPaths;
+    return void 0;
+  }
+  function resolveTransport(wallet) {
+    if (wallet.integration === "walletconnect" && wallet.id === "walletconnect") return "walletconnect";
+    if (wallet.platforms.includes("hardware")) return "hardware";
+    if (wallet.platforms.includes("extension")) return "extension";
+    return "mobile";
   }
 
   // ../client/src/wallets/build-adapters.ts
@@ -80670,9 +80551,10 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     return {
       id: wallet.id,
       name: wallet.name,
-      providerPaths: wallet.detect.providerPaths ?? [],
-      ...wallet.detect.provider ? { provider: wallet.detect.provider } : {},
-      ...wallet.detect.availabilityProbe ? { availabilityProbe: wallet.detect.availabilityProbe } : {},
+      providerPaths: wallet.detect?.providerPaths ?? [],
+      ...wallet.injected ? { strategy: wallet.injected } : {},
+      ...wallet.detect?.provider ? { provider: wallet.detect.provider } : {},
+      ...wallet.detect?.availabilityProbe ? { availabilityProbe: wallet.detect.availabilityProbe } : {},
       ...icon ? { icon } : {},
       homepage: wallet.homepage,
       downloadUrl: wallet.downloadUrl ?? wallet.homepage,
@@ -80692,16 +80574,39 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
   }
   function hydrateAdapterMetadata(wallet, adapter2) {
     const icon = wallet.icon ?? getWalletIcon(wallet.id);
-    if (!icon && !wallet.availabilityMode) return adapter2;
+    const catalog = buildCatalogItem(wallet);
+    const metadataCatalog = {
+      ...catalog.enabled !== void 0 ? { enabled: catalog.enabled } : {},
+      ...catalog.featured !== void 0 ? { featured: catalog.featured } : {},
+      ...catalog.providerPaths ? { providerPaths: catalog.providerPaths } : {},
+      ...catalog.conflictMarkers ? { conflictMarkers: catalog.conflictMarkers } : {},
+      ...catalog.mobileDeepLink ? { mobileDeepLink: catalog.mobileDeepLink } : {},
+      ...catalog.supportsWalletConnect !== void 0 ? { supportsWalletConnect: catalog.supportsWalletConnect } : {}
+    };
     adapter2.metadata = {
       ...adapter2.metadata,
       ...icon ? { icon } : {},
-      ...wallet.availabilityMode ? { availabilityMode: wallet.availabilityMode } : {}
+      ...wallet.availabilityMode ? { availabilityMode: wallet.availabilityMode } : {},
+      catalog: metadataCatalog
     };
     return adapter2;
   }
 
   // ../client/src/wallets/entries/backpack.ts
+  function getBackpackInjectedProvider() {
+    const globals = globalThis;
+    const backpack2 = safeGetProperty(globals, "backpack");
+    if (!backpack2 || typeof backpack2 !== "object") return void 0;
+    const wallet = backpack2;
+    return mergeBackpackProvider(safeGetProperty(wallet, "tron")) ?? mergeBackpackProvider(safeGetProperty(wallet, "tronLink"));
+  }
+  function mergeBackpackProvider(value) {
+    if (!isInjectedTronProvider(value)) return void 0;
+    const provider = cloneInjectedProvider(value);
+    const globalTronWeb = safeGetProperty(globalThis, "tronWeb");
+    if (!provider.tronWeb && globalTronWeb && typeof globalTronWeb === "object") provider.tronWeb = globalTronWeb;
+    return provider;
+  }
   var backpack = {
     id: "backpack",
     name: "Backpack",
@@ -80709,10 +80614,62 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     homepage: "https://backpack.app/",
     platforms: ["extension"],
     group: "popular",
-    detect: { providerPaths: ["backpack.tron", "backpack.tronLink"] }
+    providerPaths: ["backpack.tron", "backpack.tronLink"],
+    conflictMarkers: ["backpack"],
+    injected: withRequestMethods(standardInjected({ provider: getBackpackInjectedProvider, rdns: ["app.backpack"] }), ["tron_requestAccounts"]),
+    detect: { providerPaths: ["backpack.tron", "backpack.tronLink"], provider: getBackpackInjectedProvider }
   };
 
   // ../client/src/wallets/entries/binance.ts
+  function getBinanceInjectedProvider() {
+    const globals = globalThis;
+    const binancew3w = safeGetProperty(globals, "binancew3w");
+    if (!binancew3w || typeof binancew3w !== "object") return void 0;
+    const wallet = binancew3w;
+    const tron = safeGetProperty(wallet, "tron");
+    if (!tron || typeof tron !== "object") return void 0;
+    const provider = tron;
+    const getAccount = safeGetProperty(provider, "getAccount");
+    const getChainId = safeGetProperty(provider, "getChainId");
+    const signMessageV2 = safeGetProperty(provider, "signMessageV2");
+    const signTransaction2 = safeGetProperty(provider, "signTransaction");
+    if (typeof getAccount !== "function") return void 0;
+    const trx = {};
+    if (typeof getChainId === "function") {
+      trx.getBlockByNumber = async () => {
+        const chainId = String(await getChainId.call(provider));
+        const suffix = chainId.startsWith("0x") ? chainId.slice(2).slice(-8) : "";
+        return { blockID: `${"0".repeat(56)}${suffix}` };
+      };
+    }
+    if (typeof signMessageV2 === "function") {
+      trx.signMessageV2 = (message) => signMessageV2.call(provider, message);
+    }
+    if (typeof signTransaction2 === "function") {
+      trx.sign = (transaction) => signTransaction2.call(provider, transaction);
+    }
+    return {
+      request: async ({ method, params }) => {
+        if (method === "tron_requestAccounts" || method === "eth_requestAccounts") {
+          const account = await getAccount.call(provider);
+          const address = extractInjectedAddress(account);
+          return address ? [address] : account;
+        }
+        if (method === "tron_signMessage" && typeof signMessageV2 === "function") {
+          const message = typeof params === "object" && params !== null && "message" in params ? params.message : params;
+          return signMessageV2.call(provider, String(message ?? ""));
+        }
+        if (method === "tron_signTransaction" && typeof signTransaction2 === "function") {
+          const transaction = typeof params === "object" && params !== null && "transaction" in params ? params.transaction : params;
+          return signTransaction2.call(provider, transaction);
+        }
+        return void 0;
+      },
+      tronWeb: {
+        trx
+      }
+    };
+  }
   var binance = {
     id: "binance",
     name: "Binance Web3 Wallet",
@@ -80721,10 +80678,44 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     platforms: ["extension", "mobile"],
     group: "popular",
     supportsWalletConnect: true,
+    providerPaths: ["binancew3w.tron"],
+    conflictMarkers: ["binancew3w"],
+    injected: standardInjected({ provider: getBinanceInjectedProvider }),
     detect: { providerPaths: ["binancew3w.tron"], provider: getBinanceInjectedProvider }
   };
 
   // ../client/src/wallets/entries/bitget.ts
+  function getBitgetInjectedProvider() {
+    const globals = globalThis;
+    const bitkeep = safeGetProperty(globals, "bitkeep");
+    if (bitkeep && typeof bitkeep === "object") {
+      let mergeParentTronWeb2 = function(value) {
+        if (!isInjectedTronProvider(value)) return void 0;
+        const provider2 = cloneInjectedProvider(value);
+        if (!provider2.tronWeb && walletTronWeb) provider2.tronWeb = walletTronWeb;
+        return provider2;
+      };
+      var mergeParentTronWeb = mergeParentTronWeb2;
+      const wallet = bitkeep;
+      const walletTronWeb = safeGetProperty(wallet, "tronWeb");
+      const provider = mergeParentTronWeb2(safeGetProperty(wallet, "tronLink")) ?? mergeParentTronWeb2(safeGetProperty(wallet, "tron")) ?? mergeParentTronWeb2(wallet);
+      if (provider) return provider;
+    }
+    const globalTronLink = safeGetProperty(globals, "tronLink");
+    if (safeGetProperty(globals, "isBitKeep") && isInjectedTronProvider(globalTronLink)) {
+      const provider = cloneInjectedProvider(globalTronLink);
+      const globalTronWeb = safeGetProperty(globals, "tronWeb");
+      if (!provider.tronWeb && globalTronWeb) provider.tronWeb = globalTronWeb;
+      return provider;
+    }
+    return void 0;
+  }
+  function hasBitgetInjectedMarker() {
+    const globals = globalThis;
+    return Boolean(
+      safeGetProperty(globals, "bitkeep") || safeGetProperty(globals, "bitget") || safeGetProperty(globals, "bitgetWallet") || safeGetProperty(globals, "BitgetWallet") || safeGetProperty(globals, "isBitKeep")
+    );
+  }
   var bitget = {
     id: "bitget",
     name: "Bitget Wallet",
@@ -80733,7 +80724,21 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     platforms: ["extension", "mobile"],
     group: "popular",
     featured: 4,
-    detect: { providerPaths: ["bitkeep.tronLink", "bitkeep.tron"], provider: getBitgetInjectedProvider }
+    injected: withPreferInjectedAddress(withAddressPoll(withRequestMethods(standardInjected({
+      providerPaths: ["bitkeep.tronLink", "bitkeep.tron"],
+      provider: getBitgetInjectedProvider,
+      rdns: ["com.bitget.web3"],
+      marker: hasBitgetInjectedMarker
+    }), ["tron_requestAccounts", "eth_requestAccounts"]), {
+      settleMs: 2500,
+      retryDelayMs: 350,
+      retryTimeoutMs: 3e3
+    })),
+    detect: {
+      providerPaths: ["bitkeep.tronLink", "bitkeep.tron"],
+      provider: getBitgetInjectedProvider,
+      availabilityProbe: hasBitgetInjectedMarker
+    }
   };
 
   // ../client/src/wallets/entries/bybit.ts
@@ -80744,10 +80749,37 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     homepage: "https://www.bybit.com/web3",
     platforms: ["extension", "mobile"],
     group: "popular",
+    injected: standardInjected({ providerPaths: ["bybitWallet.tronLink", "bybitWallet.tron"], rdns: ["com.bybit"] }),
     detect: { providerPaths: ["bybitWallet.tronLink", "bybitWallet.tron"] }
   };
 
   // ../client/src/wallets/entries/foxwallet.ts
+  function getFoxWalletInjectedProvider() {
+    const foxwallet2 = safeGetProperty(globalThis, "foxwallet");
+    if (!foxwallet2 || typeof foxwallet2 !== "object") return void 0;
+    const wallet = foxwallet2;
+    const walletRequest = safeGetProperty(wallet, "request");
+    const walletTronWeb = safeGetProperty(wallet, "tronWeb");
+    return mergeFoxWalletProvider(safeGetProperty(wallet, "tronLink")) ?? mergeFoxWalletProvider(safeGetProperty(wallet, "tron")) ?? mergeFoxWalletProvider(wallet);
+    function mergeFoxWalletProvider(value) {
+      if (!value || typeof value !== "object") return void 0;
+      const source = value;
+      const sourceRequest = safeGetProperty(source, "request");
+      const sourceTronWeb = safeGetProperty(source, "tronWeb");
+      const provider = {};
+      if (typeof sourceRequest === "function") {
+        provider.request = sourceRequest.bind(source);
+      } else if (typeof walletRequest === "function") {
+        provider.request = walletRequest.bind(wallet);
+      }
+      if (typeof sourceTronWeb === "object" && sourceTronWeb !== null) {
+        provider.tronWeb = sourceTronWeb;
+      } else if (typeof walletTronWeb === "object" && walletTronWeb !== null) {
+        provider.tronWeb = walletTronWeb;
+      }
+      return provider.request || provider.tronWeb ? provider : void 0;
+    }
+  }
   var foxwallet = {
     id: "foxwallet",
     name: "FoxWallet",
@@ -80756,10 +80788,37 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     platforms: ["mobile"],
     group: "popular",
     mobileDeepLink: { scheme: "foxwallet", urlTemplate: "foxwallet://dapp?url={encodedUrl}" },
+    injected: standardInjected({ providerPaths: ["foxwallet.tronLink", "foxwallet.tron"], provider: getFoxWalletInjectedProvider }),
     detect: { providerPaths: ["foxwallet.tronLink", "foxwallet.tron"], provider: getFoxWalletInjectedProvider }
   };
 
   // ../client/src/wallets/entries/gate.ts
+  function getGateInjectedProvider() {
+    const gatewallet = safeGetProperty(globalThis, "gatewallet");
+    if (!gatewallet || typeof gatewallet !== "object") return void 0;
+    const wallet = gatewallet;
+    const walletRequest = safeGetProperty(wallet, "request");
+    const walletTronWeb = safeGetProperty(wallet, "tronWeb");
+    const tronLink = safeGetProperty(wallet, "tronLink");
+    const provider = mergeGateProvider(safeGetProperty(wallet, "tron")) ?? mergeGateProvider(tronLink) ?? mergeGateProvider(wallet);
+    if (provider) return provider;
+    if (tronLink && typeof tronLink === "object" && walletTronWeb) return { tronWeb: walletTronWeb };
+    return void 0;
+    function mergeGateProvider(value) {
+      if (!isInjectedTronProvider(value)) return void 0;
+      const provider2 = cloneInjectedProvider(value);
+      if (!provider2.request && typeof walletRequest === "function") {
+        provider2.request = walletRequest.bind(wallet);
+      }
+      if (!provider2.tronWeb && walletTronWeb) provider2.tronWeb = walletTronWeb;
+      return provider2;
+    }
+  }
+  async function hasGateInjectedMarker() {
+    const gatewallet = safeGetProperty(globalThis, "gatewallet");
+    if (!gatewallet || typeof gatewallet !== "object") return false;
+    return Boolean(safeGetProperty(gatewallet, "tronLink"));
+  }
   var gate = {
     id: "gate",
     name: "Gate Wallet",
@@ -80768,19 +80827,38 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     platforms: ["extension"],
     group: "popular",
     availabilityTimeoutMs: 5e3,
-    addressTimeoutMs: 15e3,
-    addressSettleMs: 8e3,
-    accountChangeEventNames: ["accountsChanged"],
-    accountChangeTimeoutMs: 5e3,
+    injected: withEvents(withAddressPoll(withEthRequest(standardInjected({
+      providerPaths: ["gatewallet.tron", "gatewallet.tronLink", "gatewallet.tronWeb"],
+      provider: getGateInjectedProvider,
+      rdns: ["io.gate.wallet"],
+      marker: hasGateInjectedMarker
+    })), {
+      timeoutMs: 15e3,
+      settleMs: 8e3,
+      accountChangeTimeoutMs: 5e3
+    }), { accountsChanged: "accountsChanged" }),
     detect: {
       providerPaths: ["gatewallet.tron", "gatewallet.tronLink", "gatewallet.tronWeb"],
       provider: getGateInjectedProvider,
       availabilityProbe: hasGateInjectedMarker
-    },
-    requestMethods: ["eth_requestAccounts"]
+    }
   };
 
   // ../client/src/wallets/entries/guarda.ts
+  function getGuardaInjectedProvider() {
+    const guarda2 = safeGetProperty(globalThis, "guarda");
+    if (!guarda2 || typeof guarda2 !== "object") return void 0;
+    const wallet = guarda2;
+    const walletTronWeb = safeGetProperty(wallet, "tronWeb");
+    const tron = safeGetProperty(wallet, "tron");
+    if (isInjectedTronProvider(tron)) {
+      const provider = cloneInjectedProvider(tron);
+      if (!provider.tronWeb && walletTronWeb) provider.tronWeb = walletTronWeb;
+      return provider;
+    }
+    if (isInjectedTronProvider(wallet)) return cloneInjectedProvider(wallet);
+    return void 0;
+  }
   var guarda = {
     id: "guarda",
     name: "Guarda",
@@ -80788,6 +80866,7 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     homepage: "https://guarda.com/",
     platforms: ["extension"],
     group: "popular",
+    injected: standardInjected({ providerPaths: ["guarda.tron", "guarda"], provider: getGuardaInjectedProvider, rdns: ["com.guarda.wallet"] }),
     detect: { providerPaths: ["guarda.tron", "guarda"], provider: getGuardaInjectedProvider }
   };
 
@@ -80841,6 +80920,50 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
   };
 
   // ../client/src/wallets/entries/math.ts
+  function getMathWalletInjectedProvider() {
+    const globals = globalThis;
+    const namespacedProvider = mergeMathWalletProvider(safeGetProperty(globals, "mathwallet"), true) ?? mergeMathWalletProvider(safeGetProperty(globals, "mathWallet"), true) ?? mergeMathWalletProvider(safeGetProperty(globals, "MathWallet"), true);
+    if (namespacedProvider) return namespacedProvider;
+    return mergeMathWalletProvider(safeGetProperty(globals, "tronLink"), false) ?? mergeMathWalletProvider(safeGetProperty(globals, "tron"), false) ?? createMathWalletProviderFromTronWeb(safeGetProperty(globals, "tronWeb"), false);
+  }
+  function mergeMathWalletProvider(value, namespaced) {
+    if (!value || typeof value !== "object") return void 0;
+    const wallet = value;
+    if (!namespaced && !hasMathWalletMarker(wallet)) return void 0;
+    const walletRequest = safeGetProperty(wallet, "request");
+    const walletTronWeb = safeGetProperty(wallet, "tronWeb");
+    const provider = createMathWalletProviderFromBranch(safeGetProperty(wallet, "tron"), wallet, walletTronWeb) ?? createMathWalletProviderFromBranch(safeGetProperty(wallet, "tronLink"), wallet, walletTronWeb) ?? createMathWalletProviderFromBranch(wallet, wallet, walletTronWeb) ?? createMathWalletProviderFromTronWeb(walletTronWeb, true);
+    if (!provider) return void 0;
+    if (!provider.request && typeof walletRequest === "function") {
+      provider.request = walletRequest.bind(wallet);
+    }
+    return provider;
+  }
+  function createMathWalletProviderFromBranch(value, wallet, parentTronWeb) {
+    if (isInjectedTronProvider(value)) {
+      const provider2 = cloneInjectedProvider(value);
+      if (!provider2.tronWeb && parentTronWeb) provider2.tronWeb = parentTronWeb;
+      return provider2;
+    }
+    const provider = createMathWalletProviderFromTronWeb(value, value === parentTronWeb || hasMathWalletMarker(wallet));
+    if (provider && parentTronWeb && !provider.tronWeb) provider.tronWeb = parentTronWeb;
+    return provider;
+  }
+  function createMathWalletProviderFromTronWeb(value, allowNamespace) {
+    if (!value || typeof value !== "object") return void 0;
+    const tronWeb = value;
+    if (!allowNamespace && !hasMathWalletMarker(tronWeb)) return void 0;
+    if (typeof tronWeb.trx !== "object" || tronWeb.trx === null) return void 0;
+    return { tronWeb };
+  }
+  function hasMathWalletMarker(value) {
+    if (!value || typeof value !== "object") return false;
+    const source = value;
+    const markerKeys = ["isMathWallet", "isMath", "isMathWalletProvider", "_isMathWallet"];
+    if (markerKeys.some((key) => safeGetProperty(source, key) === true)) return true;
+    const name2 = safeGetProperty(source, "name") ?? safeGetProperty(source, "walletName") ?? safeGetProperty(source, "providerName");
+    return typeof name2 === "string" && /math\s*wallet|mathwallet/i.test(name2);
+  }
   var math = {
     id: "math",
     name: "MathWallet",
@@ -80850,8 +80973,8 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     platforms: ["extension", "mobile"],
     group: "popular",
     supportsWalletConnect: true,
-    detect: { providerPaths: ["tronLink", "tron"] },
-    requestMethods: ["tron_requestAccounts"],
+    injected: withRequestMethods(standardInjected({ provider: getMathWalletInjectedProvider }), ["tron_requestAccounts"]),
+    detect: { provider: getMathWalletInjectedProvider },
     description: "TronWeb-compatible injected wallet with WalletConnect fallback."
   };
 
@@ -80881,6 +81004,7 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     platforms: ["extension", "mobile"],
     group: "popular",
     featured: 3,
+    injected: standardInjected({ providerPaths: ["okxwallet.tronLink"], rdns: ["com.okex.wallet"] }),
     detect: { providerPaths: ["okxwallet.tronLink"] }
   };
 
@@ -80893,10 +81017,70 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     platforms: ["extension"],
     group: "popular",
     availabilityMode: "on-demand",
+    injected: standardInjected({ providerPaths: ["$onekey.tron", "$onekey.tronLink"], rdns: ["so.onekey.app.wallet"] }),
     detect: { providerPaths: ["$onekey.tron", "$onekey.tronLink"] }
   };
 
   // ../client/src/wallets/entries/safepal.ts
+  function getSafePalInjectedProvider() {
+    const globals = globalThis;
+    const safePalHook = safeGetProperty(globals, "SafePalHook");
+    if (!safePalHook || typeof safePalHook !== "object") return void 0;
+    const hook = safePalHook;
+    const tronWeb = resolveSafePalTronWebSource(hook, globals);
+    if (!tronWeb || typeof tronWeb !== "object") return void 0;
+    const request2 = safeGetProperty(hook, "request");
+    const provider = {
+      tronWeb: createSafePalTronWeb(tronWeb, hook)
+    };
+    if (typeof request2 === "function") {
+      provider.request = async (args) => {
+        const result = await request2.call(hook, args);
+        provider.tronWeb = createSafePalTronWeb(resolveSafePalTronWebSource(hook, globals) ?? tronWeb, hook);
+        if (args.method === "tron_requestAccounts" || args.method === "eth_requestAccounts") {
+          const address = extractInjectedAddress(result) ?? readSafePalBase58Address(hook, provider.tronWeb);
+          return typeof address === "string" ? [address] : result;
+        }
+        return result;
+      };
+    }
+    return provider;
+  }
+  function hasSafePalInjectedMarker() {
+    const globals = globalThis;
+    return Boolean(safeGetProperty(globals, "SafePalHook") || safeGetProperty(globals, "sfpPlatform"));
+  }
+  function createSafePalTronWeb(tronWeb, hook) {
+    const source = tronWeb;
+    const defaultAddress = pickSafePalDefaultAddress(hook, source);
+    const trx = safeGetProperty(source, "trx");
+    const normalized = {};
+    if (typeof defaultAddress === "object" && defaultAddress !== null) {
+      normalized.defaultAddress = defaultAddress;
+    }
+    if (typeof trx === "object" && trx !== null) {
+      normalized.trx = trx;
+    }
+    return normalized;
+  }
+  function resolveSafePalTronWebSource(hook, globals) {
+    const hookTronWeb = safeGetProperty(hook, "tronWeb");
+    if (hookTronWeb && typeof hookTronWeb === "object") return hookTronWeb;
+    return safeGetProperty(globals, "tronWeb");
+  }
+  function pickSafePalDefaultAddress(hook, tronWeb) {
+    const hookDefaultAddress = safeGetProperty(hook, "defaultAddress");
+    const tronWebDefaultAddress = safeGetProperty(tronWeb, "defaultAddress");
+    const hookTronWeb = safeGetProperty(hook, "tronWeb");
+    const hookTronWebDefaultAddress = hookTronWeb && typeof hookTronWeb === "object" ? safeGetProperty(hookTronWeb, "defaultAddress") : void 0;
+    return firstDefaultAddressWithBase58(hookDefaultAddress, hookTronWebDefaultAddress, tronWebDefaultAddress) ?? hookDefaultAddress ?? hookTronWebDefaultAddress ?? tronWebDefaultAddress;
+  }
+  function firstDefaultAddressWithBase58(...values) {
+    return values.find((value) => typeof getDefaultBase58Address(value) === "string" && getDefaultBase58Address(value).length > 0);
+  }
+  function readSafePalBase58Address(hook, tronWeb) {
+    return getDefaultBase58Address(safeGetProperty(hook, "defaultAddress")) ?? getDefaultBase58Address(safeGetProperty(safeGetProperty(hook, "tronWeb"), "defaultAddress")) ?? getDefaultBase58Address(tronWeb?.defaultAddress);
+  }
   var safepal = {
     id: "safepal",
     name: "SafePal",
@@ -80906,8 +81090,16 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     platforms: ["extension", "mobile"],
     group: "popular",
     supportsWalletConnect: true,
-    detect: { provider: getSafePalInjectedProvider },
-    signMessageMode: "sign"
+    injected: withSignMode(withAddressPoll(standardInjected({
+      provider: getSafePalInjectedProvider,
+      rdns: ["com.safepal"],
+      marker: hasSafePalInjectedMarker
+    }), {
+      settleMs: 2500,
+      retryDelayMs: 300,
+      retryTimeoutMs: 3e3
+    }), "sign"),
+    detect: { provider: getSafePalInjectedProvider, availabilityProbe: hasSafePalInjectedMarker }
   };
 
   // ../client/src/wallets/entries/tokenpocket.ts
@@ -80920,6 +81112,7 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     group: "popular",
     featured: 2,
     supportsWalletConnect: true,
+    injected: standardInjected({ providerPaths: ["tokenpocket.tron", "tokenpocket.tronWeb"] }),
     detect: { providerPaths: ["tokenpocket.tron", "tokenpocket.tronWeb"] }
   };
 
@@ -80929,7 +81122,10 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
   // ../adapters/tronlink/src/index.ts
   var TIP6963_ANNOUNCE_PROVIDER_EVENT = "TIP6963:announceProvider";
   var TIP6963_REQUEST_PROVIDER_EVENT = "TIP6963:requestProvider";
+  var EIP6963_ANNOUNCE_PROVIDER_EVENT = "eip6963:announceProvider";
+  var EIP6963_REQUEST_PROVIDER_EVENT = "eip6963:requestProvider";
   var TRONLINK_TIP6963_NAME = "TronLink";
+  var TRONLINK_TIP6963_RDNS = "org.tronlink.www";
   var TronLinkAdapter = class {
     adapterApiVersion = "1.1";
     metadata;
@@ -80946,6 +81142,8 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     checkIntervalMs;
     hasCustomProviderResolver;
     provider;
+    discoveredTip6963Provider;
+    tip6963Discovery;
     account;
     network;
     constructor(options = {}) {
@@ -80964,19 +81162,26 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
       this.providerResolver = options.provider ?? getGlobalTronLinkProvider;
       this.checkTimeoutMs = options.checkTimeoutMs ?? 5e3;
       this.checkIntervalMs = options.checkIntervalMs ?? 100;
+      void this.startTip6963Discovery();
     }
     async isAvailable() {
+      void this.startTip6963Discovery();
+      if (hasGlobalTronLinkInstalledMarker()) return true;
       return Boolean(await this.waitForProvider());
+    }
+    detect() {
+      void this.startTip6963Discovery();
+      return Boolean(this.discoveredTip6963Provider) || hasGlobalTronLinkDetectMarker() || Boolean(this.providerResolver());
     }
     async connect(options = {}) {
       try {
         const provider = await this.getProvider();
         const address = await requestAddress(provider);
-        const tronWeb = getProviderTronWeb(provider);
+        const tronWeb = getOptionalProviderTronWeb(provider);
         if (!address) {
           throw new WalletKitError("CONNECTION_FAILED", "TronLink wallet is locked or no account is available.");
         }
-        const network = await resolveNetwork2(tronWeb, options.network);
+        const network = tronWeb ? await resolveNetwork2(tronWeb, options.network) : resolveNetworkFallback2(options.network);
         this.provider = provider;
         this.network = network;
         this.account = {
@@ -80984,7 +81189,7 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
           network,
           networkType: network.networkType,
           activationStatus: "unknown",
-          ...tronWeb.defaultAddress?.hex ? { hexAddress: tronWeb.defaultAddress.hex } : {}
+          ...tronWeb?.defaultAddress?.hex ? { hexAddress: tronWeb.defaultAddress.hex } : {}
         };
         return { account: this.account, network, raw: provider };
       } catch (cause) {
@@ -81065,28 +81270,48 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
       return provider;
     }
     async waitForProvider() {
-      const immediate = this.providerResolver();
+      void this.startTip6963Discovery();
+      const immediate = this.providerResolver() ?? this.discoveredTip6963Provider;
       if (immediate || this.checkTimeoutMs <= 0 || typeof window === "undefined" && !this.hasCustomProviderResolver) return immediate;
-      if (!this.hasCustomProviderResolver) {
-        const tip6963Provider = await discoverTip6963TronLinkProvider(this.checkTimeoutMs);
-        if (tip6963Provider) return tip6963Provider;
-      }
-      const startedAt = Date.now();
       return new Promise((resolve) => {
+        let settled = false;
+        let tip6963Done = false;
+        let pollingDone = false;
         const check = () => {
-          const provider = this.providerResolver();
+          if (settled) return;
+          const provider = this.providerResolver() ?? this.discoveredTip6963Provider;
           if (provider) {
-            resolve(provider);
+            finish(provider);
             return;
           }
           if (Date.now() - startedAt >= this.checkTimeoutMs) {
-            resolve(void 0);
+            pollingDone = true;
+            if (tip6963Done) finish();
             return;
           }
           globalThis.setTimeout(check, this.checkIntervalMs);
         };
+        const finish = (provider) => {
+          if (settled) return;
+          settled = true;
+          resolve(provider);
+        };
+        const startedAt = Date.now();
+        void this.startTip6963Discovery().then((provider) => {
+          tip6963Done = true;
+          if (provider) finish(provider);
+          else if (pollingDone) finish();
+        });
         globalThis.setTimeout(check, this.checkIntervalMs);
       });
+    }
+    startTip6963Discovery() {
+      if (this.tip6963Discovery) return this.tip6963Discovery;
+      this.tip6963Discovery = discoverTip6963TronLinkProvider(this.checkTimeoutMs).then((provider) => {
+        if (provider) this.discoveredTip6963Provider = provider;
+        return provider;
+      });
+      return this.tip6963Discovery;
     }
     getConnectedTronWeb() {
       if (!this.provider) throw new WalletKitError("NO_SESSION", "TronLink is not connected.");
@@ -81107,12 +81332,35 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     }
     return void 0;
   }
+  function hasGlobalTronLinkInstalledMarker() {
+    const globalObject = globalThis;
+    if (globalObject.tron?.isTronLink && !isKnownNonTronLinkProvider(globalObject.tron, globalObject)) return true;
+    if (globalObject.tronLink?.isTronLink && !isKnownNonTronLinkProvider(globalObject.tronLink, globalObject)) return true;
+    if (!globalObject.tronLink || typeof globalObject.tronLink.request !== "function") return false;
+    if (isNestedKnownWalletProvider(globalObject.tronLink, globalObject)) return false;
+    if (isLinkedToKnownWalletProvider(globalObject.tronLink, globalObject)) return false;
+    return true;
+  }
+  function hasGlobalTronLinkDetectMarker() {
+    const globalObject = globalThis;
+    if (globalObject.tron?.isTronLink && !isKnownNonTronLinkProvider(globalObject.tron, globalObject)) return true;
+    if (globalObject.tronLink?.isTronLink && !isKnownNonTronLinkProvider(globalObject.tronLink, globalObject)) return true;
+    if (globalObject.tronLink && typeof globalObject.tronLink === "object") {
+      if (isNestedKnownWalletProvider(globalObject.tronLink, globalObject)) return false;
+      if (isLinkedToKnownWalletProvider(globalObject.tronLink, globalObject)) return false;
+      return true;
+    }
+    if (globalObject.tron && !globalObject.tron.isTronLink) return false;
+    if (isUsableTronWeb(globalObject.tronWeb) && !isTronWebLinkedToKnownWallet(globalObject.tronWeb, globalObject)) return true;
+    return false;
+  }
   async function discoverTip6963TronLinkProvider(timeoutMs) {
     if (typeof window === "undefined" || timeoutMs <= 0) return void 0;
     return new Promise((resolve) => {
       let settled = false;
       const cleanup = () => {
         window.removeEventListener(TIP6963_ANNOUNCE_PROVIDER_EVENT, onAnnounce);
+        window.removeEventListener(EIP6963_ANNOUNCE_PROVIDER_EVENT, onAnnounce);
         globalThis.clearTimeout(timer);
       };
       const finish = (provider) => {
@@ -81123,13 +81371,20 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
       };
       const onAnnounce = (event) => {
         const detail = event.detail;
-        if (!detail || detail.info?.name !== TRONLINK_TIP6963_NAME || !isTip1193TronProvider(detail.provider)) return;
+        if (!detail || !isTronLinkTip6963Info(detail.info) || !isTip1193TronProvider(detail.provider)) return;
         finish({ kind: "tip1193", provider: detail.provider });
       };
       const timer = globalThis.setTimeout(() => finish(), timeoutMs);
       window.addEventListener(TIP6963_ANNOUNCE_PROVIDER_EVENT, onAnnounce);
+      window.addEventListener(EIP6963_ANNOUNCE_PROVIDER_EVENT, onAnnounce);
       window.dispatchEvent(new Event(TIP6963_REQUEST_PROVIDER_EVENT));
+      window.dispatchEvent(new Event(EIP6963_REQUEST_PROVIDER_EVENT));
     });
+  }
+  function isTronLinkTip6963Info(info) {
+    if (!info) return false;
+    if (info.rdns) return info.rdns === TRONLINK_TIP6963_RDNS;
+    return info.name === TRONLINK_TIP6963_NAME;
   }
   function isTip1193TronProvider(value) {
     if (!value || typeof value !== "object") return false;
@@ -81141,12 +81396,7 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     if (isNestedKnownWalletProvider(globalObject.tronLink, globalObject)) return false;
     if (isLinkedToKnownWalletProvider(globalObject.tronLink, globalObject)) return false;
     if (hasExplicitLegacyTronLinkSignal(globalObject.tronLink, globalObject.tronWeb)) return true;
-    if (globalObject.tron && !globalObject.tron.isTronLink) return false;
-    const knownNonTronLinkProviderExists = Boolean(
-      globalObject.tokenpocket || globalObject.bitkeep || globalObject.okxwallet || globalObject.bybitWallet || globalObject.gatewallet || globalObject.binancew3w || globalObject.trustwallet || globalObject.backpack || globalObject.$onekey
-    );
-    if (knownNonTronLinkProviderExists) return false;
-    return hasLegacyTronLinkShape(globalObject.tronLink, globalObject.tronWeb);
+    return hasLegacyTronLinkShape(globalObject.tronLink, globalObject.tronWeb) || hasLegacyTronLinkRequestShape(globalObject.tronLink);
   }
   function hasExplicitLegacyTronLinkSignal(provider, tronWeb) {
     if (!provider || typeof provider.request !== "function") return false;
@@ -81157,6 +81407,9 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
   function hasLegacyTronLinkShape(provider, tronWeb) {
     if (!provider || typeof provider.request !== "function") return false;
     return Boolean(isUsableTronWeb(provider.tronWeb) || isUsableTronWeb(tronWeb));
+  }
+  function hasLegacyTronLinkRequestShape(provider) {
+    return Boolean(provider && typeof provider.request === "function");
   }
   function isUsableTronWeb(tronWeb) {
     if (!tronWeb || typeof tronWeb !== "object") return false;
@@ -81190,7 +81443,13 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     ["backpack", "tron"],
     ["backpack", "tronLink"],
     ["$onekey", "tron"],
-    ["$onekey", "tronLink"]
+    ["$onekey", "tronLink"],
+    ["mathwallet", "tron"],
+    ["mathwallet", "tronLink"],
+    ["mathWallet", "tron"],
+    ["mathWallet", "tronLink"],
+    ["MathWallet", "tron"],
+    ["MathWallet", "tronLink"]
   ];
   var KNOWN_NON_TRONLINK_PROVIDER_ROOTS = [
     "tokenpocket",
@@ -81201,11 +81460,18 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     "binancew3w",
     "trustwallet",
     "backpack",
-    "$onekey"
+    "$onekey",
+    "mathwallet",
+    "mathWallet",
+    "MathWallet"
   ];
   function isLinkedToKnownWalletProvider(provider, globalObject) {
     if (!provider) return false;
     const providerTronWeb = readPath(provider, ["tronWeb"]);
+    if (!providerTronWeb) return false;
+    return isTronWebLinkedToKnownWallet(providerTronWeb, globalObject);
+  }
+  function isTronWebLinkedToKnownWallet(providerTronWeb, globalObject) {
     if (!providerTronWeb) return false;
     return KNOWN_NON_TRONLINK_PROVIDER_ROOTS.some((root) => {
       const wallet = readPath(globalObject, [root]);
@@ -81223,19 +81489,44 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     if (provider.kind === "tip1193") {
       const result = await provider.provider.request({ method: "eth_requestAccounts" });
       const address = Array.isArray(result) && typeof result[0] === "string" ? result[0] : void 0;
-      return address ?? getProviderTronWeb(provider).defaultAddress?.base58;
+      return address ?? getProviderOwnedTronWeb(provider)?.defaultAddress?.base58;
     }
     if (provider.kind === "legacy") {
       const result = await provider.provider.request({ method: "tron_requestAccounts" });
       if (result?.code === 4001) throw new WalletKitError("USER_REJECTED", result.message ?? "User rejected TronLink connection.");
       if (result?.code === 4e3) throw new WalletKitError("CONNECTION_FAILED", result.message ?? "A TronLink request is already pending.");
+      hydrateLegacyTronWeb(provider.provider);
     }
     return getProviderTronWeb(provider).defaultAddress?.base58;
   }
   function getProviderTronWeb(provider) {
-    const tronWeb = provider.provider.tronWeb;
+    const tronWeb = getOptionalProviderTronWeb(provider);
     if (!tronWeb) throw new WalletKitError("CONNECTION_FAILED", "TronLink tronWeb is not available.");
     return tronWeb;
+  }
+  function getOptionalProviderTronWeb(provider) {
+    if (provider.kind === "legacy") hydrateLegacyTronWeb(provider.provider);
+    return getProviderOwnedTronWeb(provider) ?? getSafeGlobalTronWebForProvider(provider);
+  }
+  function getProviderOwnedTronWeb(provider) {
+    const tronWeb = provider.provider.tronWeb;
+    return tronWeb && typeof tronWeb === "object" ? tronWeb : void 0;
+  }
+  function getSafeGlobalTronWebForProvider(provider) {
+    if (provider.kind !== "tip1193") return void 0;
+    const globalObject = globalThis;
+    if (!isUsableTronWeb(globalObject.tronWeb)) return void 0;
+    if (isTronWebLinkedToKnownWallet(globalObject.tronWeb, globalObject)) return void 0;
+    return globalObject.tronWeb;
+  }
+  function hydrateLegacyTronWeb(provider) {
+    if (provider.tronWeb) return;
+    const tronWeb = globalThis.tronWeb;
+    if (tronWeb) provider.tronWeb = tronWeb;
+  }
+  function resolveNetworkFallback2(fallback) {
+    if (typeof fallback === "object" && fallback) return fallback;
+    return TRON_MAINNET;
   }
   async function resolveNetwork2(tronWeb, fallback) {
     const block = await tronWeb.trx.getBlockByNumber?.(0);
@@ -81300,6 +81591,22 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
   };
 
   // ../client/src/wallets/entries/trust.ts
+  function getTrustInjectedProvider() {
+    const globals = globalThis;
+    const trustwallet = safeGetProperty(globals, "trustwallet");
+    if (!trustwallet || typeof trustwallet !== "object") return void 0;
+    const wallet = trustwallet;
+    return asUsableTrustProvider(safeGetProperty(wallet, "tronLink")) ?? asUsableTrustProvider(safeGetProperty(wallet, "tron"));
+  }
+  function asUsableTrustProvider(value) {
+    if (!value || typeof value !== "object") return void 0;
+    const provider = value;
+    const request2 = safeGetProperty(provider, "request");
+    const tronWeb = safeGetProperty(provider, "tronWeb");
+    const hasTronWebTrx = Boolean(tronWeb && typeof tronWeb === "object" && typeof tronWeb.trx === "object");
+    if (typeof request2 !== "function" && !hasTronWebTrx) return void 0;
+    return value;
+  }
   var trust = {
     id: "trust",
     name: "Trust Wallet",
@@ -81308,7 +81615,9 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     platforms: ["extension", "mobile"],
     group: "popular",
     supportsWalletConnect: true,
-    detect: { providerPaths: ["trustwallet.tronLink", "trustwallet.tron"] }
+    conflictMarkers: ["trustwallet"],
+    injected: standardInjected({ provider: getTrustInjectedProvider }),
+    detect: { provider: getTrustInjectedProvider }
   };
 
   // ../client/src/wallets/entries/walletconnect.ts
@@ -81449,7 +81758,7 @@ ${selector} .twk-body {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
   padding: 8px 20px 12px;
   will-change: opacity, transform;
 }
@@ -81721,8 +82030,11 @@ ${selector} .twk-button-panel-overlay .twk-account-panel[data-has-recent="true"]
   height: min(650px, calc(100dvh - 48px));
 }
 ${selector} .twk-wallet-row, ${selector} .twk-wallet-card {
+  animation: twk-wallet-item-settle .18s cubic-bezier(.25, 1, .5, 1);
   border-color: color-mix(in srgb, var(--twk-border) 72%, transparent);
+  transition: background-color .16s ease, border-color .16s ease, color .16s ease, opacity .24s ease, filter .24s ease;
 }
+@keyframes twk-wallet-item-settle { from { opacity: .72; transform: translateY(2px); } to { opacity: 1; transform: none; } }
 ${selector} .twk-wallet-row {
   gap: 8px;
   justify-content: space-between;
@@ -81731,7 +82043,16 @@ ${selector} .twk-wallet-row {
   text-align: left;
   width: 100%;
 }
-${selector} .twk-wallet-row:disabled { cursor: not-allowed; opacity: 0.68; }
+${selector} .twk-wallet-row:disabled { cursor: not-allowed; }
+${selector} .twk-wallet-row[data-availability="unavailable"],
+${selector} .twk-wallet-card[data-availability="unavailable"] {
+  filter: grayscale(.18);
+  opacity: .42;
+}
+${selector} .twk-wallet-row[data-availability="unavailable"]:hover,
+${selector} .twk-wallet-card[data-availability="unavailable"]:hover {
+  background: var(--twk-surface-elevated);
+}
 ${selector} .twk-wallet-icon-wrap {
   display: inline-flex;
   position: relative;
@@ -81869,6 +82190,7 @@ ${selector} .twk-skeleton::after {
   transform: translateX(-100%);
 }
 ${selector} .twk-skeleton-circle { border-radius: 999px; flex-shrink: 0; }
+${selector} .twk-skeleton-icon { border-radius: var(--twk-wallet-icon-radius); flex-shrink: 0; }
 ${selector} .twk-skeleton-line { border-radius: 4px; }
 ${selector} .twk-skeleton-pill { border-radius: 999px; }
 ${selector} .twk-skeleton-card { border-radius: var(--twk-wallet-radius); }
@@ -82004,7 +82326,7 @@ ${selector} .twk-wallet-card[data-loading="true"] .twk-wallet-icon {
   height: 56px;
   width: 56px;
 }
-${selector} .twk-wallet-card:disabled { cursor: not-allowed; opacity: 0.64; }
+${selector} .twk-wallet-card:disabled { cursor: not-allowed; }
 ${selector} .twk-wallet-card:disabled[data-loading="true"] { opacity: 1; }
 ${selector} .twk-wallet-card .twk-wallet-icon {
   flex-basis: 56px;
@@ -82058,6 +82380,9 @@ ${selector} .twk-connect-detail {
   padding: 6px 0 0;
   text-align: center;
   width: 100%;
+}
+${selector} .twk-qr-detail {
+  padding-bottom: 12px;
 }
 ${selector} .twk-connect-detail .twk-title { line-height: 1.4; }
 ${selector} .twk-wallet-icon-large {
@@ -82144,6 +82469,9 @@ ${selector} .twk-detail-actions {
   gap: 10px;
   justify-content: center;
   margin-top: 16px;
+}
+${selector} .twk-qr-detail .twk-detail-actions {
+  margin-top: 18px;
 }
 ${selector} .twk-install-row {
   align-items: center;
@@ -82352,6 +82680,12 @@ ${selector} .twk-error {
   min-height: 48px;
   overflow-wrap: anywhere;
   padding: 12px 16px;
+}
+${selector} .twk-error[data-scope="qr"] {
+  border-top-color: color-mix(in srgb, var(--twk-danger) 18%, var(--twk-border));
+  margin-top: 18px;
+  padding-top: 14px;
+  width: min(100%, 360px);
 }
 ${selector} .twk-account-body {
   display: grid;
@@ -82917,10 +83251,10 @@ ${selector} .twk-toast-link:hover, ${selector} .twk-toast-dismiss:hover { backgr
 @keyframes twk-skeleton-shimmer { to { transform: translateX(100%); } }
 @keyframes twk-toast-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) {
-  ${selector} .twk-toast, ${selector} .twk-toast-spinner, ${selector} .twk-action-spin, ${selector} .twk-connecting-ring-accent, ${selector} .twk-tx-icon::before, ${selector} .twk-skeleton::after, ${selector} .twk-qr-skeleton::after { animation: none; }
+  ${selector} .twk-toast, ${selector} .twk-toast-spinner, ${selector} .twk-action-spin, ${selector} .twk-connecting-ring-accent, ${selector} .twk-tx-icon::before, ${selector} .twk-skeleton::after, ${selector} .twk-qr-skeleton::after, ${selector} .twk-wallet-row, ${selector} .twk-wallet-card { animation: none; }
   ${selector} .twk-close, ${selector} .twk-back, ${selector} .twk-action, ${selector} .twk-address-qr-action, ${selector} .twk-tx-header-link, ${selector} .twk-wallet-row, ${selector} .twk-wallet-card, ${selector} .twk-search-trigger, ${selector} .twk-connect-button { transition: none; }
 }
-@media (max-width: 420px) {
+@media (max-width: 480px) {
   ${selector} .twk-overlay {
     align-items: end;
     padding: max(12px, env(safe-area-inset-top)) 0 0;
@@ -83547,106 +83881,6 @@ ${variables}
     return String(hash3);
   }
 
-  // ../ui/src/session-wallet.ts
-  function resolveSessionWalletMetadata(session, adapter2) {
-    const metadata = session?.metadata;
-    const id2 = getString(metadata?.walletId) ?? session?.adapterId ?? adapter2?.metadata.id;
-    const name2 = getString(metadata?.walletName) ?? session?.walletName ?? adapter2?.metadata.name;
-    const icon = getString(metadata?.walletIcon) ?? adapter2?.metadata.icon;
-    return {
-      ...id2 ? { id: id2 } : {},
-      ...name2 ? { name: name2 } : {},
-      ...icon ? { icon } : {}
-    };
-  }
-  function getString(value) {
-    return typeof value === "string" && value.length > 0 ? value : void 0;
-  }
-
-  // ../ui/src/button.ts
-  var defaultWalletButtonLabels = en2.walletButton;
-  function createWalletButtonHtml(viewModel = {}) {
-    const labels = { ...defaultWalletButtonLabels, ...viewModel.labels };
-    const status = viewModel.status ?? "disconnected";
-    const isConnected = status === "connected";
-    const isConnecting = status === "connecting";
-    const label = isConnecting ? labels.connecting : isConnected ? viewModel.connectedLabel ?? viewModel.label ?? (viewModel.address ? shortenAddress(viewModel.address) : labels.openAccount) : viewModel.label ?? labels.connect;
-    const size3 = viewModel.size ?? "md";
-    const variant = viewModel.variant ?? "default";
-    const showAdapterIcon = viewModel.showAdapterIcon ?? true;
-    const showChevron = isConnected && (viewModel.showChevron ?? true);
-    const showBalance = isConnected && (viewModel.showBalance ?? Boolean(viewModel.balanceTrx ?? viewModel.balanceLoading));
-    const icon = showAdapterIcon ? createWalletButtonIconHtml(viewModel) : "";
-    const labelHtml = isConnected && viewModel.identityLoading ? `<span class="twk-button-label twk-skeleton-name twk-skeleton-pill" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">${escapeHtml(label)}</span></span>` : `<span class="twk-button-label">${escapeHtml(label)}</span>`;
-    const balance = showBalance ? viewModel.balanceLoading ? `<span class="twk-button-balance twk-skeleton-balance twk-skeleton-pill" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">TRX balance</span></span>` : viewModel.balanceTrx ? `<span class="twk-button-balance">(${escapeHtml(viewModel.balanceTrx)} TRX)</span>` : "" : "";
-    const chevron = showChevron ? `<span class="twk-button-chevron" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>` : "";
-    const pending = isConnected && viewModel.hasPendingTransactions ? `<span class="twk-button-pending" aria-hidden="true"></span>` : "";
-    return `<button class="twk-connect-button" type="button" data-status="${escapeAttribute(status)}" data-size="${escapeAttribute(size3)}" data-variant="${escapeAttribute(variant)}" aria-label="${escapeAttribute(isConnected ? labels.openAccount : label)}" ${isConnecting ? "disabled" : ""}>
-  <span class="twk-button-icon-wrap">${icon}${pending}</span>
-  ${labelHtml}
-  ${balance}
-  ${chevron}
-</button>`;
-  }
-  function createWalletButtonIconHtml(viewModel) {
-    if (viewModel.adapterIcon) {
-      return `<span class="twk-button-icon"><img src="${escapeAttribute(viewModel.adapterIcon)}" alt="" aria-hidden="true" /></span>`;
-    }
-    return `<span class="twk-button-icon twk-button-icon-generic" aria-hidden="true">${walletIcon()}</span>`;
-  }
-  function createWalletButton(options) {
-    let root = null;
-    const render = () => {
-      if (!root) return;
-      const session = options.manager.getSession();
-      const adapter2 = session ? options.manager.getAdapter(session.adapterId) : null;
-      const walletMetadata = resolveSessionWalletMetadata(session, adapter2);
-      const pending = options.manager.getTransactions().some((transaction) => transaction.status === "submitted");
-      const viewModel = {
-        status: session ? "connected" : "disconnected",
-        hasPendingTransactions: pending
-      };
-      if (options.label) viewModel.label = options.label;
-      if (options.connectedLabel) viewModel.connectedLabel = options.connectedLabel;
-      else if (session) viewModel.connectedLabel = shortenAddress(session.account.address);
-      if (session?.account.address) viewModel.address = session.account.address;
-      if (session?.balance?.formatted) viewModel.balanceTrx = session.balance.formatted;
-      if (walletMetadata.icon) viewModel.adapterIcon = walletMetadata.icon;
-      if (walletMetadata.name) viewModel.adapterName = walletMetadata.name;
-      root.innerHTML = createWalletButtonHtml(viewModel);
-    };
-    const unsubscribe = [
-      options.manager.on("connecting", render),
-      options.manager.on("connected", render),
-      options.manager.on("disconnected", render),
-      options.manager.on("session_restored", render),
-      options.manager.on("tx_submitted", render),
-      options.manager.on("tx_confirmed", render),
-      options.manager.on("tx_failed", render)
-    ];
-    return {
-      mount(target) {
-        const documentRef = typeof target === "string" ? globalThis.document : target.ownerDocument;
-        if (!documentRef) throw new Error("createWalletButton requires a DOM document.");
-        ensureWalletKitStyles(documentRef);
-        root = createWalletKitRoot(options.theme, documentRef);
-        root.addEventListener("click", () => options.modal.open());
-        const targetElement = typeof target === "string" ? documentRef.querySelector(target) : target;
-        if (!targetElement) throw new Error(`Wallet button target was not found: ${String(target)}`);
-        targetElement.append(root);
-        render();
-      },
-      setTheme(config) {
-        if (root) applyThemeToElement(root, config);
-      },
-      destroy() {
-        unsubscribe.forEach((off) => off());
-        root?.remove();
-        root = null;
-      }
-    };
-  }
-
   // ../ui/src/clipboard.ts
   async function copyToClipboard(text, documentRef = globalThis.document) {
     const view = documentRef.defaultView;
@@ -83673,480 +83907,6 @@ ${variables}
     } finally {
       textarea.remove();
     }
-  }
-
-  // ../ui/src/locales/vi.ts
-  var vi = {
-    connectModal: {
-      title: "Connect wallet",
-      subtitle: "",
-      allWallets: "All wallets",
-      back: "Back",
-      close: "Close",
-      connecting: "Connecting",
-      continueInWallet: "Continue in",
-      acceptRequest: "Accept the connection request in your wallet",
-      tryAgain: "Try again",
-      getWallet: "Get",
-      searchWallet: "Search wallet",
-      searchPlaceholder: "Search wallet",
-      noWalletsFound: "No TRON wallets found",
-      poweredBy: "Powered by TRON Wallet Kit",
-      unavailable: "Unavailable",
-      ready: "Ready",
-      installed: "Installed",
-      notInstalled: "Not installed",
-      qrCode: "QR CODE",
-      tron: "TRON",
-      scanQr: "Scan this QR Code with your phone",
-      dontHave: "Don't have",
-      checking: "Checking",
-      connectionDeclined: "Connection declined",
-      copyLink: "Copy link",
-      qrRenderFailed: "Could not render the QR code. Try again."
-    },
-    accountPanel: {
-      title: "Connected",
-      addressTitle: "Address",
-      back: "Back",
-      close: "Close",
-      copy: "Copy address",
-      copied: "Copied",
-      disconnect: "Disconnect",
-      explorer: "Explorer",
-      showQr: "QR",
-      lightQr: "Light QR",
-      noTransactions: "No recent transactions",
-      recentTransactions: "Recent transactions",
-      qrAlt: "TRON address QR code"
-    },
-    walletButton: {
-      connect: "Connect wallet",
-      connecting: "Connecting",
-      openAccount: "Open account"
-    },
-    toast: {
-      txSubmitted: "Transaction submitted",
-      txConfirmed: "Transaction confirmed",
-      txFailed: "Transaction failed",
-      viewOnExplorer: "View",
-      dismiss: "Dismiss"
-    },
-    errors: {
-      fallbackTitle: "Request failed",
-      fallbackMessage: "The wallet request failed. Try again.",
-      codes: {
-        WALLET_NOT_FOUND: {
-          title: "Wallet not found",
-          message: "This wallet is not registered in the current wallet kit configuration."
-        },
-        WALLET_UNAVAILABLE: {
-          title: "Wallet unavailable",
-          message: "This wallet is not available in the current browser."
-        },
-        CONNECTION_FAILED: {
-          title: "Connection failed",
-          message: "The wallet connection failed. Try again."
-        },
-        USER_REJECTED: {
-          title: "Connection declined",
-          message: "The request was cancelled in the wallet."
-        },
-        REQUEST_TIMEOUT: {
-          title: "Request timed out",
-          message: "The wallet did not respond in time. Try again."
-        },
-        CONFIGURATION_ERROR: {
-          title: "Configuration error",
-          message: "The wallet adapter could not be loaded. Refresh the page and try again."
-        },
-        NETWORK_ERROR: {
-          title: "Network error",
-          message: "The TRON network request failed. Check the RPC endpoint and try again."
-        },
-        RATE_LIMITED: {
-          title: "Rate limited",
-          message: "The TRON RPC endpoint is rate limiting requests. Try again shortly."
-        },
-        TRANSACTION_EXPIRATION_ERROR: {
-          title: "Transaction expired",
-          message: "The transaction expired before broadcast. Rebuild and sign it again."
-        },
-        OUT_OF_ENERGY: {
-          title: "Not enough energy",
-          message: "The account does not have enough TRON energy for this transaction."
-        },
-        INSUFFICIENT_BALANCE: {
-          title: "Insufficient balance",
-          message: "The account balance is not enough for this transaction."
-        },
-        SEND_TRANSACTION_FAILED: {
-          title: "Transaction failed",
-          message: "The transaction could not be broadcast to the TRON network."
-        },
-        SIGN_MESSAGE_FAILED: {
-          title: "Signing failed",
-          message: "The wallet could not sign the message."
-        },
-        SIGN_TRANSACTION_FAILED: {
-          title: "Transaction signing failed",
-          message: "The wallet could not sign the transaction."
-        },
-        UNSUPPORTED: {
-          title: "Unsupported action",
-          message: "This wallet does not support the requested action."
-        },
-        NO_SESSION: {
-          title: "Wallet not connected",
-          message: "Connect a TRON wallet before continuing."
-        }
-      }
-    }
-  };
-
-  // ../ui/src/locales/index.ts
-  var BUILTIN_LOCALES = { en: en2, vi };
-  function resolveLabelPack(locale, overrides) {
-    const base3 = BUILTIN_LOCALES[locale || "en"] ?? BUILTIN_LOCALES.en;
-    return {
-      connectModal: { ...BUILTIN_LOCALES.en.connectModal, ...base3.connectModal, ...overrides?.connectModal },
-      accountPanel: { ...BUILTIN_LOCALES.en.accountPanel, ...base3.accountPanel, ...overrides?.accountPanel },
-      walletButton: { ...BUILTIN_LOCALES.en.walletButton, ...base3.walletButton, ...overrides?.walletButton },
-      toast: { ...BUILTIN_LOCALES.en.toast, ...base3.toast, ...overrides?.toast },
-      errors: {
-        ...BUILTIN_LOCALES.en.errors,
-        ...base3.errors,
-        ...overrides?.errors,
-        codes: {
-          ...BUILTIN_LOCALES.en.errors.codes,
-          ...base3.errors.codes,
-          ...overrides?.errors?.codes
-        }
-      }
-    };
-  }
-
-  // ../ui/src/wallet-kinds.ts
-  function isWalletConnectWallet(wallet) {
-    return wallet.id === "walletconnect" || wallet.transport === "walletconnect";
-  }
-  function isQrWallet(wallet) {
-    return isWalletConnectWallet(wallet) || wallet.transport === "qr" || wallet.capabilities?.includes("qr") === true;
-  }
-  function isQrFallbackWallet(wallet) {
-    return !isWalletConnectWallet(wallet) && (wallet.transport === "qr" || wallet.capabilities?.includes("qr") === true);
-  }
-  function isHardwareWallet(wallet) {
-    return wallet.transport === "hardware" || wallet.platforms?.includes("hardware") === true;
-  }
-  function isMobileCapableWallet(wallet) {
-    return isQrWallet(wallet) || inferWalletPlatforms(wallet).includes("mobile") || Boolean(wallet.mobileDeepLink) || wallet.supportsWalletConnect === true;
-  }
-  function inferWalletPlatforms(wallet) {
-    if (isHardwareWallet(wallet)) return ["hardware"];
-    if (wallet.transport === "mobile" || isQrWallet(wallet)) return ["mobile"];
-    return ["extension"];
-  }
-
-  // ../ui/src/wallet-badges.ts
-  function resolveWalletBadge(wallet, labels, options = {}) {
-    const tone = options.tone ?? wallet.badge?.tone;
-    const available = options.available ?? wallet.available === true;
-    const transport = wallet.transport;
-    if (tone === "qr" || transport === "qr" || transport === "walletconnect" || isQrWallet(wallet)) return createBadge(labels.qrCode, "qr");
-    if (tone === "tron" && (transport === "hardware" || isHardwareWallet(wallet))) return createBadge("HARDWARE", "tron", false);
-    if (transport === "hardware" || isHardwareWallet(wallet)) return createBadge("HARDWARE", "tron", false);
-    if (wallet.readyState === "loading") return createBadge(labels.checking, "muted");
-    if (tone === "installed" || wallet.readyState === "found" || available) return createBadge(labels.installed, "installed");
-    if (wallet.readyState === "notFound") return createBadge(labels.notInstalled, "muted");
-    if (wallet.readyState === "unsupported") return createBadge(labels.unavailable, "muted");
-    return createBadge(labels.tron, "tron");
-  }
-  function resolveCatalogBadge(item, available, labels) {
-    const wallet = {
-      id: item.id,
-      platforms: item.platforms,
-      available
-    };
-    if (item.transport !== void 0) wallet.transport = item.transport;
-    if (item.badge !== void 0) wallet.badge = item.badge;
-    return resolveWalletBadge(wallet, labels, { available, tone: item.badge?.tone });
-  }
-  function createQrWalletBadge(labels) {
-    return createBadge(labels.qrCode, "qr");
-  }
-  function createBadge(label, tone, uppercase = true) {
-    return { label: uppercase ? label.toUpperCase() : label, tone };
-  }
-
-  // ../ui/src/wallet-catalog.ts
-  var TRON_WALLET_CATALOG = [];
-  var featuredOrder = ["tronlink", "tokenpocket", "okx", "bitget", "walletconnect"];
-  function mergeWalletOptionsWithCatalog(wallets, labels = en2.connectModal, catalog = TRON_WALLET_CATALOG) {
-    const adapterIds = new Set(wallets.map((wallet) => wallet.adapterId ?? wallet.id));
-    const byId = new Map(wallets.map((wallet) => [wallet.id, wallet]));
-    const merged = [];
-    for (const item of catalog.filter((wallet) => wallet.enabled !== false)) {
-      const group = item.group ?? "popular";
-      const itemTransport = item.transport ?? (item.platforms.includes("extension") ? "extension" : "mobile");
-      const current = byId.get(item.id);
-      if (current) {
-        merged.push(enrichWalletOption(current, item, adapterIds, labels));
-        byId.delete(item.id);
-        continue;
-      }
-      const nativeAdapterId = item.adapterId ?? item.id;
-      const hasNativeAdapter = adapterIds.has(nativeAdapterId);
-      const canUseWalletConnect = item.supportsWalletConnect === true && item.id !== "walletconnect" && adapterIds.has("walletconnect");
-      const adapterId = hasNativeAdapter ? nativeAdapterId : canUseWalletConnect ? "walletconnect" : nativeAdapterId;
-      const transport = hasNativeAdapter ? itemTransport : canUseWalletConnect ? "qr" : itemTransport;
-      const option = {
-        id: item.id,
-        adapterId,
-        name: item.name,
-        group,
-        transport,
-        platforms: item.platforms,
-        ...item.featured !== void 0 ? { featured: item.featured } : {},
-        ...item.providerPaths ? { providerPaths: item.providerPaths } : {},
-        ...item.conflictMarkers ? { conflictMarkers: item.conflictMarkers } : {},
-        ...item.mobileDeepLink ? { mobileDeepLink: item.mobileDeepLink } : {},
-        ...item.supportsWalletConnect ? { supportsWalletConnect: item.supportsWalletConnect } : {},
-        available: hasNativeAdapter || canUseWalletConnect,
-        readyState: hasNativeAdapter || canUseWalletConnect ? "found" : "notFound",
-        capabilities: transport === "qr" || transport === "walletconnect" ? ["qr"] : [],
-        badge: resolveCatalogBadge({ ...item, group, transport }, hasNativeAdapter || canUseWalletConnect, labels)
-      };
-      if (item.icon) option.icon = item.icon;
-      if (item.homepage) option.homepage = item.homepage;
-      if (item.downloadUrl) option.downloadUrl = item.downloadUrl;
-      merged.push(option);
-    }
-    return [...merged, ...byId.values()];
-  }
-  function getFeaturedWalletOptions(wallets, config = {}, environment) {
-    const normalizedConfig = typeof config === "number" ? {} : config;
-    const mode = normalizedConfig.featuredMode ?? (normalizedConfig.featuredWallets?.length ? "manual" : "installed-first");
-    const byId = new Map(wallets.map((wallet) => [wallet.id, wallet]));
-    const ranked = [...wallets].filter((wallet) => getWalletRank(wallet) < Number.POSITIVE_INFINITY).sort(compareWalletRank);
-    const rankedIds = ranked.length > 0 ? ranked.map((wallet) => wallet.id) : featuredOrder;
-    const manualIds = normalizedConfig.featuredWallets?.length ? normalizedConfig.featuredWallets : rankedIds;
-    if (mode === "manual") {
-      return uniqueWalletsById(manualIds.flatMap((id2) => byId.get(id2) ? [byId.get(id2)] : []));
-    }
-    if (environment?.kind === "mobile-browser") {
-      const walletConnect2 = byId.get("walletconnect");
-      if (mode === "installed-only") return walletConnect2 ? [walletConnect2] : [];
-      const mobileRanked = wallets.filter((wallet) => wallet.id !== "walletconnect" && isMobileCapableWallet(wallet)).sort(compareWalletRank);
-      return walletConnect2 ? uniqueWalletsById([walletConnect2, ...mobileRanked]) : mobileRanked;
-    }
-    const installed = wallets.filter(isInstalledWallet).sort(compareWalletRank);
-    if (mode === "installed-only") {
-      return installed.length > 0 ? installed : getWalletConnectFallback(byId);
-    }
-    const installedIds = new Set(installed.map((wallet) => wallet.id));
-    const walletConnect = byId.get("walletconnect");
-    const targetCount = Math.max(installed.length + (walletConnect ? 1 : 0), rankedIds.length);
-    const qrFallbacks = wallets.filter((wallet) => !installedIds.has(wallet.id) && isQrFeaturedFallbackWallet(wallet)).sort(compareWalletRank);
-    const hardware = wallets.filter((wallet) => !installedIds.has(wallet.id) && isHardwareWallet(wallet)).sort(compareWalletRank);
-    const loading = wallets.filter((wallet) => !installedIds.has(wallet.id) && !isWalletConnectWallet(wallet) && !isQrFeaturedFallbackWallet(wallet) && !isHardwareWallet(wallet) && wallet.readyState === "loading").sort(compareWalletRank);
-    const featured = uniqueWalletsById([
-      ...installed,
-      ...walletConnect ? [walletConnect] : [],
-      ...qrFallbacks,
-      ...hardware,
-      ...loading
-    ]).slice(0, targetCount);
-    if (installed.length === 0) {
-      return walletConnect ? uniqueWalletsById([walletConnect, ...featured]) : featured;
-    }
-    return featured;
-  }
-  function filterWalletOptions(wallets, query = "") {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) return [...wallets];
-    return wallets.filter((wallet) => `${wallet.name} ${wallet.id}`.toLowerCase().includes(normalized));
-  }
-  function applyWalletListConfig(wallets, config = {}, environment) {
-    const allowed = config.wallets === "all" || !config.wallets ? void 0 : new Set(config.wallets);
-    const disabled = new Set(config.disabledWallets ?? []);
-    const filtered = wallets.filter((wallet) => {
-      if (allowed && !allowed.has(wallet.id)) return false;
-      if (disabled.has(wallet.id)) return false;
-      if (!isWalletVisibleInEnvironment(wallet, environment)) return false;
-      if (config.showUnavailable === false && isUnavailableWallet(wallet) && !shouldKeepUnavailableForEnvironment(wallet, environment)) return false;
-      return true;
-    });
-    if (config.sortAvailableFirst === false) return filtered;
-    return sortWalletsByAvailability(filtered);
-  }
-  function sortWalletsByAvailability(wallets) {
-    return [...wallets].sort((a3, b5) => walletAvailabilityRank(a3) - walletAvailabilityRank(b5));
-  }
-  function walletAvailabilityRank(wallet) {
-    if (wallet.readyState === "found" || wallet.available === true) return 0;
-    if (isQrWallet(wallet) || isHardwareWallet(wallet)) return 1;
-    if (wallet.readyState === "loading") return 2;
-    if (wallet.readyState === "notFound" || wallet.readyState === "unsupported" || wallet.available === false) return 3;
-    return 2;
-  }
-  function isUnavailableWallet(wallet) {
-    if (isHardwareWallet(wallet)) return false;
-    return wallet.readyState === "notFound" || wallet.readyState === "unsupported" || wallet.available === false;
-  }
-  function isWalletVisibleInEnvironment(wallet, environment) {
-    if (!environment) return true;
-    if (isQrWallet(wallet)) return true;
-    const platforms = wallet.platforms ?? inferWalletPlatforms(wallet);
-    if (environment.kind === "desktop-extension") return platforms.includes("extension") || platforms.includes("hardware");
-    return platforms.includes("mobile");
-  }
-  function shouldKeepUnavailableForEnvironment(wallet, environment) {
-    if (environment?.kind !== "mobile-browser") return false;
-    return isMobileCapableWallet(wallet);
-  }
-  function enrichWalletOption(wallet, item, adapterIds, labels) {
-    const canUseWalletConnect = item.supportsWalletConnect === true && item.id !== "walletconnect" && adapterIds.has("walletconnect");
-    const useQrFallback = canUseWalletConnect && (wallet.readyState === "notFound" || wallet.readyState === "unsupported");
-    const itemTransport = item.transport ?? (item.platforms.includes("extension") ? "extension" : "mobile");
-    const group = wallet.group ?? item.group ?? "popular";
-    const transport = useQrFallback ? "qr" : wallet.transport ?? itemTransport;
-    const option = {
-      ...wallet,
-      adapterId: useQrFallback ? "walletconnect" : wallet.adapterId ?? item.adapterId ?? item.id,
-      group,
-      transport,
-      platforms: wallet.platforms ?? item.platforms,
-      ...wallet.featured !== void 0 || item.featured !== void 0 ? { featured: wallet.featured ?? item.featured } : {},
-      ...useQrFallback ? {
-        available: true,
-        readyState: "found",
-        capabilities: [.../* @__PURE__ */ new Set([...wallet.capabilities ?? [], "qr"])]
-      } : {}
-    };
-    const icon = wallet.icon ?? item.icon;
-    const homepage = wallet.homepage ?? item.homepage;
-    const downloadUrl = wallet.downloadUrl ?? item.downloadUrl;
-    const providerPaths = wallet.providerPaths ?? item.providerPaths;
-    const conflictMarkers = wallet.conflictMarkers ?? item.conflictMarkers;
-    const mobileDeepLink = wallet.mobileDeepLink ?? item.mobileDeepLink;
-    const supportsWalletConnect = wallet.supportsWalletConnect ?? item.supportsWalletConnect;
-    const badgeTransport = useQrFallback ? "qr" : itemTransport;
-    const badge = useQrFallback ? createQrWalletBadge(labels) : wallet.badge ?? resolveCatalogBadge({ ...item, group, transport: badgeTransport }, wallet.available === true || wallet.readyState === "found", labels);
-    if (icon) option.icon = icon;
-    if (homepage) option.homepage = homepage;
-    if (downloadUrl) option.downloadUrl = downloadUrl;
-    if (providerPaths) option.providerPaths = providerPaths;
-    if (conflictMarkers) option.conflictMarkers = conflictMarkers;
-    if (mobileDeepLink) option.mobileDeepLink = mobileDeepLink;
-    if (supportsWalletConnect !== void 0) option.supportsWalletConnect = supportsWalletConnect;
-    if (badge) option.badge = badge;
-    return option;
-  }
-  function getWalletConnectFallback(byId) {
-    const walletConnect = byId.get("walletconnect");
-    return walletConnect ? [walletConnect] : [];
-  }
-  function uniqueWalletsById(wallets) {
-    const seen = /* @__PURE__ */ new Set();
-    return wallets.filter((wallet) => {
-      if (seen.has(wallet.id)) return false;
-      seen.add(wallet.id);
-      return true;
-    });
-  }
-  function compareWalletRank(a3, b5) {
-    return getWalletRank(a3) - getWalletRank(b5) || a3.name.localeCompare(b5.name);
-  }
-  function getWalletRank(wallet) {
-    if (typeof wallet.featured === "number") return wallet.featured;
-    const order = featuredOrder.indexOf(wallet.id);
-    return order === -1 ? Number.POSITIVE_INFINITY : order + 1e3;
-  }
-  function isInstalledWallet(wallet) {
-    if (isWalletConnectWallet(wallet) || isQrFallbackWallet(wallet)) return false;
-    if (isHardwareWallet(wallet)) return false;
-    return wallet.readyState === "found" || wallet.available === true;
-  }
-  function isQrFeaturedFallbackWallet(wallet) {
-    return isQrFallbackWallet(wallet);
-  }
-
-  // ../ui/src/config.ts
-  var FEATURED_DEFAULT_LIMIT = 5;
-  function resolveWalletUiConfig(config = {}) {
-    const themeName = config.themeName ?? (resolveMode(config.themeMode ?? config.mode) === "dark" ? "dark" : "light");
-    const customTheme = {
-      ...config.accent ? { accent: config.accent, focusRing: config.accent } : {},
-      ...config.fontFamily ? { fontFamily: config.fontFamily } : {},
-      ...config.customTheme ?? {}
-    };
-    const featuredLimit = normalizeDeprecatedFeaturedLimit(config.walletList?.featuredLimit);
-    const featuredWallets = config.walletList?.featuredWallets;
-    const labels = resolveLabelPack(config.locale, config.labels);
-    return {
-      theme: resolveTheme({ themeName, ...Object.keys(customTheme).length > 0 ? { tokens: customTheme } : {} }),
-      labels,
-      catalog: config.catalog ?? TRON_WALLET_CATALOG,
-      modal: {
-        title: config.modal?.title ?? labels.connectModal.title,
-        subtitle: config.modal?.subtitle ?? labels.connectModal.subtitle,
-        width: config.modal?.width ?? "default",
-        footerText: config.modal?.footerText ?? "TRON Wallet Kit",
-        showCloseButton: config.modal?.showCloseButton ?? true,
-        closeOnBackdropClick: config.modal?.closeOnBackdropClick ?? true,
-        closeOnSelect: config.modal?.closeOnSelect ?? true,
-        disableAnimations: config.modal?.disableAnimations ?? false,
-        onModalOpen: config.modal?.onModalOpen ?? (() => void 0),
-        onModalClose: config.modal?.onModalClose ?? (() => void 0),
-        branding: {
-          showPoweredBy: config.modal?.branding?.showPoweredBy ?? true,
-          poweredByText: config.modal?.branding?.poweredByText ?? config.modal?.footerText ?? labels.connectModal.poweredBy
-        }
-      },
-      qr: {
-        size: config.qr?.size ?? 304,
-        addressSize: config.qr?.addressSize ?? 264,
-        margin: config.qr?.margin ?? 4,
-        includeWalletLogo: config.qr?.includeWalletLogo ?? true,
-        errorCorrectionLevel: config.qr?.errorCorrectionLevel ?? "M"
-      },
-      walletList: {
-        layout: normalizeWalletListLayout(config.walletList?.layout),
-        featuredMode: config.walletList?.featuredMode ?? "installed-first",
-        wallets: config.walletList?.wallets ?? "all",
-        disabledWallets: config.walletList?.disabledWallets ?? [],
-        showUnavailable: config.walletList?.showUnavailable ?? true,
-        featuredLimit,
-        featuredWallets: featuredWallets ?? [],
-        sortAvailableFirst: config.walletList?.sortAvailableFirst ?? true
-      },
-      accountPanel: {
-        mode: config.accountPanel?.mode ?? "modal",
-        copyAddress: config.accountPanel?.copyAddress ?? true,
-        showAddressQr: config.accountPanel?.showAddressQr ?? true,
-        showRecentTransactions: config.accountPanel?.showRecentTransactions ?? config.showRecentTransactions ?? true,
-        disconnect: config.accountPanel?.disconnect ?? true,
-        maxVisibleTransactions: config.accountPanel?.maxVisibleTransactions ?? config.maxVisibleTransactions ?? 3,
-        explorerAccountUrl: config.accountPanel?.explorerAccountUrl ?? ""
-      },
-      toast: config.toast ? {
-        position: typeof config.toast === "object" ? config.toast.position ?? "bottom-right" : "bottom-right",
-        maxVisible: typeof config.toast === "object" ? config.toast.maxVisible ?? 3 : 3,
-        autoDismissMs: typeof config.toast === "object" ? config.toast.autoDismissMs ?? 5e3 : 5e3
-      } : false
-    };
-  }
-  function normalizeWalletListLayout(layout) {
-    if (layout === "card" || layout === "grid") return "card";
-    return "list";
-  }
-  function normalizeDeprecatedFeaturedLimit(value) {
-    if (value === void 0 || !Number.isFinite(value)) return FEATURED_DEFAULT_LIMIT;
-    return Math.max(1, Math.trunc(value));
-  }
-  function createDefaultWalletUiConfig(config = {}) {
-    return resolveWalletUiConfig(config);
   }
 
   // ../ui/src/qr.ts
@@ -84288,6 +84048,766 @@ ${variables}
     };
   }
 
+  // ../ui/src/session-wallet.ts
+  function resolveSessionWalletMetadata(session, adapter2) {
+    const metadata = session?.metadata;
+    const id2 = getString(metadata?.walletId) ?? session?.adapterId ?? adapter2?.metadata.id;
+    const name2 = getString(metadata?.walletName) ?? session?.walletName ?? adapter2?.metadata.name;
+    const icon = getString(metadata?.walletIcon) ?? adapter2?.metadata.icon;
+    return {
+      ...id2 ? { id: id2 } : {},
+      ...name2 ? { name: name2 } : {},
+      ...icon ? { icon } : {}
+    };
+  }
+  function getString(value) {
+    return typeof value === "string" && value.length > 0 ? value : void 0;
+  }
+
+  // ../ui/src/button.ts
+  var defaultWalletButtonLabels = en2.walletButton;
+  function createWalletButtonHtml(viewModel = {}) {
+    const labels = { ...defaultWalletButtonLabels, ...viewModel.labels };
+    const status = viewModel.status ?? "disconnected";
+    const isConnected = status === "connected";
+    const isConnecting = status === "connecting";
+    const label = isConnecting ? labels.connecting : isConnected ? viewModel.connectedLabel ?? viewModel.label ?? (viewModel.address ? shortenAddress(viewModel.address) : labels.openAccount) : viewModel.label ?? labels.connect;
+    const size3 = viewModel.size ?? "md";
+    const variant = viewModel.variant ?? "default";
+    const showAdapterIcon = viewModel.showAdapterIcon ?? true;
+    const showChevron = isConnected && (viewModel.showChevron ?? true);
+    const showBalance = isConnected && (viewModel.showBalance ?? Boolean(viewModel.balanceTrx ?? viewModel.balanceLoading));
+    const icon = showAdapterIcon ? createWalletButtonIconHtml(viewModel) : "";
+    const labelHtml = isConnected && viewModel.identityLoading ? `<span class="twk-button-label twk-skeleton-name twk-skeleton-pill" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">${escapeHtml(label)}</span></span>` : `<span class="twk-button-label">${escapeHtml(label)}</span>`;
+    const balance = showBalance ? viewModel.balanceLoading ? `<span class="twk-button-balance twk-skeleton-balance twk-skeleton-pill" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">TRX balance</span></span>` : viewModel.balanceTrx ? `<span class="twk-button-balance">(${escapeHtml(viewModel.balanceTrx)} TRX)</span>` : "" : "";
+    const chevron = showChevron ? `<span class="twk-button-chevron" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>` : "";
+    const pending = isConnected && viewModel.hasPendingTransactions ? `<span class="twk-button-pending" aria-hidden="true"></span>` : "";
+    return `<button class="twk-connect-button" type="button" data-status="${escapeAttribute(status)}" data-size="${escapeAttribute(size3)}" data-variant="${escapeAttribute(variant)}" aria-label="${escapeAttribute(isConnected ? labels.openAccount : label)}" ${isConnecting ? "disabled" : ""}>
+  <span class="twk-button-icon-wrap">${icon}${pending}</span>
+  ${labelHtml}
+  ${balance}
+  ${chevron}
+</button>`;
+  }
+  function createWalletButtonIconHtml(viewModel) {
+    if (viewModel.adapterIcon) {
+      return `<span class="twk-button-icon"><img src="${escapeAttribute(viewModel.adapterIcon)}" alt="" aria-hidden="true" /></span>`;
+    }
+    return `<span class="twk-button-icon twk-button-icon-generic" aria-hidden="true">${walletIcon()}</span>`;
+  }
+  function createWalletButton(options) {
+    let root = null;
+    let documentRef = null;
+    let accountOpen = false;
+    let accountView = "account";
+    let copyState = "idle";
+    let addressQrSrc;
+    let isRefreshingDetails = false;
+    let refreshRunId = 0;
+    let qrRunId = 0;
+    const render = () => {
+      if (!root) return;
+      const session = options.manager.getSession();
+      const adapter2 = session ? options.manager.getAdapter(session.adapterId) : null;
+      const walletMetadata = resolveSessionWalletMetadata(session, adapter2);
+      const pending = options.manager.getTransactions().some((transaction) => transaction.status === "submitted");
+      const viewModel = {
+        status: session ? "connected" : "disconnected",
+        hasPendingTransactions: pending
+      };
+      if (options.label) viewModel.label = options.label;
+      if (options.connectedLabel) viewModel.connectedLabel = options.connectedLabel;
+      else if (session) viewModel.connectedLabel = session.account.domain ?? session.account.displayName ?? shortenAddress(session.account.address);
+      if (options.size) viewModel.size = options.size;
+      if (options.variant) viewModel.variant = options.variant;
+      if (session?.account.address) viewModel.address = session.account.address;
+      const showBalance = options.showBalance ?? true;
+      viewModel.showBalance = showBalance;
+      if (session?.balance?.formatted) viewModel.balanceTrx = session.balance.formatted;
+      if (session && showBalance && !session.balance?.formatted) viewModel.balanceLoading = isRefreshingDetails;
+      if (session && !session.account.domain && !session.account.displayName) viewModel.identityLoading = isRefreshingDetails;
+      if (walletMetadata.icon) viewModel.adapterIcon = walletMetadata.icon;
+      if (walletMetadata.name) viewModel.adapterName = walletMetadata.name;
+      const panelHtml = session && accountOpen ? createButtonAccountPanelHtml(session, accountView, copyState, addressQrSrc, options.manager, options.accountPanelMode ?? "modal") : "";
+      root.innerHTML = `${createWalletButtonHtml(viewModel)}${panelHtml}`;
+    };
+    const refreshAccountDetails = () => {
+      const session = options.manager.getSession();
+      if (!session || !options.refreshAccountDetails) return;
+      const runId = ++refreshRunId;
+      isRefreshingDetails = true;
+      render();
+      void Promise.resolve(options.refreshAccountDetails()).catch(() => void 0).finally(() => {
+        if (runId !== refreshRunId) return;
+        isRefreshingDetails = false;
+        render();
+      });
+    };
+    const renderAddressQr = () => {
+      const session = options.manager.getSession();
+      if (!root || !session?.account.address || accountView !== "address-qr") return;
+      const runId = ++qrRunId;
+      addressQrSrc = void 0;
+      render();
+      const foreground = typeof globalThis.getComputedStyle === "function" ? globalThis.getComputedStyle(root).getPropertyValue("--twk-qr-foreground").trim() || QR_FALLBACK_DARK : QR_FALLBACK_DARK;
+      void createStyledQrDataUrl(session.account.address, { width: 264, margin: 4, foreground, background: "transparent" }).then((src2) => {
+        if (runId !== qrRunId) return;
+        addressQrSrc = src2;
+        render();
+      }).catch(() => void 0);
+    };
+    const closeAccountPanel = () => {
+      accountOpen = false;
+      accountView = "account";
+      copyState = "idle";
+      addressQrSrc = void 0;
+      qrRunId += 1;
+      render();
+    };
+    const handleClick = (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const action = target?.closest("[data-twk-action]")?.getAttribute("data-twk-action");
+      const session = options.manager.getSession();
+      if (action === "copy" && session && documentRef) {
+        void copyToClipboard(session.account.address, documentRef).then((copied) => {
+          if (!copied) return;
+          copyState = "copied";
+          render();
+          globalThis.setTimeout(() => {
+            copyState = "idle";
+            render();
+          }, 1400);
+        });
+        return;
+      }
+      if (action === "address-qr") {
+        accountView = "address-qr";
+        renderAddressQr();
+        return;
+      }
+      if (action === "tx-history") {
+        accountView = "tx-history";
+        render();
+        return;
+      }
+      if (action === "account-back") {
+        accountView = "account";
+        addressQrSrc = void 0;
+        qrRunId += 1;
+        render();
+        return;
+      }
+      if (action === "close-account") {
+        closeAccountPanel();
+        return;
+      }
+      if (action === "disconnect") {
+        void options.manager.disconnect();
+        closeAccountPanel();
+        return;
+      }
+      if (target?.closest(".twk-account-panel")) return;
+      if (session) {
+        event.preventDefault();
+        event.stopPropagation();
+        accountOpen = !accountOpen;
+        if (!accountOpen) {
+          accountView = "account";
+          addressQrSrc = void 0;
+          qrRunId += 1;
+        }
+        render();
+        return;
+      }
+      options.modal.open();
+    };
+    const handleOutsidePointerDown = (event) => {
+      if (!accountOpen || !root) return;
+      const target = event.target;
+      if (target instanceof Node && root.contains(target)) return;
+      closeAccountPanel();
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape" && accountOpen) closeAccountPanel();
+    };
+    const unsubscribe = [
+      options.manager.on("connecting", render),
+      options.manager.on("connected", () => {
+        accountOpen = false;
+        accountView = "account";
+        render();
+        refreshAccountDetails();
+      }),
+      options.manager.on("disconnected", () => {
+        closeAccountPanel();
+      }),
+      options.manager.on("session_restored", () => {
+        render();
+        refreshAccountDetails();
+      }),
+      options.manager.on("tx_submitted", render),
+      options.manager.on("tx_confirmed", render),
+      options.manager.on("tx_failed", render)
+    ];
+    return {
+      mount(target) {
+        documentRef = typeof target === "string" ? globalThis.document : target.ownerDocument;
+        if (!documentRef) throw new Error("createWalletButton requires a DOM document.");
+        ensureWalletKitStyles(documentRef);
+        root = createWalletKitRoot(options.theme, documentRef);
+        root.addEventListener("click", handleClick);
+        documentRef.addEventListener("pointerdown", handleOutsidePointerDown);
+        documentRef.addEventListener("keydown", handleKeyDown);
+        const targetElement = typeof target === "string" ? documentRef.querySelector(target) : target;
+        if (!targetElement) throw new Error(`Wallet button target was not found: ${String(target)}`);
+        targetElement.append(root);
+        render();
+        if (options.manager.getSession()) refreshAccountDetails();
+      },
+      setTheme(config) {
+        if (root) applyThemeToElement(root, config);
+      },
+      destroy() {
+        unsubscribe.forEach((off) => off());
+        root?.removeEventListener("click", handleClick);
+        documentRef?.removeEventListener("pointerdown", handleOutsidePointerDown);
+        documentRef?.removeEventListener("keydown", handleKeyDown);
+        root?.remove();
+        root = null;
+        documentRef = null;
+      }
+    };
+  }
+  function createButtonAccountPanelHtml(session, view, copyState, addressQrSrc, manager, mode) {
+    if (view === "address-qr") {
+      return createButtonPanelShell(createAddressQrPanelHtml({
+        address: session.account.address,
+        copyState,
+        ...addressQrSrc ? { qrImageSrc: addressQrSrc } : {}
+      }), mode);
+    }
+    const model = {
+      account: session.account,
+      ...session.balance?.formatted ? { balanceTrx: session.balance.formatted } : {},
+      copyState,
+      recentTransactions: manager.getTransactions(10).map(mapTransaction),
+      showRecentTransactions: true,
+      maxVisibleTransactions: 3,
+      showAddressQrButton: true
+    };
+    const panel = view === "tx-history" ? createTransactionHistoryPanelHtml(model) : createAccountPanelHtml(model);
+    return createButtonPanelShell(panel, mode);
+  }
+  function createButtonPanelShell(panel, mode) {
+    if (mode === "modal") {
+      return `<div class="twk-button-panel-overlay" data-twk-account-panel-mode="modal">${panel}</div>`;
+    }
+    return `<div class="twk-button-panel" data-twk-account-panel-mode="dropdown">${panel}</div>`;
+  }
+  function mapTransaction(transaction) {
+    return {
+      id: transaction.id,
+      label: transaction.description ?? "TRON transaction",
+      status: mapTransactionStatus(transaction.status),
+      txHash: transaction.hash,
+      timestamp: new Date(transaction.submittedAt).toISOString(),
+      ...transaction.explorerUrl ? { explorerUrl: transaction.explorerUrl } : {}
+    };
+  }
+  function mapTransactionStatus(status) {
+    if (status === "confirmed") return "success";
+    if (status === "submitted") return "pending";
+    if (status === "failed") return "failed";
+    return "unknown";
+  }
+
+  // ../ui/src/locales/zh.ts
+  var zh = {
+    connectModal: {
+      title: "\u8FDE\u63A5\u94B1\u5305",
+      subtitle: "",
+      allWallets: "\u5168\u90E8\u94B1\u5305",
+      back: "\u8FD4\u56DE",
+      close: "\u5173\u95ED",
+      connecting: "\u8FDE\u63A5\u4E2D",
+      continueInWallet: "\u7EE7\u7EED\u4F7F\u7528",
+      acceptRequest: "\u8BF7\u5728\u94B1\u5305\u4E2D\u786E\u8BA4\u8FDE\u63A5\u8BF7\u6C42",
+      tryAgain: "\u91CD\u8BD5",
+      getWallet: "\u83B7\u53D6",
+      searchWallet: "\u641C\u7D22\u94B1\u5305",
+      searchPlaceholder: "\u641C\u7D22\u94B1\u5305",
+      noWalletsFound: "\u672A\u627E\u5230 TRON \u94B1\u5305",
+      poweredBy: "\u7531 TRON Wallet Kit \u63D0\u4F9B\u652F\u6301",
+      unavailable: "\u4E0D\u53EF\u7528",
+      ready: "\u5C31\u7EEA",
+      installed: "\u5DF2\u5B89\u88C5",
+      notInstalled: "\u672A\u5B89\u88C5",
+      qrCode: "\u4E8C\u7EF4\u7801",
+      tron: "TRON",
+      scanQr: "\u4F7F\u7528\u624B\u673A\u626B\u63CF\u6B64\u4E8C\u7EF4\u7801",
+      dontHave: "\u8FD8\u6CA1\u6709",
+      checking: "\u68C0\u6D4B\u4E2D",
+      connectionDeclined: "\u8FDE\u63A5\u88AB\u62D2\u7EDD",
+      copyLink: "\u590D\u5236\u94FE\u63A5",
+      qrRenderFailed: "\u65E0\u6CD5\u751F\u6210\u4E8C\u7EF4\u7801\uFF0C\u8BF7\u91CD\u8BD5\u3002"
+    },
+    accountPanel: {
+      title: "\u5DF2\u8FDE\u63A5",
+      addressTitle: "\u5730\u5740",
+      back: "\u8FD4\u56DE",
+      close: "\u5173\u95ED",
+      copy: "\u590D\u5236\u5730\u5740",
+      copied: "\u5DF2\u590D\u5236",
+      disconnect: "\u65AD\u5F00\u8FDE\u63A5",
+      explorer: "\u533A\u5757\u6D4F\u89C8\u5668",
+      showQr: "\u4E8C\u7EF4\u7801",
+      lightQr: "\u6D45\u8272\u4E8C\u7EF4\u7801",
+      noTransactions: "\u6682\u65E0\u8FD1\u671F\u4EA4\u6613",
+      recentTransactions: "\u8FD1\u671F\u4EA4\u6613",
+      qrAlt: "TRON \u5730\u5740\u4E8C\u7EF4\u7801"
+    },
+    walletButton: {
+      connect: "\u8FDE\u63A5\u94B1\u5305",
+      connecting: "\u8FDE\u63A5\u4E2D",
+      openAccount: "\u6253\u5F00\u8D26\u6237"
+    },
+    toast: {
+      txSubmitted: "\u4EA4\u6613\u5DF2\u63D0\u4EA4",
+      txConfirmed: "\u4EA4\u6613\u5DF2\u786E\u8BA4",
+      txFailed: "\u4EA4\u6613\u5931\u8D25",
+      viewOnExplorer: "\u67E5\u770B",
+      dismiss: "\u5173\u95ED"
+    },
+    errors: {
+      fallbackTitle: "\u8BF7\u6C42\u5931\u8D25",
+      fallbackMessage: "\u94B1\u5305\u8BF7\u6C42\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5\u3002",
+      codes: {
+        WALLET_NOT_FOUND: {
+          title: "\u672A\u627E\u5230\u94B1\u5305",
+          message: "\u8BE5\u94B1\u5305\u672A\u5728\u5F53\u524D\u94B1\u5305\u5957\u4EF6\u914D\u7F6E\u4E2D\u6CE8\u518C\u3002"
+        },
+        WALLET_UNAVAILABLE: {
+          title: "\u94B1\u5305\u4E0D\u53EF\u7528",
+          message: "\u8BE5\u94B1\u5305\u5728\u5F53\u524D\u6D4F\u89C8\u5668\u4E2D\u4E0D\u53EF\u7528\u3002"
+        },
+        CONNECTION_FAILED: {
+          title: "\u8FDE\u63A5\u5931\u8D25",
+          message: "\u94B1\u5305\u8FDE\u63A5\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5\u3002"
+        },
+        USER_REJECTED: {
+          title: "\u8FDE\u63A5\u88AB\u62D2\u7EDD",
+          message: "\u8BF7\u6C42\u5DF2\u5728\u94B1\u5305\u4E2D\u53D6\u6D88\u3002"
+        },
+        REQUEST_TIMEOUT: {
+          title: "\u8BF7\u6C42\u8D85\u65F6",
+          message: "\u94B1\u5305\u672A\u5728\u89C4\u5B9A\u65F6\u95F4\u5185\u54CD\u5E94\uFF0C\u8BF7\u91CD\u8BD5\u3002"
+        },
+        CONFIGURATION_ERROR: {
+          title: "\u914D\u7F6E\u9519\u8BEF",
+          message: "\u65E0\u6CD5\u52A0\u8F7D\u94B1\u5305\u9002\u914D\u5668\u3002\u8BF7\u5237\u65B0\u9875\u9762\u540E\u91CD\u8BD5\u3002"
+        },
+        NETWORK_ERROR: {
+          title: "\u7F51\u7EDC\u9519\u8BEF",
+          message: "TRON \u7F51\u7EDC\u8BF7\u6C42\u5931\u8D25\u3002\u8BF7\u68C0\u67E5 RPC \u8282\u70B9\u540E\u91CD\u8BD5\u3002"
+        },
+        RATE_LIMITED: {
+          title: "\u8BF7\u6C42\u53D7\u9650",
+          message: "TRON RPC \u8282\u70B9\u6B63\u5728\u9650\u6D41\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5\u3002"
+        },
+        TRANSACTION_EXPIRATION_ERROR: {
+          title: "\u4EA4\u6613\u5DF2\u8FC7\u671F",
+          message: "\u4EA4\u6613\u5728\u5E7F\u64AD\u524D\u5DF2\u8FC7\u671F\u3002\u8BF7\u91CD\u65B0\u6784\u5EFA\u5E76\u7B7E\u540D\u3002"
+        },
+        OUT_OF_ENERGY: {
+          title: "\u80FD\u91CF\u4E0D\u8DB3",
+          message: "\u8D26\u6237\u6CA1\u6709\u8DB3\u591F\u7684 TRON \u80FD\u91CF\u6765\u5B8C\u6210\u6B64\u4EA4\u6613\u3002"
+        },
+        INSUFFICIENT_BALANCE: {
+          title: "\u4F59\u989D\u4E0D\u8DB3",
+          message: "\u8D26\u6237\u4F59\u989D\u4E0D\u8DB3\u4EE5\u5B8C\u6210\u6B64\u4EA4\u6613\u3002"
+        },
+        SEND_TRANSACTION_FAILED: {
+          title: "\u4EA4\u6613\u5931\u8D25",
+          message: "\u4EA4\u6613\u65E0\u6CD5\u5E7F\u64AD\u5230 TRON \u7F51\u7EDC\u3002"
+        },
+        SIGN_MESSAGE_FAILED: {
+          title: "\u7B7E\u540D\u5931\u8D25",
+          message: "\u94B1\u5305\u65E0\u6CD5\u5BF9\u8BE5\u6D88\u606F\u8FDB\u884C\u7B7E\u540D\u3002"
+        },
+        SIGN_TRANSACTION_FAILED: {
+          title: "\u4EA4\u6613\u7B7E\u540D\u5931\u8D25",
+          message: "\u94B1\u5305\u65E0\u6CD5\u5BF9\u8BE5\u4EA4\u6613\u8FDB\u884C\u7B7E\u540D\u3002"
+        },
+        UNSUPPORTED: {
+          title: "\u4E0D\u652F\u6301\u7684\u64CD\u4F5C",
+          message: "\u8BE5\u94B1\u5305\u4E0D\u652F\u6301\u6240\u8BF7\u6C42\u7684\u64CD\u4F5C\u3002"
+        },
+        NO_SESSION: {
+          title: "\u94B1\u5305\u672A\u8FDE\u63A5",
+          message: "\u8BF7\u5148\u8FDE\u63A5 TRON \u94B1\u5305\u518D\u7EE7\u7EED\u3002"
+        }
+      }
+    }
+  };
+
+  // ../ui/src/locales/index.ts
+  var BUILTIN_LOCALES = { en: en2, zh };
+  function resolveLabelPack(locale, overrides) {
+    const base3 = BUILTIN_LOCALES[locale || "en"] ?? BUILTIN_LOCALES.en;
+    return {
+      connectModal: { ...BUILTIN_LOCALES.en.connectModal, ...base3.connectModal, ...overrides?.connectModal },
+      accountPanel: { ...BUILTIN_LOCALES.en.accountPanel, ...base3.accountPanel, ...overrides?.accountPanel },
+      walletButton: { ...BUILTIN_LOCALES.en.walletButton, ...base3.walletButton, ...overrides?.walletButton },
+      toast: { ...BUILTIN_LOCALES.en.toast, ...base3.toast, ...overrides?.toast },
+      errors: {
+        ...BUILTIN_LOCALES.en.errors,
+        ...base3.errors,
+        ...overrides?.errors,
+        codes: {
+          ...BUILTIN_LOCALES.en.errors.codes,
+          ...base3.errors.codes,
+          ...overrides?.errors?.codes
+        }
+      }
+    };
+  }
+
+  // ../ui/src/config.ts
+  var FEATURED_DEFAULT_LIMIT = 5;
+  var EMPTY_RUNTIME_CATALOG = [];
+  function resolveWalletUiConfig(config = {}) {
+    const themeName = config.themeName ?? (resolveMode(config.themeMode ?? config.mode) === "dark" ? "dark" : "light");
+    const customTheme = {
+      ...config.accent ? { accent: config.accent, focusRing: config.accent } : {},
+      ...config.fontFamily ? { fontFamily: config.fontFamily } : {},
+      ...config.customTheme ?? {}
+    };
+    const featuredLimit = normalizeDeprecatedFeaturedLimit(config.walletList?.featuredLimit);
+    const featuredWallets = config.walletList?.featuredWallets;
+    const labels = resolveLabelPack(config.locale, config.labels);
+    return {
+      theme: resolveTheme({ themeName, ...Object.keys(customTheme).length > 0 ? { tokens: customTheme } : {} }),
+      labels,
+      catalog: config.catalog ?? EMPTY_RUNTIME_CATALOG,
+      modal: {
+        title: config.modal?.title ?? labels.connectModal.title,
+        subtitle: config.modal?.subtitle ?? labels.connectModal.subtitle,
+        width: config.modal?.width ?? "default",
+        footerText: config.modal?.footerText ?? "TRON Wallet Kit",
+        showCloseButton: config.modal?.showCloseButton ?? true,
+        closeOnBackdropClick: config.modal?.closeOnBackdropClick ?? true,
+        closeOnSelect: config.modal?.closeOnSelect ?? true,
+        disableAnimations: config.modal?.disableAnimations ?? false,
+        onModalOpen: config.modal?.onModalOpen ?? (() => void 0),
+        onModalClose: config.modal?.onModalClose ?? (() => void 0),
+        branding: {
+          showPoweredBy: config.modal?.branding?.showPoweredBy ?? true,
+          poweredByText: config.modal?.branding?.poweredByText ?? config.modal?.footerText ?? labels.connectModal.poweredBy
+        }
+      },
+      qr: {
+        size: config.qr?.size ?? 304,
+        addressSize: config.qr?.addressSize ?? 264,
+        margin: config.qr?.margin ?? 4,
+        includeWalletLogo: config.qr?.includeWalletLogo ?? true,
+        errorCorrectionLevel: config.qr?.errorCorrectionLevel ?? "M"
+      },
+      walletList: {
+        layout: normalizeWalletListLayout(config.walletList?.layout),
+        featuredMode: config.walletList?.featuredMode ?? "installed-first",
+        wallets: config.walletList?.wallets ?? "all",
+        disabledWallets: config.walletList?.disabledWallets ?? [],
+        showUnavailable: config.walletList?.showUnavailable ?? true,
+        featuredLimit,
+        featuredWallets: featuredWallets ?? [],
+        sortAvailableFirst: config.walletList?.sortAvailableFirst ?? true
+      },
+      accountPanel: {
+        mode: config.accountPanel?.mode ?? "modal",
+        copyAddress: config.accountPanel?.copyAddress ?? true,
+        showAddressQr: config.accountPanel?.showAddressQr ?? true,
+        showRecentTransactions: config.accountPanel?.showRecentTransactions ?? config.showRecentTransactions ?? true,
+        disconnect: config.accountPanel?.disconnect ?? true,
+        maxVisibleTransactions: config.accountPanel?.maxVisibleTransactions ?? config.maxVisibleTransactions ?? 3,
+        explorerAccountUrl: config.accountPanel?.explorerAccountUrl ?? ""
+      },
+      toast: config.toast ? {
+        position: typeof config.toast === "object" ? config.toast.position ?? "bottom-right" : "bottom-right",
+        maxVisible: typeof config.toast === "object" ? config.toast.maxVisible ?? 3 : 3,
+        autoDismissMs: typeof config.toast === "object" ? config.toast.autoDismissMs ?? 5e3 : 5e3
+      } : false
+    };
+  }
+  function normalizeWalletListLayout(layout) {
+    if (layout === "card") return "card";
+    return "list";
+  }
+  function normalizeDeprecatedFeaturedLimit(value) {
+    if (value === void 0 || !Number.isFinite(value)) return FEATURED_DEFAULT_LIMIT;
+    return Math.max(1, Math.trunc(value));
+  }
+  function createDefaultWalletUiConfig(config = {}) {
+    return resolveWalletUiConfig(config);
+  }
+
+  // ../ui/src/wallet-kinds.ts
+  function isWalletConnectWallet(wallet) {
+    return wallet.id === "walletconnect" || wallet.transport === "walletconnect";
+  }
+  function isQrWallet(wallet) {
+    return isWalletConnectWallet(wallet) || wallet.transport === "qr" || wallet.capabilities?.includes("qr") === true;
+  }
+  function isQrFallbackWallet(wallet) {
+    return !isWalletConnectWallet(wallet) && (wallet.transport === "qr" || wallet.capabilities?.includes("qr") === true);
+  }
+  function isHardwareWallet(wallet) {
+    return wallet.transport === "hardware" || wallet.platforms?.includes("hardware") === true;
+  }
+  function isMobileCapableWallet(wallet) {
+    return isQrWallet(wallet) || inferWalletPlatforms(wallet).includes("mobile") || Boolean(wallet.mobileDeepLink) || wallet.supportsWalletConnect === true;
+  }
+  function inferWalletPlatforms(wallet) {
+    if (isHardwareWallet(wallet)) return ["hardware"];
+    if (wallet.transport === "mobile" || isQrWallet(wallet)) return ["mobile"];
+    return ["extension"];
+  }
+
+  // ../ui/src/wallet-badges.ts
+  function resolveWalletBadge(wallet, labels, options = {}) {
+    const tone = options.tone ?? wallet.badge?.tone;
+    const available = options.available ?? wallet.available === true;
+    const transport = wallet.transport;
+    if (tone === "qr" || transport === "qr" || transport === "walletconnect" || isQrWallet(wallet)) return createBadge(labels.qrCode, "qr");
+    if (tone === "tron" && (transport === "hardware" || isHardwareWallet(wallet))) return createBadge("HARDWARE", "tron", false);
+    if (transport === "hardware" || isHardwareWallet(wallet)) return createBadge("HARDWARE", "tron", false);
+    if (wallet.readyState === "loading") return createBadge(labels.checking, "muted");
+    if (tone === "installed" || wallet.readyState === "found" || available) return createBadge(labels.installed, "installed");
+    if (wallet.readyState === "notFound") return createBadge(labels.notInstalled, "muted");
+    if (wallet.readyState === "unsupported") return createBadge(labels.unavailable, "muted");
+    return createBadge(labels.tron, "tron");
+  }
+  function resolveCatalogBadge(item, available, labels) {
+    const wallet = {
+      id: item.id,
+      platforms: item.platforms,
+      available
+    };
+    if (item.transport !== void 0) wallet.transport = item.transport;
+    if (item.badge !== void 0) wallet.badge = item.badge;
+    return resolveWalletBadge(wallet, labels, { available, tone: item.badge?.tone });
+  }
+  function createQrWalletBadge(labels) {
+    return createBadge(labels.qrCode, "qr");
+  }
+  function createBadge(label, tone, uppercase = true) {
+    return { label: uppercase ? label.toUpperCase() : label, tone };
+  }
+
+  // ../ui/src/wallet-catalog.ts
+  var TRON_WALLET_CATALOG = [];
+  var featuredOrder = ["tronlink", "tokenpocket", "okx", "bitget", "walletconnect"];
+  function mergeWalletOptionsWithCatalog(wallets, labels = en2.connectModal, catalog = TRON_WALLET_CATALOG) {
+    const adapterIds = new Set(wallets.map((wallet) => wallet.adapterId ?? wallet.id));
+    const byId = new Map(wallets.map((wallet) => [wallet.id, wallet]));
+    const merged = [];
+    for (const item of catalog.filter((wallet) => wallet.enabled !== false)) {
+      const group = item.group ?? "popular";
+      const itemTransport = item.transport ?? (item.platforms.includes("extension") ? "extension" : "mobile");
+      const current = byId.get(item.id);
+      if (current) {
+        merged.push(enrichWalletOption(current, item, adapterIds, labels));
+        byId.delete(item.id);
+        continue;
+      }
+      const nativeAdapterId = item.adapterId ?? item.id;
+      const hasNativeAdapter = adapterIds.has(nativeAdapterId);
+      const canUseWalletConnect = item.supportsWalletConnect === true && item.id !== "walletconnect" && adapterIds.has("walletconnect");
+      const adapterId = hasNativeAdapter ? nativeAdapterId : canUseWalletConnect ? "walletconnect" : nativeAdapterId;
+      const transport = hasNativeAdapter ? itemTransport : canUseWalletConnect ? "qr" : itemTransport;
+      const option = {
+        id: item.id,
+        adapterId,
+        name: item.name,
+        group,
+        transport,
+        platforms: item.platforms,
+        ...item.featured !== void 0 ? { featured: item.featured } : {},
+        ...item.providerPaths ? { providerPaths: item.providerPaths } : {},
+        ...item.conflictMarkers ? { conflictMarkers: item.conflictMarkers } : {},
+        ...item.mobileDeepLink ? { mobileDeepLink: item.mobileDeepLink } : {},
+        ...item.supportsWalletConnect ? { supportsWalletConnect: item.supportsWalletConnect } : {},
+        available: hasNativeAdapter || canUseWalletConnect,
+        readyState: hasNativeAdapter || canUseWalletConnect ? "found" : "notFound",
+        capabilities: transport === "qr" || transport === "walletconnect" ? ["qr"] : [],
+        badge: resolveCatalogBadge({ ...item, group, transport }, hasNativeAdapter || canUseWalletConnect, labels)
+      };
+      if (item.icon) option.icon = item.icon;
+      if (item.homepage) option.homepage = item.homepage;
+      if (item.downloadUrl) option.downloadUrl = item.downloadUrl;
+      merged.push(option);
+    }
+    return [...merged, ...byId.values()];
+  }
+  function getFeaturedWalletOptions(wallets, config = {}, environment) {
+    const normalizedConfig = typeof config === "number" ? {} : config;
+    const mode = normalizedConfig.featuredMode ?? (normalizedConfig.featuredWallets?.length ? "manual" : "installed-first");
+    const byId = new Map(wallets.map((wallet) => [wallet.id, wallet]));
+    const ranked = [...wallets].filter((wallet) => getWalletRank(wallet) < Number.POSITIVE_INFINITY).sort(compareWalletRank);
+    const rankedIds = ranked.length > 0 ? ranked.map((wallet) => wallet.id) : featuredOrder;
+    const manualIds = normalizedConfig.featuredWallets?.length ? normalizedConfig.featuredWallets : rankedIds;
+    if (mode === "manual") {
+      return uniqueWalletsById(manualIds.flatMap((id2) => byId.get(id2) ? [byId.get(id2)] : []));
+    }
+    if (environment?.kind === "mobile-browser") {
+      const walletConnect2 = byId.get("walletconnect");
+      if (mode === "installed-only") return walletConnect2 ? [walletConnect2] : [];
+      const mobileRanked = wallets.filter((wallet) => wallet.id !== "walletconnect" && isMobileCapableWallet(wallet)).sort(compareWalletRank);
+      return walletConnect2 ? uniqueWalletsById([walletConnect2, ...mobileRanked]) : mobileRanked;
+    }
+    const installed = wallets.filter(isInstalledWallet).sort(compareWalletRank);
+    if (mode === "installed-only") {
+      return installed.length > 0 ? installed : getWalletConnectFallback(byId);
+    }
+    const installedIds = new Set(installed.map((wallet) => wallet.id));
+    const walletConnect = byId.get("walletconnect");
+    const rankedWallets = rankedIds.flatMap((id2) => byId.get(id2) ? [byId.get(id2)] : []);
+    const targetCount = Math.max(installed.length + (walletConnect ? 1 : 0), rankedWallets.length);
+    const hasPendingDetection = wallets.some((wallet) => wallet.readyState === "loading");
+    const qrFallbacks = wallets.filter((wallet) => !installedIds.has(wallet.id) && isQrFeaturedFallbackWallet(wallet)).sort(compareWalletRank);
+    const hardware = wallets.filter((wallet) => !installedIds.has(wallet.id) && isHardwareWallet(wallet)).sort(compareWalletRank);
+    const loading = wallets.filter((wallet) => !installedIds.has(wallet.id) && !isWalletConnectWallet(wallet) && !isQrFeaturedFallbackWallet(wallet) && !isHardwareWallet(wallet) && wallet.readyState === "loading").sort(compareWalletRank);
+    const featured = uniqueWalletsById(
+      hasPendingDetection ? [
+        ...rankedWallets,
+        ...installed,
+        ...walletConnect ? [walletConnect] : [],
+        ...qrFallbacks,
+        ...hardware,
+        ...loading
+      ] : [
+        ...installed,
+        ...walletConnect ? [walletConnect] : [],
+        ...qrFallbacks,
+        ...hardware,
+        ...rankedWallets,
+        ...loading
+      ]
+    ).slice(0, targetCount);
+    if (installed.length === 0) {
+      return walletConnect ? uniqueWalletsById([walletConnect, ...featured]) : featured;
+    }
+    return featured;
+  }
+  function filterWalletOptions(wallets, query = "") {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return [...wallets];
+    return wallets.filter((wallet) => `${wallet.name} ${wallet.id}`.toLowerCase().includes(normalized));
+  }
+  function applyWalletListConfig(wallets, config = {}, environment) {
+    const allowed = config.wallets === "all" || !config.wallets ? void 0 : new Set(config.wallets);
+    const disabled = new Set(config.disabledWallets ?? []);
+    const filtered = wallets.filter((wallet) => {
+      if (allowed && !allowed.has(wallet.id)) return false;
+      if (disabled.has(wallet.id)) return false;
+      if (!isWalletVisibleInEnvironment(wallet, environment)) return false;
+      if (config.showUnavailable === false && isUnavailableWallet(wallet) && !shouldKeepUnavailableForEnvironment(wallet, environment)) return false;
+      return true;
+    });
+    if (config.sortAvailableFirst === false || filtered.some((wallet) => wallet.readyState === "loading")) return filtered;
+    return sortWalletsByAvailability(filtered);
+  }
+  function sortWalletsByAvailability(wallets) {
+    return [...wallets].sort((a3, b5) => walletAvailabilityRank(a3) - walletAvailabilityRank(b5));
+  }
+  function walletAvailabilityRank(wallet) {
+    if (wallet.readyState === "found" || wallet.available === true) return 0;
+    if (isQrWallet(wallet) || isHardwareWallet(wallet)) return 1;
+    if (wallet.readyState === "loading") return 2;
+    if (wallet.readyState === "notFound" || wallet.readyState === "unsupported" || wallet.available === false) return 3;
+    return 2;
+  }
+  function isUnavailableWallet(wallet) {
+    if (isHardwareWallet(wallet)) return false;
+    return wallet.readyState === "notFound" || wallet.readyState === "unsupported" || wallet.available === false;
+  }
+  function isWalletVisibleInEnvironment(wallet, environment) {
+    if (!environment) return true;
+    if (isQrWallet(wallet)) return true;
+    const platforms = wallet.platforms ?? inferWalletPlatforms(wallet);
+    if (environment.kind === "desktop-extension") return platforms.includes("extension") || platforms.includes("hardware");
+    return platforms.includes("mobile");
+  }
+  function shouldKeepUnavailableForEnvironment(wallet, environment) {
+    if (environment?.kind !== "mobile-browser") return false;
+    return isMobileCapableWallet(wallet);
+  }
+  function enrichWalletOption(wallet, item, adapterIds, labels) {
+    const canUseWalletConnect = item.supportsWalletConnect === true && item.id !== "walletconnect" && adapterIds.has("walletconnect");
+    const useQrFallback = canUseWalletConnect && (wallet.readyState === "notFound" || wallet.readyState === "unsupported");
+    const itemTransport = item.transport ?? (item.platforms.includes("extension") ? "extension" : "mobile");
+    const group = wallet.group ?? item.group ?? "popular";
+    const transport = useQrFallback ? "qr" : wallet.transport ?? itemTransport;
+    const option = {
+      ...wallet,
+      adapterId: useQrFallback ? "walletconnect" : wallet.adapterId ?? item.adapterId ?? item.id,
+      group,
+      transport,
+      platforms: wallet.platforms ?? item.platforms,
+      ...wallet.featured !== void 0 || item.featured !== void 0 ? { featured: wallet.featured ?? item.featured } : {},
+      ...useQrFallback ? {
+        available: true,
+        readyState: "found",
+        capabilities: [.../* @__PURE__ */ new Set([...wallet.capabilities ?? [], "qr"])]
+      } : {}
+    };
+    const icon = wallet.icon ?? item.icon;
+    const homepage = wallet.homepage ?? item.homepage;
+    const downloadUrl = wallet.downloadUrl ?? item.downloadUrl;
+    const providerPaths = wallet.providerPaths ?? item.providerPaths;
+    const conflictMarkers = wallet.conflictMarkers ?? item.conflictMarkers;
+    const mobileDeepLink = wallet.mobileDeepLink ?? item.mobileDeepLink;
+    const supportsWalletConnect = wallet.supportsWalletConnect ?? item.supportsWalletConnect;
+    const badgeTransport = useQrFallback ? "qr" : itemTransport;
+    const badge = useQrFallback ? createQrWalletBadge(labels) : wallet.badge ?? resolveCatalogBadge({ ...item, group, transport: badgeTransport }, wallet.available === true || wallet.readyState === "found", labels);
+    if (icon) option.icon = icon;
+    if (homepage) option.homepage = homepage;
+    if (downloadUrl) option.downloadUrl = downloadUrl;
+    if (providerPaths) option.providerPaths = providerPaths;
+    if (conflictMarkers) option.conflictMarkers = conflictMarkers;
+    if (mobileDeepLink) option.mobileDeepLink = mobileDeepLink;
+    if (supportsWalletConnect !== void 0) option.supportsWalletConnect = supportsWalletConnect;
+    if (badge) option.badge = badge;
+    return option;
+  }
+  function getWalletConnectFallback(byId) {
+    const walletConnect = byId.get("walletconnect");
+    return walletConnect ? [walletConnect] : [];
+  }
+  function uniqueWalletsById(wallets) {
+    const seen = /* @__PURE__ */ new Set();
+    return wallets.filter((wallet) => {
+      if (seen.has(wallet.id)) return false;
+      seen.add(wallet.id);
+      return true;
+    });
+  }
+  function compareWalletRank(a3, b5) {
+    return getWalletRank(a3) - getWalletRank(b5) || a3.name.localeCompare(b5.name);
+  }
+  function getWalletRank(wallet) {
+    if (typeof wallet.featured === "number") return wallet.featured;
+    const order = featuredOrder.indexOf(wallet.id);
+    return order === -1 ? Number.POSITIVE_INFINITY : order + 1e3;
+  }
+  function isInstalledWallet(wallet) {
+    if (isWalletConnectWallet(wallet) || isQrFallbackWallet(wallet)) return false;
+    if (isHardwareWallet(wallet)) return false;
+    return wallet.readyState === "found" || wallet.available === true;
+  }
+  function isQrFeaturedFallbackWallet(wallet) {
+    return isQrFallbackWallet(wallet);
+  }
+
   // ../ui/src/wallet-options.ts
   function mapAdapterToWalletOption(adapter2, availability, labels = en2.connectModal) {
     const readyState = resolveReadyState(adapter2, availability);
@@ -84305,6 +84825,11 @@ ${variables}
     if (adapter2.metadata.group) option.group = adapter2.metadata.group;
     if (adapter2.metadata.type) option.transport = adapter2.metadata.type;
     if (adapter2.metadata.platforms) option.platforms = adapter2.metadata.platforms;
+    if (adapter2.metadata.catalog?.featured !== void 0) option.featured = adapter2.metadata.catalog.featured;
+    if (adapter2.metadata.catalog?.providerPaths) option.providerPaths = adapter2.metadata.catalog.providerPaths;
+    if (adapter2.metadata.catalog?.conflictMarkers) option.conflictMarkers = adapter2.metadata.catalog.conflictMarkers;
+    if (adapter2.metadata.catalog?.mobileDeepLink) option.mobileDeepLink = adapter2.metadata.catalog.mobileDeepLink;
+    if (adapter2.metadata.catalog?.supportsWalletConnect !== void 0) option.supportsWalletConnect = adapter2.metadata.catalog.supportsWalletConnect;
     if (capabilities.length > 0) option.capabilities = capabilities;
     const badgeWallet = { id: adapter2.metadata.id, capabilities, readyState };
     const badge = resolveWalletBadge(
@@ -84394,7 +84919,7 @@ ${variables}
     return viewModel.showPoweredBy === false ? "" : `<div class="twk-footer">${escapeHtml(viewModel.poweredByText ?? viewModel.labels.poweredBy)}</div>`;
   }
   function createWalletSkeletonGridHtml(count, layout, scope) {
-    const card = layout === "card" ? `<span class="twk-wallet-card twk-skeleton-card" data-loading="true" aria-hidden="true"><span class="twk-wallet-icon twk-skeleton-circle" data-loading="true"><span class="twk-skeleton"></span></span><span class="twk-wallet-name twk-skeleton-line" data-loading="true"><span class="twk-skeleton"></span></span></span>` : `<span class="twk-wallet-row twk-skeleton-row" data-loading="true" aria-hidden="true"><span class="twk-wallet-main"><span class="twk-wallet-icon twk-skeleton-circle" data-loading="true"><span class="twk-skeleton"></span></span><span class="twk-wallet-name twk-skeleton-line" data-loading="true"><span class="twk-skeleton"></span></span></span><span class="twk-badge twk-skeleton-pill" data-loading="true" data-tone="muted"><span class="twk-skeleton"></span></span></span>`;
+    const card = layout === "card" ? `<span class="twk-wallet-card twk-skeleton-card" data-loading="true" aria-hidden="true"><span class="twk-wallet-icon twk-skeleton-icon" data-loading="true"><span class="twk-skeleton"></span></span><span class="twk-wallet-name twk-skeleton-line" data-loading="true"><span class="twk-skeleton"></span></span></span>` : `<span class="twk-wallet-row twk-skeleton-row" data-loading="true" aria-hidden="true"><span class="twk-wallet-main"><span class="twk-wallet-icon twk-skeleton-icon" data-loading="true"><span class="twk-skeleton"></span></span><span class="twk-wallet-name twk-skeleton-line" data-loading="true"><span class="twk-skeleton"></span></span></span><span class="twk-badge twk-skeleton-pill" data-loading="true" data-tone="muted"><span class="twk-skeleton"></span></span></span>`;
     return `<div class="twk-wallet-grid" data-layout="${escapeAttribute(layout)}" ${scope ? `data-scope="${escapeAttribute(scope)}"` : ""} data-loading="true">${card.repeat(count)}</div>`;
   }
   function getWalletPlatforms(wallet) {
@@ -84435,15 +84960,15 @@ ${variables}
     const retryBusy = viewModel.retryState === "busy";
     const retryIcon = retryBusy ? actionSpinnerIcon() : refreshIcon();
     const installRow = wallet?.id === "walletconnect" ? "" : createInstallRowHtml(name2, installUrl, labels);
-    const qrContent = viewModel.qrUri ? `<span class="twk-qr-code" data-twk-qr-code="true" ${viewModel.qrRenderState === "error" ? 'data-twk-qr-renderer="error"' : ""}>${viewModel.qrRenderState === "error" ? `<span class="twk-qr-error">${escapeHtml(labels.qrRenderFailed)}</span>` : viewModel.qrImageSrc ? `<img src="${escapeAttribute(viewModel.qrImageSrc)}" alt="${escapeAttribute(`${name2} ${labels.qrCode}`)}" />${wallet ? `<span class="twk-qr-center-logo">${createWalletIconHtml(wallet)}</span>` : ""}` : `<span class="twk-qr-skeleton twk-skeleton-qr" aria-hidden="true"></span>`}</span>` : `<span class="twk-qr-code" data-loading="true" data-twk-qr-code="true"><span class="twk-qr-skeleton twk-skeleton-qr" aria-hidden="true"></span><span class="twk-sr-only">${escapeHtml(labels.qrCode)}</span></span>`;
-    return `<div class="twk-connect-detail">
+    const qrContent = viewModel.qrUri ? `<span class="twk-qr-code" data-twk-qr-code="true" ${viewModel.qrRenderState === "error" ? 'data-twk-qr-renderer="error"' : ""}>${viewModel.qrRenderState === "error" ? `<span class="twk-qr-error">${escapeHtml(labels.qrRenderFailed)}</span>` : viewModel.qrImageSrc ? `<img src="${escapeAttribute(viewModel.qrImageSrc)}" alt="${escapeAttribute(`${name2} ${labels.qrCode}`)}" />${wallet ? `<span class="twk-qr-center-logo">${createWalletIconHtml(wallet, false)}</span>` : ""}` : `<span class="twk-qr-skeleton twk-skeleton-qr" aria-hidden="true"></span>`}</span>` : `<span class="twk-qr-code" data-loading="true" data-twk-qr-code="true"><span class="twk-qr-skeleton twk-skeleton-qr" aria-hidden="true"></span><span class="twk-sr-only">${escapeHtml(labels.qrCode)}</span></span>`;
+    return `<div class="twk-connect-detail twk-qr-detail">
     <div class="twk-qr-slot twk-qr-large">${qrContent}</div>
     <p class="twk-detail-subtitle">${escapeHtml(isQrTransport ? labels.scanQr : labels.acceptRequest)}</p>
     <div class="twk-detail-actions">
       <button class="twk-action" type="button" data-twk-action="copy-uri" ${viewModel.qrUri ? "" : "disabled"}>${createActionContentHtml(copyIcon2, labels.copyLink, copyState)}</button>
       <button class="twk-action" type="button" data-twk-action="retry" ${retryBusy ? `data-busy="true" disabled` : ""}>${createActionContentHtml(retryIcon, labels.tryAgain, retryBusy ? "busy" : void 0)}</button>
     </div>
-    ${createErrorHtml(viewModel.errorMessage ? resolveConnectErrorDisplay(viewModel.errorMessage, wallet, viewModel.errorMessages, viewModel.errorTitle).message : void 0)}
+    ${createErrorHtml(viewModel.errorMessage ? resolveConnectErrorDisplay(viewModel.errorMessage, wallet, viewModel.errorMessages, viewModel.errorTitle).message : void 0, "qr")}
     ${installRow}
   </div>`;
   }
@@ -84452,12 +84977,14 @@ ${variables}
     const isConnecting = selectedWalletId === wallet.id || wallet.status === "connecting";
     const badge = wallet.badge ?? resolveWalletBadge(wallet, labels);
     const statusLabel = wallet.disabledReason ?? (disabled ? labels.unavailable : isConnecting ? labels.connecting : badge.label);
-    return `<button class="twk-wallet-row" type="button" data-twk-wallet-id="${escapeAttribute(wallet.id)}" data-twk-adapter-id="${escapeAttribute(wallet.adapterId ?? wallet.id)}" data-twk-platforms="${escapeAttribute(getWalletPlatforms(wallet).join(" "))}" aria-label="${escapeAttribute(`${wallet.name}: ${statusLabel}`)}" ${disabled ? "disabled" : ""}>
+    const rowBadgeLabel = wallet.readyState === "loading" ? labels.checking : isConnecting ? labels.connecting : badge.label;
+    const rowBadgeTone = wallet.readyState === "loading" ? "muted" : badge.tone;
+    return `<button class="twk-wallet-row" type="button" data-twk-wallet-id="${escapeAttribute(wallet.id)}" data-twk-adapter-id="${escapeAttribute(wallet.adapterId ?? wallet.id)}" data-twk-platforms="${escapeAttribute(getWalletPlatforms(wallet).join(" "))}" data-availability="${escapeAttribute(resolveWalletAvailabilityState(wallet))}" aria-label="${escapeAttribute(`${wallet.name}: ${statusLabel}`)}" ${disabled ? "disabled" : ""}>
   <span class="twk-wallet-main">
-    ${createWalletIconHtml(wallet)}
-    ${createWalletNameHtml(wallet)}
+    ${createWalletIconHtml(wallet, wallet.readyState !== "loading")}
+    ${createWalletNameHtml(wallet, wallet.readyState !== "loading")}
   </span>
-  ${createWalletBadgeHtml(wallet, isConnecting ? labels.connecting : badge.label, badge.tone)}
+  ${createWalletBadgeHtml(wallet, rowBadgeLabel, rowBadgeTone, false)}
 </button>`;
   }
   function createWalletCardHtml(wallet, labels, selectedWalletId) {
@@ -84466,9 +84993,9 @@ ${variables}
     const badge = wallet.badge ?? resolveWalletBadge(wallet, labels);
     const statusLabel = wallet.disabledReason ?? (disabled ? labels.unavailable : isConnecting ? labels.connecting : badge.label);
     const indicator = createWalletStatusIndicatorHtml(wallet, labels, isConnecting);
-    return `<button class="twk-wallet-card" type="button" data-twk-wallet-id="${escapeAttribute(wallet.id)}" data-twk-adapter-id="${escapeAttribute(wallet.adapterId ?? wallet.id)}" data-twk-platforms="${escapeAttribute(getWalletPlatforms(wallet).join(" "))}" aria-label="${escapeAttribute(`${wallet.name}: ${statusLabel}`)}" ${disabled ? "disabled" : ""} ${wallet.readyState === "loading" ? 'data-loading="true"' : ""}>
-    <span class="twk-wallet-icon-wrap">${createWalletIconHtml(wallet)}${indicator}</span>
-    ${createWalletNameHtml(wallet)}
+    return `<button class="twk-wallet-card" type="button" data-twk-wallet-id="${escapeAttribute(wallet.id)}" data-twk-adapter-id="${escapeAttribute(wallet.adapterId ?? wallet.id)}" data-twk-platforms="${escapeAttribute(getWalletPlatforms(wallet).join(" "))}" data-availability="${escapeAttribute(resolveWalletAvailabilityState(wallet))}" aria-label="${escapeAttribute(`${wallet.name}: ${statusLabel}`)}" ${disabled ? "disabled" : ""} ${wallet.readyState === "loading" ? 'data-loading="true"' : ""}>
+    <span class="twk-wallet-icon-wrap">${createWalletIconHtml(wallet, true)}${indicator}</span>
+    ${createWalletNameHtml(wallet, true)}
   </button>`;
   }
   function createWalletCollectionHtml(wallets, labels, selectedWalletId, layout, scope) {
@@ -84476,7 +85003,7 @@ ${variables}
     return `<div class="twk-wallet-grid" data-layout="${escapeAttribute(layout)}" data-scope="${escapeAttribute(scope)}">${items}</div>`;
   }
   function resolveWalletListLayout(config) {
-    return config?.layout === "card" || config?.layout === "grid" ? "card" : "list";
+    return config?.layout === "card" ? "card" : "list";
   }
   function createWalletStatusIndicatorHtml(wallet, labels, isConnecting) {
     if (wallet.readyState === "loading") return "";
@@ -84490,21 +85017,21 @@ ${variables}
     }
     return "";
   }
-  function createWalletNameHtml(wallet) {
-    if (wallet.readyState === "loading") {
+  function createWalletNameHtml(wallet, skeletonWhenLoading) {
+    if (wallet.readyState === "loading" && skeletonWhenLoading) {
       return `<span class="twk-wallet-name twk-skeleton-line" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">${escapeHtml(wallet.name)}</span></span>`;
     }
     return `<span class="twk-wallet-name">${escapeHtml(wallet.name)}</span>`;
   }
-  function createWalletBadgeHtml(wallet, label, tone) {
-    if (wallet.readyState === "loading") {
+  function createWalletBadgeHtml(wallet, label, tone, skeletonWhenLoading = true) {
+    if (wallet.readyState === "loading" && skeletonWhenLoading) {
       return `<span class="twk-badge twk-skeleton-pill" data-loading="true" data-tone="muted"><span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">${escapeHtml(label)}</span></span>`;
     }
     return `<span class="twk-badge" data-tone="${escapeAttribute(tone ?? "muted")}">${escapeHtml(label)}</span>`;
   }
-  function createWalletIconHtml(wallet) {
-    if (wallet.readyState === "loading") {
-      return `<span class="twk-wallet-icon twk-skeleton-circle" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span></span>`;
+  function createWalletIconHtml(wallet, skeletonWhenLoading) {
+    if (wallet.readyState === "loading" && skeletonWhenLoading) {
+      return `<span class="twk-wallet-icon twk-skeleton-icon" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span></span>`;
     }
     const icon = wallet.icon ? `<img src="${escapeAttribute(wallet.icon)}" alt="" aria-hidden="true" onerror="this.remove()" /><span class="twk-wallet-icon-fallback" aria-hidden="true">${escapeHtml(wallet.name.slice(0, 1).toUpperCase())}</span>` : `<span aria-hidden="true">${escapeHtml(wallet.name.slice(0, 1).toUpperCase())}</span>`;
     return `<span class="twk-wallet-icon">${icon}</span>`;
@@ -84530,8 +85057,8 @@ ${variables}
   function createAllWalletsTriggerLabel(label) {
     return label === "All Wallets" ? "All wallets" : label;
   }
-  function createErrorHtml(message) {
-    return message ? `<div class="twk-error" role="alert">${escapeHtml(message)}</div>` : "";
+  function createErrorHtml(message, scope) {
+    return message ? `<div class="twk-error" ${scope ? `data-scope="${escapeAttribute(scope)}"` : ""} role="alert">${escapeHtml(message)}</div>` : "";
   }
   function resolveStatusErrorMessage(viewModel) {
     if (!viewModel.errorMessage) return void 0;
@@ -84552,6 +85079,12 @@ ${variables}
     if (isHardwareWallet(wallet)) return false;
     return wallet.readyState === "unsupported" || wallet.readyState === "notFound" && !isQrWallet(wallet);
   }
+  function resolveWalletAvailabilityState(wallet) {
+    if (isQrWallet(wallet)) return "qr";
+    if (wallet.readyState === "loading") return "checking";
+    if (wallet.readyState === "notFound" || wallet.readyState === "unsupported" || wallet.available === false) return "unavailable";
+    return "available";
+  }
   function resolveActiveWallet(wallets, walletId) {
     return wallets.find((wallet) => wallet.id === walletId) ?? wallets.find((wallet) => wallet.adapterId === walletId);
   }
@@ -84569,9 +85102,11 @@ ${variables}
   // ../ui/src/modal.ts
   var defaultConnectModalLabels = en2.connectModal;
   var AUTO_CONNECT_RETRY_DELAY_MS = 650;
+  var DETECT_FIRST_RENDER_MIN_MS = 600;
+  var DETECT_FALSE_GRACE_MS = 1800;
+  var DETECT_POLL_MS = 150;
   function shouldAutoRetryConnect(error, wallet, options) {
     if (options.isQrFlow) return false;
-    if (wallet.id === "gate" || wallet.adapterId === "gate") return false;
     if ((options.attempt ?? 0) >= 1) return false;
     const code2 = typeof error === "object" && error !== null && "code" in error ? String(error.code ?? "") : "";
     const message = error instanceof Error ? error.message : String(error);
@@ -84667,6 +85202,7 @@ ${variables}
     let allWalletsPrimed = false;
     let allWalletsLoading = false;
     let allWalletsTimer;
+    let availabilityRenderTimer;
     const getWalletOptions = () => mergeWalletOptionsWithCatalog(
       options.manager.getWallets().map((adapter2) => mapAdapterToWalletOption(adapter2, availability.get(adapter2.metadata.id), config.labels.connectModal)),
       config.labels.connectModal,
@@ -84723,27 +85259,73 @@ ${variables}
       }
       if (entering) focusPrimaryControl(root);
     };
-    const refreshAvailability = () => {
+    const scheduleAvailabilityRender = () => {
+      if (availabilityRenderTimer !== void 0) return;
+      const timer = documentRef.defaultView?.setTimeout(() => {
+        availabilityRenderTimer = void 0;
+        render();
+      }, 120);
+      if (timer === void 0) {
+        render();
+        return;
+      }
+      availabilityRenderTimer = timer;
+    };
+    const refreshAvailability = (refreshOptions = {}) => {
       for (const adapter2 of options.manager.getWallets()) {
         if (adapter2.metadata.availabilityMode === "on-demand") {
           if (availability.get(adapter2.metadata.id) === void 0) availability.set(adapter2.metadata.id, true);
           continue;
         }
-        if (!adapter2.isAvailable) {
+        if (!adapter2.detect && !adapter2.isAvailable) {
           availability.set(adapter2.metadata.id, true);
           continue;
         }
         const id2 = adapter2.metadata.id;
-        const first = availability.get(id2) === void 0;
+        const previous = availability.get(id2);
+        const first = previous === void 0 || refreshOptions.resetTransient === true && previous !== true;
         if (first) availability.set(id2, "loading");
-        const check = Promise.resolve(adapter2.isAvailable()).catch(() => false);
-        const settle2 = first ? Promise.all([check, new Promise((resolve) => documentRef.defaultView?.setTimeout(resolve, 600))]).then(([available]) => available) : check;
+        const check = detectWithGrace(() => detectAdapterAvailability(adapter2, first), first);
+        const settle2 = first ? Promise.all([check, new Promise((resolve) => documentRef.defaultView?.setTimeout(resolve, DETECT_FIRST_RENDER_MIN_MS))]).then(([available]) => available) : check;
         void settle2.then((available) => {
+          if (availability.get(id2) === true && available === false) return;
           availability.set(id2, available);
-          render();
+          scheduleAvailabilityRender();
         });
       }
       render();
+    };
+    const detectWithGrace = async (detectWallet, first) => {
+      if (await detectWallet()) return true;
+      if (!first) return false;
+      const deadline = Date.now() + DETECT_FALSE_GRACE_MS;
+      while (Date.now() < deadline) {
+        await new Promise((resolve) => documentRef.defaultView?.setTimeout(resolve, DETECT_POLL_MS));
+        if (await detectWallet()) return true;
+      }
+      return false;
+    };
+    const detectAdapterAvailability = async (adapter2, allowAsyncFallback) => {
+      if (await Promise.resolve(adapter2.detect?.()).catch(() => false)) return true;
+      if (!adapter2.detect && adapter2.isAvailable) return Promise.resolve(adapter2.isAvailable()).catch(() => false);
+      if (!allowAsyncFallback || !adapter2.isAvailable) return false;
+      return withAvailabilityTimeout(Promise.resolve(adapter2.isAvailable()).catch(() => false), DETECT_POLL_MS);
+    };
+    const withAvailabilityTimeout = (check, timeoutMs) => {
+      return new Promise((resolve) => {
+        let settled = false;
+        const timer = documentRef.defaultView?.setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          resolve(false);
+        }, timeoutMs);
+        void check.then((available) => {
+          if (settled) return;
+          settled = true;
+          if (timer) documentRef.defaultView?.clearTimeout(timer);
+          resolve(available);
+        });
+      });
     };
     const pushView = (nextView) => {
       if (view !== nextView) viewStack.push(nextView);
@@ -84775,7 +85357,8 @@ ${variables}
       errorTitle = void 0;
       errorMessage = void 0;
     };
-    const cancelConnectionFlow = (options2 = {}) => {
+    const cancelConnectionFlow = (flowOptions = {}) => {
+      if (activeConnectAdapterId) void options.manager.cancelPendingConnection();
       connectFlowId += 1;
       if (retryTimer !== void 0) {
         documentRef.defaultView?.clearTimeout(retryTimer);
@@ -84790,7 +85373,7 @@ ${variables}
       retryBusy = false;
       errorTitle = void 0;
       errorMessage = void 0;
-      if (options2.clearWallet !== false) {
+      if (flowOptions.clearWallet !== false) {
         selectedWalletId = void 0;
         activeWalletId = void 0;
       }
@@ -84988,7 +85571,7 @@ ${variables}
       const targetElement = resolveMountTarget(target, mode, documentRef);
       targetElement.append(root);
       render();
-      refreshAvailability();
+      if (mode !== "modal" || !root.hidden) refreshAvailability();
     };
     const closeModal = (options2 = {}) => {
       const hasActiveQrFlow = activeConnectIsQrFlow || activeConnectAdapterId === "walletconnect";
@@ -85012,7 +85595,7 @@ ${variables}
           const wasHidden = root.hidden;
           lastFocusedElement = documentRef.activeElement instanceof HTMLElement ? documentRef.activeElement : null;
           root.hidden = false;
-          refreshAvailability();
+          if (wasHidden) refreshAvailability({ resetTransient: true });
           if (wasHidden) config.modal.onModalOpen();
         }
       },
@@ -85030,6 +85613,7 @@ ${variables}
         if (qrCopyResetTimer !== void 0) documentRef.defaultView?.clearTimeout(qrCopyResetTimer);
         if (retryTimer !== void 0) documentRef.defaultView?.clearTimeout(retryTimer);
         if (allWalletsTimer !== void 0) documentRef.defaultView?.clearTimeout(allWalletsTimer);
+        if (availabilityRenderTimer !== void 0) documentRef.defaultView?.clearTimeout(availabilityRenderTimer);
         root?.remove();
         root = null;
       }
@@ -85684,43 +86268,6 @@ ${variables}
     return Object.keys(theme).length > 0 ? theme : void 0;
   }
 
-  // ../client/src/wallets/build-catalog.ts
-  function buildCatalog(wallets) {
-    return wallets.filter((wallet) => wallet.enabled !== false).map((wallet) => {
-      const icon = wallet.icon ?? getWalletIcon(wallet.id);
-      const item = {
-        id: wallet.id,
-        name: wallet.name,
-        enabled: wallet.enabled ?? true,
-        group: wallet.group ?? "popular",
-        transport: resolveTransport(wallet),
-        platforms: wallet.platforms,
-        homepage: wallet.homepage,
-        downloadUrl: wallet.downloadUrl ?? wallet.homepage,
-        ...icon ? { icon } : {},
-        ...wallet.featured !== void 0 ? { featured: wallet.featured } : {},
-        ...wallet.mobileDeepLink ? { mobileDeepLink: wallet.mobileDeepLink } : {},
-        ...wallet.supportsWalletConnect ? { supportsWalletConnect: wallet.supportsWalletConnect } : {}
-      };
-      if (wallet.integration === "injected") {
-        if (wallet.detect.providerPaths) item.providerPaths = wallet.detect.providerPaths;
-      }
-      if (wallet.integration === "tronweb3-bridge") {
-        if (wallet.injectedFallback?.providerPaths) item.providerPaths = wallet.injectedFallback.providerPaths;
-      }
-      if (wallet.integration === "walletconnect") {
-        item.badge = { label: "", tone: "qr" };
-      }
-      return item;
-    });
-  }
-  function resolveTransport(wallet) {
-    if (wallet.integration === "walletconnect" && wallet.id === "walletconnect") return "walletconnect";
-    if (wallet.platforms.includes("hardware")) return "hardware";
-    if (wallet.platforms.includes("extension")) return "extension";
-    return "mobile";
-  }
-
   // ../client/src/kit.ts
   function createWalletKit(config = {}) {
     configureSharedTronWeb(config.tronWeb);
@@ -85730,25 +86277,13 @@ ${variables}
     const uiConfig = resolveWalletUiConfig(ui);
     const modal = createWalletModal({ manager, ui });
     const buttonTheme = toThemeConfig(config.ui);
-    const button = config.connectButton ? createWalletButton({
-      manager,
-      modal,
-      ...buttonTheme ? { theme: buttonTheme } : {},
-      ...config.connectButton.label ? { label: config.connectButton.label } : {},
-      ...config.connectButton.connectedLabel ? { connectedLabel: config.connectButton.connectedLabel } : {}
-    }) : null;
-    const toast = config.ui?.toast ? createWalletToast({ manager, ui }) : null;
     const identityResolver = resolveIdentityResolver(config.identity, manager);
     const identityCache = /* @__PURE__ */ new Map();
+    const identityInFlight = /* @__PURE__ */ new Map();
+    const identityCooldown = /* @__PURE__ */ new Map();
     const identityCacheTtlMs = config.identity?.cacheTtlMs ?? 10 * 60 * 1e3;
+    const identityRateLimitCooldownMs = Math.min(2 * 60 * 1e3, Math.max(30 * 1e3, identityCacheTtlMs / 5));
     const balanceResolver = config.balance?.enabled === false ? void 0 : config.balance?.resolver ?? createDefaultTrxBalanceResolver();
-    if (typeof document !== "undefined") {
-      modal.mount();
-      toast?.mount();
-      if (config.connectButton?.target) button?.mount(config.connectButton.target);
-    }
-    const transactionRuntime = createTransactionRuntime(manager);
-    const submit = (methodHint, transaction, description) => transactionRuntime.signAndSendTransaction({ methodHint, transaction }, methodHint, description);
     const getRefreshTargetSession = (session) => {
       const latest = manager.getSession();
       if (!latest) return null;
@@ -85761,6 +86296,102 @@ ${variables}
       const walletId = session.metadata?.walletId;
       return typeof walletId === "string" && walletId.length > 0 ? walletId : session.adapterId;
     };
+    const refreshBalance = async () => {
+      const session = manager.getSession();
+      if (!session || !balanceResolver) return session?.balance;
+      try {
+        const result = await balanceResolver(session.account, { network: session.network, walletId: getEffectiveWalletId2(session) });
+        const balance = normalizeBalance(result);
+        const latest = getRefreshTargetSession(session);
+        if (!latest) return void 0;
+        if (!balance) return latest.balance;
+        await manager.setSession({ ...latest, balance, updatedAt: Date.now() });
+        return balance;
+      } catch (error) {
+        if (config.balance?.failSilently !== false) return getRefreshTargetSession(session)?.balance;
+        throw error;
+      }
+    };
+    const refreshIdentity = async () => {
+      const session = manager.getSession();
+      const account = session?.account;
+      if (!session || !account || !identityResolver) return void 0;
+      const key = `${session.network.id}:${account.address}`;
+      const cached = identityCache.get(key);
+      if (cached && cached.expiresAt > Date.now()) {
+        const latest = getRefreshTargetSession(session);
+        if (cached.identity && latest) {
+          await manager.setSession({
+            ...latest,
+            account: {
+              ...latest.account,
+              ...cached.identity.domain ? { domain: cached.identity.domain } : {},
+              ...cached.identity.displayName ? { displayName: cached.identity.displayName } : {},
+              ...cached.identity.avatar ? { avatar: cached.identity.avatar } : {}
+            },
+            updatedAt: Date.now()
+          });
+        }
+        return cached.identity;
+      }
+      const cooldownUntil = identityCooldown.get(key);
+      if (cooldownUntil && cooldownUntil > Date.now()) return void 0;
+      const inFlight = identityInFlight.get(key);
+      if (inFlight) return inFlight;
+      try {
+        const request2 = (async () => {
+          try {
+            const identity3 = await identityResolver(account, { network: session.network, walletId: getEffectiveWalletId2(session) });
+            if (identity3) identityCache.set(key, { identity: identity3, expiresAt: Date.now() + identityCacheTtlMs });
+            const latest = getRefreshTargetSession(session);
+            if (!latest) return identity3;
+            if (identity3) {
+              await manager.setSession({
+                ...latest,
+                account: {
+                  ...latest.account,
+                  ...identity3.domain ? { domain: identity3.domain } : {},
+                  ...identity3.displayName ? { displayName: identity3.displayName } : {},
+                  ...identity3.avatar ? { avatar: identity3.avatar } : {}
+                },
+                updatedAt: Date.now()
+              });
+            }
+            return identity3;
+          } catch (error) {
+            if (isRateLimitError(error)) identityCooldown.set(key, Date.now() + identityRateLimitCooldownMs);
+            throw error;
+          } finally {
+            identityInFlight.delete(key);
+          }
+        })();
+        identityInFlight.set(key, request2);
+        return await request2;
+      } catch (error) {
+        if (config.identity?.failSilently !== false) return void 0;
+        throw error;
+      }
+    };
+    const button = config.connectButton ? createWalletButton({
+      manager,
+      modal,
+      ...buttonTheme ? { theme: buttonTheme } : {},
+      ...config.connectButton.label ? { label: config.connectButton.label } : {},
+      ...config.connectButton.connectedLabel ? { connectedLabel: config.connectButton.connectedLabel } : {},
+      ...config.connectButton.showBalance !== void 0 ? { showBalance: config.connectButton.showBalance } : {},
+      accountPanelMode: uiConfig.accountPanel.mode === "inline" ? "dropdown" : "modal",
+      refreshAccountDetails: async () => {
+        await Promise.allSettled([refreshIdentity(), refreshBalance()]);
+      }
+    }) : null;
+    const toast = config.ui?.toast ? createWalletToast({ manager, ui }) : null;
+    if (typeof document !== "undefined") {
+      modal.mount();
+      toast?.mount();
+      if (config.connectButton?.target) button?.mount(config.connectButton.target);
+    }
+    const transactionRuntime = createTransactionRuntime(manager);
+    const submit = (methodHint, transaction, description) => transactionRuntime.signAndSendTransaction({ methodHint, transaction }, methodHint, description);
     return {
       manager,
       modal,
@@ -85779,72 +86410,15 @@ ${variables}
         modal.destroy();
         manager.destroy();
         identityCache.clear();
+        identityInFlight.clear();
+        identityCooldown.clear();
       },
       openModal: () => modal.open(),
       closeModal: () => modal.close(),
       disconnect: () => manager.disconnect(),
-      refreshBalance: async () => {
-        const session = manager.getSession();
-        if (!session || !balanceResolver) return session?.balance;
-        try {
-          const result = await balanceResolver(session.account, { network: session.network, walletId: getEffectiveWalletId2(session) });
-          const balance = normalizeBalance(result);
-          const latest = getRefreshTargetSession(session);
-          if (!latest) return void 0;
-          if (!balance) return latest.balance;
-          await manager.setSession({ ...latest, balance, updatedAt: Date.now() });
-          return balance;
-        } catch (error) {
-          if (config.balance?.failSilently !== false) return getRefreshTargetSession(session)?.balance;
-          throw error;
-        }
-      },
+      refreshBalance,
       refreshAccount: async () => manager.getAccount(),
-      refreshIdentity: async () => {
-        const session = manager.getSession();
-        const account = session?.account;
-        if (!session || !account || !identityResolver) return void 0;
-        const key = `${session.network.id}:${account.address}`;
-        const cached = identityCache.get(key);
-        if (cached && cached.expiresAt > Date.now()) {
-          const latest = getRefreshTargetSession(session);
-          if (cached.identity && latest) {
-            await manager.setSession({
-              ...latest,
-              account: {
-                ...latest.account,
-                ...cached.identity.domain ? { domain: cached.identity.domain } : {},
-                ...cached.identity.displayName ? { displayName: cached.identity.displayName } : {},
-                ...cached.identity.avatar ? { avatar: cached.identity.avatar } : {}
-              },
-              updatedAt: Date.now()
-            });
-          }
-          return cached.identity;
-        }
-        try {
-          const identity3 = await identityResolver(account, { network: session.network, walletId: getEffectiveWalletId2(session) });
-          if (identity3) identityCache.set(key, { identity: identity3, expiresAt: Date.now() + identityCacheTtlMs });
-          const latest = getRefreshTargetSession(session);
-          if (!latest) return identity3;
-          if (identity3) {
-            await manager.setSession({
-              ...latest,
-              account: {
-                ...latest.account,
-                ...identity3.domain ? { domain: identity3.domain } : {},
-                ...identity3.displayName ? { displayName: identity3.displayName } : {},
-                ...identity3.avatar ? { avatar: identity3.avatar } : {}
-              },
-              updatedAt: Date.now()
-            });
-          }
-          return identity3;
-        } catch (error) {
-          if (config.identity?.failSilently !== false) return void 0;
-          throw error;
-        }
-      },
+      refreshIdentity,
       getSession: manager.getSession.bind(manager),
       signMessage: (request2) => manager.signMessage(request2),
       signTransaction: (transaction) => manager.signTransaction(transaction),
@@ -85876,6 +86450,16 @@ ${variables}
       undelegateResource: (request2) => submit("undelegateResource", { to: request2.to, amountSun: String(request2.amountSun), resource: request2.resource }, request2.description),
       voteWitness: (request2) => submit("voteWitness", { votes: request2.votes }, request2.description)
     };
+  }
+  function isRateLimitError(error) {
+    const value = error;
+    const text = [
+      typeof value?.message === "string" ? value.message : "",
+      typeof value?.code === "string" ? value.code : "",
+      typeof value?.status === "number" ? String(value.status) : "",
+      typeof value?.response?.status === "number" ? String(value.response.status) : ""
+    ].join(" ");
+    return /\b429\b|too many requests|rate limit/i.test(text);
   }
 
   // src/index.ts

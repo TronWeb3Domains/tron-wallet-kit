@@ -13,6 +13,7 @@ import type {
   WalletAdapter,
   WalletAdapterType,
   WalletCapabilities,
+  WalletKitAppMetadata,
   WalletManager,
   WalletManagerConfig,
   WalletMetadata,
@@ -30,6 +31,15 @@ export type { WalletConnectAdapterOptions, WalletConnectNetworkName };
 
 
 export type DefaultAdaptersConfig = {
+  metadata?: WalletKitAppMetadata;
+  /** @deprecated Prefer `metadata.name`. */
+  appName?: string;
+  /** @deprecated Prefer `metadata.description`. */
+  appDescription?: string;
+  /** @deprecated Prefer `metadata.url`. */
+  appUrl?: string;
+  /** @deprecated Prefer `metadata.icons`. */
+  appIcons?: string[];
   wallets?: "all" | Array<string | WalletDescriptor>;
   disabledWallets?: readonly string[];
   walletConnectProjectId?: string;

@@ -16,6 +16,30 @@ pnpm add @tron-wallet-kit/ui@beta
 
 Most React dapps should use `@tron-wallet-kit/react`.
 
+## Runtime Catalog Input
+
+The UI package is catalog-agnostic. Wallet icons, names, platform metadata, and WalletConnect support
+come from the client runtime catalog, not from hardcoded UI lists. This keeps third-party wallets and
+custom descriptors out of the UI package.
+
+```ts
+import { createWalletModal } from "@tron-wallet-kit/ui";
+
+const modal = createWalletModal({
+  manager,
+  ui: {
+    catalog: [
+      {
+        id: "custom-wallet",
+        name: "Custom Wallet",
+        icon: "https://example.com/wallet.svg",
+        platforms: ["extension"]
+      }
+    ]
+  }
+});
+```
+
 ## Main Exports
 
 - `createWalletModal`
@@ -32,6 +56,10 @@ Most React dapps should use `@tron-wallet-kit/react`.
 ## Theming
 
 The UI is driven by `--twk-*` CSS variables. Theme presets include `light`, `dark`, `tron`, `tron-energy`, `nile`, `shasta`, `bandwidth`, `energy`, `sun`, `graphite`, `midnight`, `ocean`, `glass`, `rounded`, `crisp`, `soft`, `neon`, `terminal`, `minimal`, and `highContrast`.
+
+App metadata is not configured in this package. Pass metadata to `@tron-wallet-kit/client` or
+`@tron-wallet-kit/react`; the UI receives the wallet/session data it needs from the manager and
+runtime catalog.
 
 ## Status
 

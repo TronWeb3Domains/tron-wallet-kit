@@ -72,7 +72,7 @@ export function resolveWalletUiConfig(config: WalletUiConfig = {}): ResolvedWall
 }
 
 function normalizeWalletListLayout(layout: WalletListLayout | undefined): "list" | "card" {
-  if (layout === "card" || layout === "grid") return "card";
+  if (layout === "card") return "card";
   return "list";
 }
 
