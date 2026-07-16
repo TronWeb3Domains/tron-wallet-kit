@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import type { TronAuthAdapter } from "@tron-wallet-kit/auth";
 import { createWalletKit } from "@tron-wallet-kit/client";
 import type { WalletAdapter } from "@tron-wallet-kit/core";
 import { createThemeStyleProperties } from "@tron-wallet-kit/ui";
@@ -21,6 +22,7 @@ import {
   useTronBalance,
   useTronConnect,
   useTronDisconnect,
+  useTronAuth,
   useTrxName
 } from "../src/index";
 
@@ -173,6 +175,37 @@ describe("React wallet surfaces", () => {
     expect(html).toContain("12.5 TRX");
   });
 
+  it("renders SIWT auth prompt only when authentication is configured", async () => {
+    const kit = createWalletKit({ adapters: [createMockAdapter()], wallets: [] });
+    await kit.manager.connect("tronlink");
+    const authAdapter: TronAuthAdapter = {
+      getNonce: () => "nonce",
+      verify: async (input) => ({
+        ...input,
+        valid: true
+      })
+    };
+
+    const withoutAuth = renderToStaticMarkup(
+      createElement(
+        TronKitProvider,
+        { kit, config: getDefaultConfig({ appName: "TRON dApp" }) },
+        createElement(TronConnectButton, null)
+      )
+    );
+    const withAuth = renderToStaticMarkup(
+      createElement(
+        TronKitProvider,
+        { kit, config: getDefaultConfig({ appName: "TRON dApp" }), authenticationAdapter: authAdapter },
+        createElement(AuthStatusProbe)
+      )
+    );
+
+    expect(withoutAuth).not.toContain("Sign in with TRON");
+    expect(withAuth).toContain("Sign in with TRON");
+    expect(withAuth).toContain("auth:unauthenticated:true");
+  });
+
 
   it("renders the account panel with copy, QR, and recent transaction data", () => {
     const kit = createWalletKit();
@@ -234,6 +267,11 @@ function CustomHookWalletUi() {
       `sign:${signer.isPending}`
     ].join("|")
   );
+}
+
+function AuthStatusProbe() {
+  const auth = useTronAuth();
+  return createElement("output", null, `auth:${auth.status}:${auth.isAvailable}`);
 }
 
 function createMockAdapter(): WalletAdapter {

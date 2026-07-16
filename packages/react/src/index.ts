@@ -350,15 +350,35 @@ export function TronWalletProvider(props: TronWalletProviderProps) {
   const kit = kitRef.current;
   const authControllerRef = useRef<TronAuthController | null>(null);
   const ownsAuthControllerRef = useRef(false);
+  const authAdapterRef = useRef<TronAuthAdapter | undefined>(undefined);
+  const authOptionsRef = useRef<TronAuthControllerOptions | undefined>(undefined);
   if (props.authenticationController) {
     if (authControllerRef.current !== props.authenticationController) {
       if (ownsAuthControllerRef.current) authControllerRef.current?.destroy();
       authControllerRef.current = props.authenticationController;
       ownsAuthControllerRef.current = false;
+      authAdapterRef.current = undefined;
+      authOptionsRef.current = undefined;
     }
-  } else if (props.authenticationAdapter && !authControllerRef.current) {
-    authControllerRef.current = createWalletAuth(kit.manager, props.authenticationAdapter, props.authenticationOptions);
-    ownsAuthControllerRef.current = true;
+  } else if (props.authenticationAdapter) {
+    const shouldCreateAuthController =
+      !authControllerRef.current ||
+      !ownsAuthControllerRef.current ||
+      authAdapterRef.current !== props.authenticationAdapter ||
+      authOptionsRef.current !== props.authenticationOptions;
+    if (shouldCreateAuthController) {
+      if (ownsAuthControllerRef.current) authControllerRef.current?.destroy();
+      authControllerRef.current = createWalletAuth(kit.manager, props.authenticationAdapter, props.authenticationOptions);
+      ownsAuthControllerRef.current = true;
+      authAdapterRef.current = props.authenticationAdapter;
+      authOptionsRef.current = props.authenticationOptions;
+    }
+  } else if (authControllerRef.current) {
+    if (ownsAuthControllerRef.current) authControllerRef.current.destroy();
+    authControllerRef.current = null;
+    ownsAuthControllerRef.current = false;
+    authAdapterRef.current = undefined;
+    authOptionsRef.current = undefined;
   }
   const authController = authControllerRef.current;
   useEffect(() => {

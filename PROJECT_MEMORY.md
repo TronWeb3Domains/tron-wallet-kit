@@ -5279,3 +5279,20 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Remaining:
   - visual QA the React auth prompt with real wallets;
   - decide later whether vanilla/client should also own an auth modal surface.
+
+## 2026-07-16 React SIWT Lifecycle Hardening
+
+- Fixed a React provider lifecycle issue found after adding the SIWT prompt:
+  - removing `authenticationAdapter` now destroys and clears the owned auth controller;
+  - changing `authenticationAdapter` or `authenticationOptions` recreates the owned controller;
+  - external `authenticationController` remains respected and is not destroyed by the provider.
+- Added React SSR test coverage:
+  - auth prompt renders only when authentication is configured;
+  - `useTronAuth()` reports availability/state inside the provider.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed;
+  - `pnpm --filter @tron-wallet-kit/react test -- --run --reporter=dot` passed;
+  - `pnpm --filter @tron-wallet-kit/react build` passed;
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+- Remaining:
+  - visual QA the toggle-on/toggle-off flow in `react-basic` with a real wallet.
