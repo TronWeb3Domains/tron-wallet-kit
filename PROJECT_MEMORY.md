@@ -5169,3 +5169,30 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Remaining:
   - clean knip baseline findings and make it blocking later;
   - optional Vue/Nuxt docs/examples remain deferred.
+
+## 2026-07-16 Knip Baseline Cleanup
+
+- Continued parity quality-gate cleanup after P2.5.
+- Updated `knip.json` to workspace-aware config:
+  - packages;
+  - adapter packages;
+  - examples;
+  - website;
+  - root scripts/config files.
+- Removed intentional false positives:
+  - generated/browser IIFE artifacts are ignored;
+  - generated wallet icon aliases and public React aliases are ignored as duplicate exports;
+  - template wallet entry is ignored as a guide file.
+- Removed real dead code:
+  - deleted unused `packages/ui/src/locales/vi.ts`;
+  - made internal `isUserRejected` non-exported;
+  - removed unused `normalizeConnectErrorMessage`.
+- Changed `quality:knip` from `knip --no-exit-code` to `knip --no-config-hints`, so unused files/deps/exports now fail the gate.
+- Verification:
+  - `pnpm check:quality` passed.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot` passed with 43 tests.
+- Remaining:
+  - jscpd still reports known clones under the allowed threshold;
+  - optional Vue/Nuxt docs/examples remain deferred unless requested.

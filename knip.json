@@ -1,30 +1,84 @@
 {
   "$schema": "https://unpkg.com/knip@latest/schema.json",
-  "entry": [
-    "packages/*/src/index.ts",
-    "packages/adapters/*/src/index.ts",
-    "examples/*/src/**/*.{ts,tsx}",
-    "website/.vitepress/config.ts",
-    "website/.vitepress/theme/index.ts",
-    "scripts/**/*.mjs"
-  ],
-  "project": [
-    "packages/**/*.{ts,tsx}",
-    "examples/**/*.{ts,tsx}",
-    "website/.vitepress/**/*.{ts,vue}",
-    "scripts/**/*.mjs",
-    "*.config.{js,cjs,mjs,ts}"
-  ],
-  "ignore": [
-    "**/dist/**",
-    "**/*.d.ts",
-    "**/node_modules/**",
-    "**/.vitepress/cache/**",
-    "**/.vitepress/dist/**",
-    ".quality/**",
-    "tmp/**"
-  ],
   "ignoreDependencies": [
-    "@types/react"
-  ]
+    "@types/react",
+    "@tronweb3/tronwallet-adapter-imtoken",
+    "@tronweb3/tronwallet-adapter-metamask-tron"
+  ],
+  "ignoreFiles": [
+    "examples/public/vendor/**",
+    "website/public/**"
+  ],
+  "ignoreIssues": {
+    "packages/client/src/wallets/icons.generated.ts": ["duplicates"],
+    "packages/react/src/index.ts": ["duplicates"],
+    "packages/client/src/wallets/entries/_template.ts": ["files"]
+  },
+  "workspaces": {
+    ".": {
+      "entry": [
+        "package.json",
+        "scripts/**/*.mjs",
+        "*.config.{js,cjs,mjs,ts}",
+        ".dependency-cruiser.cjs"
+      ],
+      "project": [
+        "scripts/**/*.mjs",
+        "*.config.{js,cjs,mjs,ts}",
+        ".dependency-cruiser.cjs"
+      ],
+      "ignoreDependencies": [
+        "@vitejs/plugin-react",
+        "vite",
+        "vitepress"
+      ]
+    },
+    "packages/*": {
+      "entry": [
+        "src/index.ts",
+        "test/**/*.ts"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx}",
+        "test/**/*.ts"
+      ],
+      "ignoreDependencies": [
+        "@tronweb3/tronwallet-adapter-ledger"
+      ]
+    },
+    "packages/adapters/*": {
+      "entry": [
+        "src/index.ts",
+        "test/**/*.ts"
+      ],
+      "project": [
+        "src/**/*.ts",
+        "test/**/*.ts"
+      ]
+    },
+    "examples": {
+      "entry": [
+        "vite.config.ts",
+        "react-basic/src/main.tsx"
+      ],
+      "project": [
+        "**/*.{ts,tsx}"
+      ],
+      "ignoreDependencies": [
+        "@tron-wallet-kit/adapter-tronlink",
+        "@tron-wallet-kit/adapter-walletconnect",
+        "@tron-wallet-kit/browser",
+        "@walletconnect/sign-client"
+      ]
+    },
+    "website": {
+      "entry": [
+        ".vitepress/config.ts",
+        ".vitepress/theme/index.ts"
+      ],
+      "project": [
+        ".vitepress/**/*.{ts,vue}"
+      ]
+    }
+  }
 }

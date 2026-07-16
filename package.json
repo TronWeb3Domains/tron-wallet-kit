@@ -15,7 +15,7 @@
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "eslint .",
-    "quality:knip": "knip --no-exit-code",
+    "quality:knip": "knip --no-config-hints",
     "quality:jscpd": "jscpd .",
     "quality:deps": "depcruise packages examples website/.vitepress --config .dependency-cruiser.cjs",
     "check:quality": "pnpm quality:knip && pnpm quality:jscpd && pnpm quality:deps"

@@ -65,7 +65,7 @@ export async function resolveInjectedNetwork(provider: InjectedTronProvider, fal
   return fallback ?? TRON_NILE;
 }
 
-export function isUserRejected(error: unknown): boolean {
+function isUserRejected(error: unknown): boolean {
   if (typeof error !== "object" || error === null) return false;
   const code = "code" in error ? (error as { code?: unknown }).code : undefined;
   const message = "message" in error ? String((error as { message?: unknown }).message) : "";

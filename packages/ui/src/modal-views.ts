@@ -7,10 +7,6 @@ import { filterWalletOptions, getFeaturedWalletOptions } from "./wallet-catalog"
 import { inferWalletPlatforms, isHardwareWallet, isQrWallet } from "./wallet-kinds";
 import type { ConnectModalLabels, ConnectModalView, ConnectModalViewModel, WalletOptionViewModel } from "./types";
 
-export function normalizeConnectErrorMessage(error: unknown, wallet?: WalletOptionViewModel): string {
-  return resolveConnectErrorDisplay(error, wallet).message;
-}
-
 function resolveConnectErrorDisplay(error: unknown, wallet?: WalletOptionViewModel, messages?: WalletKitErrorMessageCatalog, title?: string): { title: string; message: string } {
   if (title && typeof error === "string") return { title, message: error };
   const raw = error instanceof Error ? error.message : String(error);

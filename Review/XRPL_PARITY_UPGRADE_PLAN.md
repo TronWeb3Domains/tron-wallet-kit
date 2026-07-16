@@ -171,8 +171,12 @@ TRON has CI but lacks the static-quality trifecta XRPL runs:
 - CI now runs `pnpm check:quality`.
 - `dependency-cruiser` is configured for runtime circular dependency gates.
 - `jscpd` runs as a duplicate-code gate with a project threshold.
-- `knip` currently runs as a baseline report with `--no-exit-code`; it exposes existing unused files/deps/exports without blocking CI until cleanup is complete.
-- Verification: `pnpm check:quality` passed.
+- Follow-up cleanup completed on 2026-07-16:
+  - `knip` now runs as a blocking gate with `--no-config-hints`;
+  - removed stale Vietnamese locale file from codebase;
+  - removed unused internal exports from injected detection and modal views;
+  - workspace-aware `knip.json` now excludes intentional generated/IIFE artifacts and duplicate public aliases.
+- Verification: `pnpm check:quality` passed with blocking `knip`.
 
 ### 6. Raise the mobile bottom-sheet breakpoint
 
