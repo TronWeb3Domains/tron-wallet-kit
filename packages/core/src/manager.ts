@@ -4,6 +4,7 @@ import { WalletEventEmitter } from "./events";
 import type { WalletEventListener, WalletEventName } from "./events";
 import { NetworkRegistry } from "./networks";
 import { MemoryWalletStorage } from "./storage";
+import { WalletTransactionStore } from "./tx-store";
 import { WALLET_STORAGE_VERSION } from "./types";
 import type {
   ConnectOptions,
@@ -39,6 +40,7 @@ export class WalletManager {
   readonly storage: WalletStorage;
   readonly storageKey: string;
   readonly appName: string | undefined;
+  readonly transactionStore: WalletTransactionStore | null;
   private readonly adapters = new Map<string, WalletAdapter>();
   private readonly transactions: WalletTransaction[] = [];
   private session: WalletSession | null = null;
@@ -52,6 +54,15 @@ export class WalletManager {
     this.registry = new NetworkRegistry(config.networks);
     this.storage = config.storage ?? new MemoryWalletStorage();
     this.storageKey = config.storageKey ?? "session";
+    this.transactionStore =
+      config.transactionStore === false || config.transactionStore?.enabled === false
+        ? null
+        : new WalletTransactionStore({
+            storage: this.storage,
+            keyPrefix: config.transactionStore?.storageKey ?? `${this.storageKey}:transactions`,
+            ...(config.transactionStore?.max !== undefined ? { max: config.transactionStore.max } : {}),
+            ...(config.transactionStore?.staleSubmittedMs !== undefined ? { staleSubmittedMs: config.transactionStore.staleSubmittedMs } : {})
+          });
     this.config.adapters?.forEach((adapter) => this.register(adapter));
   }
 
@@ -297,6 +308,8 @@ export class WalletManager {
       ...(input.raw !== undefined ? { raw: input.raw } : {})
     };
     this.transactions.unshift(transaction);
+    this.applyTransactionLimitAndStaleness();
+    void this.persistTransactions();
     this.events.emit("tx_submitted", { transaction });
     return transaction;
   }
@@ -306,12 +319,14 @@ export class WalletManager {
     if (!transaction) return null;
     transaction.status = status;
     transaction.updatedAt = Date.now();
+    void this.persistTransactions();
     if (status === "confirmed") this.events.emit("tx_confirmed", { transaction });
     if (status === "failed") this.events.emit("tx_failed", { transaction, error });
     return transaction;
   }
 
   getTransactions(limit?: number): WalletTransaction[] {
+    this.applyTransactionLimitAndStaleness();
     return typeof limit === "number" ? this.transactions.slice(0, limit) : [...this.transactions];
   }
 
@@ -324,10 +339,14 @@ export class WalletManager {
   }
 
   async setSession(session: WalletSession): Promise<void> {
+    const previous = this.session;
     this.session = session;
     this.activeAdapterId = session.adapterId;
     const envelope: StoredWalletSessionEnvelope = { version: WALLET_STORAGE_VERSION, session: createStoredSession(session), updatedAt: Date.now() };
     await this.storage.setItem(this.storageKey, JSON.stringify(envelope));
+    if (!previous || previous.account.address !== session.account.address || previous.network.id !== session.network.id) {
+      await this.loadTransactionsForSession(session);
+    }
   }
 
   async cancelPendingConnection(exceptAdapterId?: string): Promise<void> {
@@ -538,6 +557,7 @@ export class WalletManager {
       updatedAt: Date.now()
     };
     this.events.emit("accountChanged", { account, session: this.session });
+    this.transactions.length = 0;
     void this.setSession(this.session);
   }
 
@@ -555,7 +575,31 @@ export class WalletManager {
       updatedAt: Date.now()
     };
     this.events.emit("networkChanged", { network, session: this.session });
+    this.transactions.length = 0;
     void this.setSession(this.session);
+  }
+
+  private async loadTransactionsForSession(session: WalletSession): Promise<void> {
+    if (!this.transactionStore) {
+      this.applyTransactionLimitAndStaleness();
+      return;
+    }
+    const loaded = await this.transactionStore.load(session.account.address, session.network.id);
+    this.transactions.length = 0;
+    this.transactions.push(...loaded);
+  }
+
+  private async persistTransactions(): Promise<void> {
+    const session = this.session;
+    if (!session || !this.transactionStore) return;
+    await this.transactionStore.save(session.account.address, session.network.id, this.transactions);
+  }
+
+  private applyTransactionLimitAndStaleness(): void {
+    if (!this.transactionStore) return;
+    const normalized = this.transactionStore.normalize(this.transactions);
+    this.transactions.length = 0;
+    this.transactions.push(...normalized);
   }
 }
 

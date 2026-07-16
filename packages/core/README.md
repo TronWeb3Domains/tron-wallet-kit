@@ -57,6 +57,25 @@ const manager = new WalletManager({
 const session = await manager.connect("my-wallet");
 ```
 
+## Transaction Store
+
+`WalletManager` keeps recent transactions per `account + network`. When a storage adapter is
+provided, submitted transactions are persisted and restored with the session.
+
+```ts
+const manager = new WalletManager({
+  storage,
+  transactionStore: {
+    max: 20,
+    staleSubmittedMs: 10 * 60 * 1000
+  },
+  adapters: [myAdapter]
+});
+```
+
+Submitted transactions older than `staleSubmittedMs` are reported as `unknown` until your app updates
+them to `confirmed` or `failed`.
+
 ## Status
 
 This package is part of the TRON Wallet Kit beta release line. Use the `beta` npm tag until the stable public release is announced.

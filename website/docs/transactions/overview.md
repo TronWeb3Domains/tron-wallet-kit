@@ -74,6 +74,25 @@ Throw from the resolver to cancel signing before the wallet request is sent.
 | `sendRawTransaction(tx)` | Broadcast a raw signed transaction. |
 | `signAndSendTransaction(tx)` | Sign and broadcast in one call. |
 
+## Recent transactions
+
+Broadcasted transactions are stored per connected `account + network`. The account panel reads this
+same store for its Recent Transactions section.
+
+```ts
+const kit = createWalletKit({
+  metadata: { name: "My TRON dApp" },
+  useBrowserStorage: true,
+  transactionStore: {
+    max: 20,
+    staleSubmittedMs: 10 * 60 * 1000
+  }
+});
+```
+
+Submitted entries older than `staleSubmittedMs` become `unknown` until the app confirms or fails
+them with the manager transaction lifecycle.
+
 ## Resources and governance
 
 ```ts

@@ -66,6 +66,23 @@ const kit = createWalletKit({
 });
 ```
 
+## Recent Transactions
+
+Broadcasted transactions are stored per `account + network` and are exposed through
+`kit.manager.getTransactions()`. The account panel uses the same list for its recent transaction
+view.
+
+```ts
+const kit = createWalletKit({
+  metadata: { name: "My TRON dApp" },
+  useBrowserStorage: true,
+  transactionStore: {
+    max: 20,
+    staleSubmittedMs: 10 * 60 * 1000
+  }
+});
+```
+
 ## Status
 
 This package is part of the TRON Wallet Kit beta release line. Use the `beta` npm tag until the stable public release is announced.

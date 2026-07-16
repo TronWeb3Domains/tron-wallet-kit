@@ -87,6 +87,14 @@ Ref: `xrplWalletKit/packages/core/src/tx-store.ts`.
 **Why:** the account panel already renders "Recent" but has no persistent source; this
 closes the loop and gives correct pending/stale/confirmed states across reloads.
 
+**Implementation status (2026-07-16):**
+- Core `WalletTransactionStore` added in `packages/core/src/tx-store.ts`.
+- `WalletManager` now persists recent transactions per `account + network` when storage is available.
+- Store supports `max` cap and `staleSubmittedMs`; stale submitted entries become `unknown`.
+- Existing `manager.addTransaction`, `updateTransaction`, and `getTransactions` APIs remain intact.
+- Account panel already consumes `manager.getTransactions()`, so restored transactions flow into recent transaction UI.
+- Core tests cover persistence, cap, and stale handling.
+
 ### 3. Elevate `@tron-wallet-kit/auth` to a RainbowKit-style adapter
 
 **What XRPL has:** `createWalletAuth(manager, adapter, options)` →

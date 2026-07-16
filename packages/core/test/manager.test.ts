@@ -1,5 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
-import { MemoryWalletStorage, TRON_MAINNET, WALLET_STORAGE_VERSION, WalletKitError, WalletManager, formatWalletError, normalizeWalletError, type WalletAdapter, type WalletSession } from "../src/index";
+import {
+  MemoryWalletStorage,
+  TRON_MAINNET,
+  WALLET_STORAGE_VERSION,
+  WALLET_TRANSACTION_STORAGE_VERSION,
+  WalletKitError,
+  WalletManager,
+  formatWalletError,
+  normalizeWalletError,
+  type WalletAdapter,
+  type WalletSession,
+  type WalletTransaction
+} from "../src/index";
 
 function createAdapter(): WalletAdapter {
   return {
@@ -179,6 +191,64 @@ describe("WalletManager", () => {
 
     expect(manager.getTransactions()[0]?.hash).toBe("tx-123");
     expect(txEvents).toEqual(["tx-123"]);
+  });
+
+  it("persists recent transactions per account and network", async () => {
+    const storage = new MemoryWalletStorage();
+    const first = new WalletManager({ adapters: [createAdapter()], storage, transactionStore: { max: 5 } });
+    await first.connect("mock", { network: TRON_MAINNET });
+    await first.submitTransaction({ transaction: { raw_data: {} }, methodHint: "transferTrx", description: "Send TRX" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const second = new WalletManager({ adapters: [createAdapter()], autoReconnect: true, storage, transactionStore: { max: 5 } });
+    await second.autoReconnect();
+
+    expect(second.getTransactions()).toHaveLength(1);
+    expect(second.getTransactions()[0]).toMatchObject({
+      hash: "tx-123",
+      account: "TMockAddress",
+      network: { id: "mainnet" },
+      methodHint: "transferTrx",
+      description: "Send TRX"
+    });
+  });
+
+  it("caps stored transactions and marks stale submitted entries unknown", async () => {
+    const storage = new MemoryWalletStorage();
+    const now = Date.now();
+    const stale = now - 10_000;
+    const older = now - 20_000;
+    const makeTransaction = (hash: string, submittedAt: number): WalletTransaction => ({
+      id: `${hash}:${submittedAt}`,
+      hash,
+      adapterId: "mock",
+      account: "TStoredAddress",
+      network: TRON_MAINNET,
+      status: "submitted",
+      submittedAt,
+      updatedAt: submittedAt
+    });
+    await storage.setItem("session", JSON.stringify({ version: WALLET_STORAGE_VERSION, session: createStoredSession(), updatedAt: Date.now() }));
+    await storage.setItem(
+      "session:transactions:mainnet:TStoredAddress",
+      JSON.stringify({
+        version: WALLET_TRANSACTION_STORAGE_VERSION,
+        transactions: [makeTransaction("old", stale), makeTransaction("new", now), makeTransaction("older", older)],
+        updatedAt: Date.now()
+      })
+    );
+    const manager = new WalletManager({
+      adapters: [createAdapter()],
+      autoReconnect: true,
+      storage,
+      transactionStore: { max: 2, staleSubmittedMs: 5_000 }
+    });
+
+    await manager.autoReconnect();
+
+    expect(manager.getTransactions()).toHaveLength(2);
+    expect(manager.getTransactions()[0]).toMatchObject({ hash: "new", status: "submitted" });
+    expect(manager.getTransactions()[1]).toMatchObject({ hash: "old", status: "unknown" });
   });
 
   it("forwards adapter account, network, and disconnect callbacks into manager state", async () => {

@@ -4,6 +4,7 @@ export * from "./events";
 export * from "./manager";
 export * from "./networks";
 export * from "./storage";
+export * from "./tx-store";
 export * from "./types";
 export * from "./utils";
 export * from "./wallet-registry";

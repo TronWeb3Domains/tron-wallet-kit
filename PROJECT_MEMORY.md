@@ -5075,3 +5075,29 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Remaining:
   - build kit-owned confirmation UI/modal surface on top of the runtime hook;
   - proceed to P1.2 durable transaction history store.
+
+## 2026-07-16 XRPL Parity P1.2 Transaction History Store
+
+- Implemented `Review/XRPL_PARITY_UPGRADE_PLAN.md` P1.2:
+  - added `WalletTransactionStore` in core;
+  - added `WALLET_TRANSACTION_STORAGE_VERSION`;
+  - added `WalletTransactionStoreOptions`;
+  - wired `WalletManager` to hydrate recent transactions per `account + network`;
+  - persisted transaction changes after add/update;
+  - kept existing synchronous `addTransaction`, `updateTransaction`, and `getTransactions` APIs intact.
+- Store behavior:
+  - caps entries with `transactionStore.max`;
+  - marks stale `submitted` entries as `unknown` after `transactionStore.staleSubmittedMs`;
+  - uses the same `WalletStorage` abstraction as sessions;
+  - account panel already reads `manager.getTransactions()`, so restored transactions flow into the Recent Transactions UI.
+- Docs updated:
+  - `packages/core/README.md`;
+  - `packages/client/README.md`;
+  - `website/docs/transactions/overview.md`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/core typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/core test -- --run --reporter=dot` passed with 25 tests.
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+- Remaining:
+  - run client tests after final docs/spec update;
+  - proceed to P1.3 auth adapter/controller.

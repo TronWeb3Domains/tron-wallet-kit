@@ -209,11 +209,19 @@ export interface WalletKitAppMetadata {
 }
 
 export const WALLET_STORAGE_VERSION = 1 as const;
+export const WALLET_TRANSACTION_STORAGE_VERSION = 1 as const;
 
 export interface StoredWalletSessionEnvelope {
   version: typeof WALLET_STORAGE_VERSION;
   session: WalletSession;
   updatedAt: number;
+}
+
+export interface WalletTransactionStoreOptions {
+  enabled?: boolean;
+  storageKey?: string;
+  max?: number;
+  staleSubmittedMs?: number;
 }
 
 export interface WalletManagerConfig {
@@ -230,6 +238,7 @@ export interface WalletManagerConfig {
   networks?: WalletNetwork[];
   storage?: WalletStorage;
   storageKey?: string;
+  transactionStore?: false | WalletTransactionStoreOptions;
   autoReconnect?: boolean;
   recoveryRetryDelaysMs?: number[];
   adapters?: WalletAdapter[];
