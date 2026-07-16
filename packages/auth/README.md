@@ -48,6 +48,33 @@ const message = createSignInMessage({
 });
 ```
 
+## Controller Flow
+
+For client-side orchestration, use `createWalletAuth(manager, adapter)`. The controller exposes a
+small state machine: `unauthenticated`, `loading`, `authenticated`, and `error`.
+
+```ts
+import { createTronAuthenticationAdapter, createWalletAuth } from "@tron-wallet-kit/auth";
+
+const authAdapter = createTronAuthenticationAdapter({
+  getNonce: async () => fetch("/auth/nonce").then((r) => r.text()),
+  verify: async (input) =>
+    fetch("/auth/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input)
+    }).then((r) => r.json())
+});
+
+const auth = createWalletAuth(kit.manager, authAdapter, {
+  domain: new URL(metadata.url).host,
+  uri: metadata.url,
+  statement: `Sign in to ${metadata.name}`
+});
+
+const state = await auth.signIn();
+```
+
 ## Status
 
 This package is part of the TRON Wallet Kit beta release line. Use the `beta` npm tag until the stable public release is announced.

@@ -111,6 +111,17 @@ Add docs `auth/custom-backend.md` + `auth/nextjs.md` mirroring XRPL.
 
 **Why:** SIWT is a headline masterplan feature; today only low-level helpers exist.
 
+**Implementation status (2026-07-16):**
+- `@tron-wallet-kit/auth` now exports:
+  - `createTronAuthenticationAdapter`;
+  - `createWalletAuth`;
+  - `TronAuthController`;
+  - `TronAuthState`.
+- Controller implements `unauthenticated | loading | authenticated | error` state flow.
+- Existing SIWT message and verification primitives remain intact.
+- Tests cover successful nonce -> sign -> verify flow and not-connected error flow.
+- Remaining: integrate optional sign-in step into the connect modal when an auth adapter is present; add deeper backend guide pages if needed.
+
 ---
 
 ## P2 upgrades — completeness

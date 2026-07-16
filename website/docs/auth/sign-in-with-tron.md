@@ -45,6 +45,36 @@ async function signIn(address: string) {
 
 In a vanilla app, use `kit.signMessage(message)` instead of the hook.
 
+## Controller
+
+`createWalletAuth` wraps nonce, message creation, wallet signing, and backend verification in a
+small state machine.
+
+```ts
+import { createTronAuthenticationAdapter, createWalletAuth } from "@tron-wallet-kit/auth";
+
+const authAdapter = createTronAuthenticationAdapter({
+  getNonce: async () => fetch("/auth/nonce").then((r) => r.text()),
+  verify: async (input) =>
+    fetch("/auth/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input),
+    }).then((r) => r.json()),
+});
+
+const auth = createWalletAuth(kit.manager, authAdapter, {
+  domain: window.location.host,
+  uri: window.location.origin,
+  statement: "Sign in to My dApp",
+});
+
+const state = await auth.signIn();
+```
+
+The state is one of `unauthenticated`, `loading`, `authenticated`, or `error`. Subscribe to it when
+you need to drive custom UI.
+
 ## Server
 
 ```ts

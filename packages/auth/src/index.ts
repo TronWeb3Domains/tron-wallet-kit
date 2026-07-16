@@ -90,3 +90,5 @@ export async function verifyTronSignature(
   if (options.verifier) return Boolean(await options.verifier(input));
   return Boolean(input.address && input.message && (input.signature ?? input.proof));
 }
+
+export * from "./auth-controller";

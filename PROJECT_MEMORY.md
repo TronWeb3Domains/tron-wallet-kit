@@ -5098,6 +5098,32 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/core typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/core test -- --run --reporter=dot` passed with 25 tests.
   - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed with 72 tests.
 - Remaining:
-  - run client tests after final docs/spec update;
   - proceed to P1.3 auth adapter/controller.
+
+## 2026-07-16 XRPL Parity P1.3 Auth Controller
+
+- Implemented `Review/XRPL_PARITY_UPGRADE_PLAN.md` P1.3 first layer:
+  - added `createTronAuthenticationAdapter`;
+  - added `createWalletAuth`;
+  - added auth state machine types: `unauthenticated`, `loading`, `authenticated`, `error`;
+  - kept existing SIWT message/verify primitives intact.
+- Controller behavior:
+  - requires an active `WalletManager` session;
+  - calls adapter `getNonce`;
+  - builds or delegates message creation;
+  - signs through `manager.signMessage`;
+  - verifies through adapter `verify`;
+  - exposes `getState`, `signIn`, `signOut`, and `subscribe`.
+- Docs updated:
+  - `packages/auth/README.md`;
+  - `website/docs/auth/sign-in-with-tron.md`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/auth typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/auth test -- --run --reporter=dot` passed with 3 tests.
+  - `pnpm --filter @tron-wallet-kit/auth build` passed.
+  - `pnpm --filter @tron-wallet-kit/website build` passed.
+- Remaining:
+  - wire optional sign-in step into connect modal when an auth adapter is provided;
+  - add custom backend and Next.js auth docs if needed.
