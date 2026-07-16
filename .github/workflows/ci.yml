@@ -34,6 +34,9 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Quality gates
+        run: pnpm check:quality
+
       - name: Typecheck
         run: pnpm typecheck
 

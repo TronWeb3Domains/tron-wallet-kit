@@ -1,0 +1,30 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "entry": [
+    "packages/*/src/index.ts",
+    "packages/adapters/*/src/index.ts",
+    "examples/*/src/**/*.{ts,tsx}",
+    "website/.vitepress/config.ts",
+    "website/.vitepress/theme/index.ts",
+    "scripts/**/*.mjs"
+  ],
+  "project": [
+    "packages/**/*.{ts,tsx}",
+    "examples/**/*.{ts,tsx}",
+    "website/.vitepress/**/*.{ts,vue}",
+    "scripts/**/*.mjs",
+    "*.config.{js,cjs,mjs,ts}"
+  ],
+  "ignore": [
+    "**/dist/**",
+    "**/*.d.ts",
+    "**/node_modules/**",
+    "**/.vitepress/cache/**",
+    "**/.vitepress/dist/**",
+    ".quality/**",
+    "tmp/**"
+  ],
+  "ignoreDependencies": [
+    "@types/react"
+  ]
+}

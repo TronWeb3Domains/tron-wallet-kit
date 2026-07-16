@@ -161,11 +161,30 @@ TRON has CI but lacks the static-quality trifecta XRPL runs:
 - Wire a `check:quality` script and add it as a CI step. Config templates exist in
   `xrplWalletKit/{knip.json,.jscpd.json,.dependency-cruiser.cjs}`.
 
+**Implementation status (2026-07-16):**
+- Added `knip.json`, `.jscpd.json`, and `.dependency-cruiser.cjs`.
+- Added scripts:
+  - `quality:knip`;
+  - `quality:jscpd`;
+  - `quality:deps`;
+  - `check:quality`.
+- CI now runs `pnpm check:quality`.
+- `dependency-cruiser` is configured for runtime circular dependency gates.
+- `jscpd` runs as a duplicate-code gate with a project threshold.
+- `knip` currently runs as a baseline report with `--no-exit-code`; it exposes existing unused files/deps/exports without blocking CI until cleanup is complete.
+- Verification: `pnpm check:quality` passed.
+
 ### 6. Raise the mobile bottom-sheet breakpoint
 
 `packages/ui/src/styles.ts` uses `@media (max-width: 480px)`; many phones are wider in
 landscape / large-screen portrait. Raise to ~600–640px (XRPL uses 640px) so the
 bottom-sheet treatment applies on more devices. Low-risk CSS-only change.
+
+**Implementation status (2026-07-16):**
+- Raised the SDK mobile sheet breakpoint in `packages/ui/src/styles.ts` from `480px` to `640px`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/website build` passed.
 
 ### 7. (Optional) Vue/Nuxt support
 

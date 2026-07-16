@@ -1,0 +1,21 @@
+{
+  "minLines": 14,
+  "minTokens": 100,
+  "threshold": 8,
+  "reporters": [
+    "console"
+  ],
+  "output": ".quality/jscpd",
+  "gitignore": true,
+  "ignore": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/.quality/**",
+    "**/.vitepress/cache/**",
+    "**/.vitepress/dist/**",
+    "**/tmp/**",
+    "**/*.min.js",
+    "examples/public/vendor/**",
+    "website/public/**"
+  ]
+}

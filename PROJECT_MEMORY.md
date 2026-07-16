@@ -5147,3 +5147,25 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - deeper per-wallet adapter pages;
   - optional use-case pages;
   - deeper Next.js/auth backend guides.
+
+## 2026-07-16 XRPL Parity P2.5 Quality Gates And P2.6 Breakpoint
+
+- Implemented `Review/XRPL_PARITY_UPGRADE_PLAN.md` P2.5:
+  - added `knip.json`;
+  - added `.jscpd.json`;
+  - added `.dependency-cruiser.cjs`;
+  - added root scripts `quality:knip`, `quality:jscpd`, `quality:deps`, and `check:quality`;
+  - added CI `Quality gates` step running `pnpm check:quality`.
+- Gate behavior:
+  - dependency-cruiser checks runtime circular dependencies;
+  - jscpd checks duplicate code against the configured threshold;
+  - knip currently runs with `--no-exit-code` as a baseline report because the repo has existing unused/dead-code findings to clean separately.
+- Implemented P2.6:
+  - raised UI mobile bottom-sheet breakpoint from `480px` to `640px`.
+- Verification:
+  - `pnpm check:quality` passed.
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/website build` passed.
+- Remaining:
+  - clean knip baseline findings and make it blocking later;
+  - optional Vue/Nuxt docs/examples remain deferred.
