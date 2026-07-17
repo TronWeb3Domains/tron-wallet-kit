@@ -161,11 +161,15 @@ TRON docs are ~25 pages vs XRPL ~40. Add, mirroring XRPL's IA:
   - `advanced/bundle-performance.md`.
 - Added guide:
   - `guides/going-live.md`.
+- Added TRON-native use-case docs:
+  - `use-cases/payments.md`;
+  - `use-cases/smart-contracts.md`;
+  - `use-cases/resources-governance.md`.
 - Expanded API reference:
   - `api/manager.md`;
   - `api/modal-toast.md`.
 - Sidebar updated to expose these pages.
-- Remaining: deeper per-wallet adapter pages beyond TronLink/WalletConnect, optional use-case pages, and deeper Next.js/auth backend guides.
+- Remaining: deeper per-wallet adapter pages beyond TronLink/WalletConnect and deeper Next.js/auth backend guides.
 
 ### 5. Add code-quality gates
 

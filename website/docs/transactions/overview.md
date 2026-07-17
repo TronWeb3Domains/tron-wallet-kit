@@ -7,6 +7,8 @@ send path per adapter.
 
 ## Transfers
 
+See [Payments](/docs/use-cases/payments) for checkout-oriented TRX and TRC-20 examples.
+
 ```ts
 // TRX (amount in SUN, 1 TRX = 1_000_000 SUN)
 await kit.transferTrx({ to: "T...", amountSun: 1_000_000n });
@@ -23,6 +25,9 @@ await kit.transferTrc10({ tokenId: "1002000", to: "T...", amount: 100n });
 ```
 
 ## Smart contracts
+
+See [Smart contracts](/docs/use-cases/smart-contracts) for contract execution patterns across
+injected wallets, WalletConnect, and hardware wallets.
 
 ```ts
 await kit.triggerSmartContract({
@@ -100,6 +105,9 @@ Submitted entries older than `staleSubmittedMs` become `unknown` until the app c
 them with the manager transaction lifecycle.
 
 ## Resources and governance
+
+See [Resources and governance](/docs/use-cases/resources-governance) for product guidance around
+freeze, delegate, undelegate, and vote flows.
 
 ```ts
 await kit.freezeBalance({ amountSun: 1_000_000n, resource: "ENERGY" });

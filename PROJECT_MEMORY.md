@@ -5296,3 +5296,19 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
 - Remaining:
   - visual QA the toggle-on/toggle-off flow in `react-basic` with a real wallet.
+
+## 2026-07-17 TRON Use-Case Docs
+
+- Continued `Review/XRPL_PARITY_UPGRADE_PLAN.md` P2.4 docs breadth.
+- Added TRON-native use-case docs:
+  - `website/docs/use-cases/payments.md`;
+  - `website/docs/use-cases/smart-contracts.md`;
+  - `website/docs/use-cases/resources-governance.md`.
+- Updated website sidebar with a new `Use cases` section.
+- Added cross-links from `website/docs/transactions/overview.md`.
+- Updated `Review/XRPL_PARITY_UPGRADE_PLAN.md` to mark use-case docs as partially completed.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/website build` passed;
+  - `pnpm check:quality` passed.
+- Remaining:
+  - deeper per-wallet adapter docs beyond TronLink/WalletConnect.

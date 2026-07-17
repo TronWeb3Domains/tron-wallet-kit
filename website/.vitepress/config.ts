@@ -65,6 +65,14 @@ export default defineConfig({
         ],
       },
       {
+        text: "Use cases",
+        items: [
+          { text: "Payments", link: "/docs/use-cases/payments" },
+          { text: "Smart contracts", link: "/docs/use-cases/smart-contracts" },
+          { text: "Resources and governance", link: "/docs/use-cases/resources-governance" },
+        ],
+      },
+      {
         text: "Authentication",
         items: [
           { text: "Sign-In with TRON", link: "/docs/auth/sign-in-with-tron" },
