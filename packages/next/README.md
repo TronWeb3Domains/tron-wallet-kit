@@ -25,7 +25,11 @@ const config = getDefaultConfig({
     icons: ["https://my-tron-app.example/icon.png"]
   },
   network: "mainnet",
-  walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
+  walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID,
+  gasFree: {
+    enabled: true,
+    apiBaseUrl: "/api/gasfree"
+  }
 });
 
 export function WalletBoundary() {
@@ -38,6 +42,10 @@ export function WalletBoundary() {
 ```
 
 Do not read `window`, `document`, injected wallet providers, or WalletConnect browser APIs from Server Components.
+
+For GasFree, keep provider API signing in a Route Handler or backend service. Client Components should
+point `gasFree.apiBaseUrl` to that same-origin route, not to code that exposes API secrets in the
+browser bundle.
 
 ## Status
 

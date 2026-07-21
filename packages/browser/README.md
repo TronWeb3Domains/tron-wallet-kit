@@ -21,7 +21,11 @@ pnpm add @tron-wallet-kit/browser@beta
       icons: [window.location.origin + "/icon.png"]
     },
     network: "mainnet",
-    walletConnectProjectId: "YOUR_WALLETCONNECT_PROJECT_ID"
+    walletConnectProjectId: "YOUR_WALLETCONNECT_PROJECT_ID",
+    gasFree: {
+      enabled: true,
+      apiBaseUrl: "/api/gasfree"
+    }
   });
 
   document.querySelector("#connect").addEventListener("click", () => kit.openModal());
@@ -36,6 +40,10 @@ The browser package emits:
 WalletConnect still requires your own WalletConnect Cloud project ID.
 
 For legacy pages, `appName` still works as a shorthand for `metadata.name`.
+
+GasFree is optional. If enabled in a browser/CDN page, route `apiBaseUrl` through your backend proxy
+so provider API secrets never appear in page source. The browser bundle can show the GasFree account
+panel mode, address copy/QR, and USDT balance when the provider API or resolver is configured.
 
 ## Status
 

@@ -1,6 +1,6 @@
 # TRON Wallet Kit
 
-TRON Wallet Kit is a TRON-native wallet kit for building dapps with a product-grade connect modal, account panel, WalletConnect QR flow, injected wallet support, theming, React bindings, and browser/CDN output.
+TRON Wallet Kit is a TRON-native wallet kit for building dapps with a product-grade connect modal, account panel, WalletConnect QR flow, injected wallet support, GasFree account mode, theming, React bindings, and browser/CDN output.
 
 This project is currently prepared for the first beta release. Use the `beta` npm tag until the public docs, deployed demo, and full real-wallet QA matrix are complete.
 
@@ -25,6 +25,12 @@ pnpm add @tron-wallet-kit/react @tron-wallet-kit/client
 
 For WalletConnect, pass your own WalletConnect Cloud project ID. The kit does not ship a default project ID.
 
+GasFree is optional. If you enable it, install the SDK too:
+
+```sh
+pnpm add @gasfree/gasfree-sdk
+```
+
 ## React Usage
 
 ```tsx
@@ -44,7 +50,11 @@ const config = getDefaultConfig({
     icons: [`${window.location.origin}/icon.png`]
   },
   network: "mainnet",
-  walletConnectProjectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID
+  walletConnectProjectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID,
+  gasFree: {
+    enabled: true,
+    apiBaseUrl: "/api/gasfree"
+  }
 });
 
 function App() {
@@ -59,6 +69,8 @@ createRoot(document.getElementById("root")!).render(<App />);
 ```
 
 WalletConnect is optional. If `walletConnectProjectId` is omitted, WalletConnect is hidden from the default wallet list.
+
+`gasFree.apiBaseUrl` should point to a same-origin proxy or trusted provider API. Do not ship a GasFree API secret in frontend code. Without `apiBaseUrl`, the kit can still derive the GasFree address locally, but provider API data such as assets and submit eligibility is not available.
 
 `metadata` identifies your dApp in WalletConnect and future auth prompts. `appName` is still accepted
 as a simple alias for `metadata.name`, but production integrations should prefer `metadata`.
@@ -84,6 +96,7 @@ Themes can be static or system-adaptive:
 - `useTronBalance`
 - `useSignMessage`
 - `useTrxName`
+- `useGasFree`
 - `useConnectModal`
 - `useAccountModal`
 - `useTronKit`

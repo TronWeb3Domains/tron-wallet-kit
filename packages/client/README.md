@@ -1,6 +1,6 @@
 # @tron-wallet-kit/client
 
-Headless client orchestration for TRON Wallet Kit. This package composes core wallet management, wallet descriptors, adapters, UI controllers, balance, identity, and transaction helpers.
+Headless client orchestration for TRON Wallet Kit. This package composes core wallet management, wallet descriptors, adapters, UI controllers, balance, identity, GasFree, and transaction helpers.
 
 ## Install
 
@@ -43,12 +43,63 @@ prefer `metadata`.
 - `kit.disconnect()`
 - `kit.refreshBalance()`
 - `kit.refreshIdentity()`
+- `kit.gasFree.getAddress()`
+- `kit.gasFree.getBalance()`
+- `kit.gasFree.setMode(mode)`
 - `kit.signMessage(request)`
 - `kit.transferTrx(request)`
 - `kit.transferTrc20(request)`
 - `kit.triggerSmartContract(request)`
 
 React dapps should normally consume these through `@tron-wallet-kit/react`.
+
+## GasFree
+
+GasFree Phase 1 is an account-panel mode for showing a deterministic GasFree address and USDT
+balance. It is display-only; the kit does not render a send form.
+
+Install the optional SDK when you enable GasFree:
+
+```sh
+pnpm add @gasfree/gasfree-sdk
+```
+
+For production browser apps, point `apiBaseUrl` at a same-origin backend proxy that signs GasFree
+provider API requests. The official provider account endpoint is `GET /api/v1/address/{accountAddress}`.
+
+```ts
+const kit = createWalletKit({
+  metadata: { name: "My TRON dApp" },
+  network: "mainnet",
+  gasFree: {
+    enabled: true,
+    apiBaseUrl: "/api/gasfree"
+  }
+});
+
+kit.gasFree.setMode("gasfree");
+const gasFreeAddress = await kit.gasFree.getAddress();
+const gasFreeBalance = await kit.gasFree.getBalance();
+```
+
+If your app cannot configure a provider API during local QA, use the opt-in on-chain TRC-20 balance
+resolver:
+
+```ts
+import { createTrc20GasFreeBalanceResolver } from "@tron-wallet-kit/client";
+
+const kit = createWalletKit({
+  metadata: { name: "My TRON dApp" },
+  network: "mainnet",
+  gasFree: {
+    enabled: true,
+    balanceResolver: createTrc20GasFreeBalanceResolver()
+  }
+});
+```
+
+Do not place a GasFree API secret in browser code. Use a backend proxy or `apiHeaders` backed by a
+server-side signer.
 
 ## Transaction Preview
 

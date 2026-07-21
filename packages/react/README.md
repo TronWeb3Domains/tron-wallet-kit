@@ -51,6 +51,41 @@ createRoot(document.getElementById("root")!).render(<App />);
 
 `metadata` identifies your dApp in WalletConnect and Sign-In with TRON prompts. `appName` still works as a shorthand for `metadata.name`.
 
+## GasFree
+
+GasFree is optional and appears as a `GasFree` mode switch in the connected account panel. It keeps
+the normal wallet session while showing the deterministic GasFree address and USDT balance.
+
+```sh
+pnpm add @gasfree/gasfree-sdk
+```
+
+```tsx
+const config = getDefaultConfig({
+  metadata: { name: "My TRON dApp" },
+  network: "mainnet",
+  gasFree: {
+    enabled: true,
+    apiBaseUrl: "/api/gasfree"
+  }
+});
+```
+
+`apiBaseUrl` should point to your backend proxy or trusted GasFree provider API. The provider API
+requires signed headers, so do not ship API secrets in browser code.
+
+Custom UI can use `useGasFree()`:
+
+```tsx
+import { useGasFree } from "@tron-wallet-kit/react";
+
+function GasFreeBadge() {
+  const gasFree = useGasFree();
+  if (!gasFree.configured) return null;
+  return <button onClick={() => gasFree.setMode("gasfree")}>GasFree</button>;
+}
+```
+
 ## Sign-In with TRON
 
 Install the optional auth package and pass an adapter to `TronKitProvider`. The provider shows a
@@ -104,6 +139,7 @@ const authenticationAdapter = createTronAuthenticationAdapter({
 - `useSignMessage`
 - `useTronAuth`
 - `useTrxName`
+- `useGasFree`
 - `useConnectModal`
 - `useAccountModal`
 - `useTronKit`

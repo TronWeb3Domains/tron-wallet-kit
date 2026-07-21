@@ -1,6 +1,6 @@
 # @tron-wallet-kit/ui
 
-Token-driven UI foundations for TRON Wallet Kit. This package renders the wallet modal, account panel, wallet button, QR states, toast UI, and theme tokens without depending on a host app CSS selector.
+Token-driven UI foundations for TRON Wallet Kit. This package renders the wallet modal, account panel, GasFree account mode, wallet button, QR states, toast UI, and theme tokens without depending on a host app CSS selector.
 
 ## Install
 
@@ -56,6 +56,13 @@ const modal = createWalletModal({
 ## Theming
 
 The UI is driven by `--twk-*` CSS variables. Theme presets include `light`, `dark`, `tron`, `tron-energy`, `nile`, `shasta`, `bandwidth`, `energy`, `sun`, `graphite`, `midnight`, `ocean`, `glass`, `rounded`, `crisp`, `soft`, `neon`, `terminal`, `minimal`, and `highContrast`.
+
+## Account Panel
+
+`createAccountPanelHtml` supports the current connected wallet, `.trx` identity, TRX balance, address
+QR, recent transactions, and the optional GasFree mode. When GasFree is configured, the General panel
+renders a compact `GasFree` action in the header; selecting it switches the same account panel to the
+GasFree address/balance view.
 
 App metadata is not configured in this package. Pass metadata to `@tron-wallet-kit/client` or
 `@tron-wallet-kit/react`; the UI receives the wallet/session data it needs from the manager and

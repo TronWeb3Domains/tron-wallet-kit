@@ -5675,3 +5675,9 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Kept the visible label as brand-correct `GasFree`.
 - Added mobile sizing for the header chip.
 - Verified with `pnpm --filter @tron-wallet-kit/ui typecheck`, `pnpm --filter @tron-wallet-kit/react typecheck`, and `pnpm --filter @tron-wallet-kit/examples typecheck`.
+
+## 2026-07-21 README Sync For GasFree
+
+- Reviewed package README files after the GasFree/account-panel changes.
+- Updated root, client, react, ui, browser, and next README files to mention GasFree, `useGasFree()`, provider API/proxy guidance, and the current browser-safe secret boundary.
+- Kept adapter package names unchanged because package names remain `@tron-wallet-kit/adapter-*` even though their folders live under `packages/adapters/*`.
