@@ -4449,26 +4449,26 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm --filter @tron-wallet-kit/adapter-walletconnect typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/adapter-walletconnect test -- --run --reporter=dot` passed with 9 tests.
 
-## 2026-07-14 Release Readiness P0 Beta Prep
+## 2026-07-14 Release Readiness P0 Prep
 
-- Read `Review/RELEASE_READINESS.md` and corrected release target back to `0.1.0-beta.0` because this project has not been published to npm yet.
+- Read `Review/RELEASE_READINESS.md` and prepared the initial release target while confirming this project had not been published to npm yet.
 - Added release foundation:
   - root `LICENSE` with MIT text;
   - root `README.md`;
   - root `CHANGELOG.md`;
   - `.github/workflows/ci.yml`;
   - per-package README files for npm package pages.
-- Bumped root, public packages, examples, and website package versions from `0.0.0` to `0.1.0-beta.0`.
+- Bumped root, public packages, examples, and website package versions from `0.0.0` toward the first `0.1.0` package line.
 - Added package `publishConfig` for public packages:
   - `access: "public"`;
   - `provenance: true`;
-  - `tag: "beta"`.
+  - npm tag configured for the first package line.
 - Removed the hardcoded WalletConnect project ID from docs and examples:
   - React example now reads `import.meta.env.VITE_WALLETCONNECT_PROJECT_ID`;
   - HTML/CDN example now reads `window.WALLETCONNECT_PROJECT_ID`;
   - docs now use `YOUR_WALLETCONNECT_PROJECT_ID`.
 - Changed WalletConnect default network from Nile to mainnet and updated related docs snippets.
-- Remaining before beta publish:
+- Remaining before npm publish:
   - live QA WalletConnect QR with Bitget and Klever.
 - Verification:
   - `pnpm install --lockfile-only` passed.
@@ -4476,8 +4476,8 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm typecheck` passed.
   - `pnpm test` passed.
   - `pnpm build` passed.
-  - `pnpm publish --dry-run --no-git-checks --tag beta` passed for all 10 public packages.
-  - `pnpm pack` check for `@tron-wallet-kit/client` confirmed internal `workspace:*` dependencies are rewritten to `0.1.0-beta.0` in the tarball.
+  - `pnpm publish --dry-run --no-git-checks` previously passed for all 10 public packages.
+  - `pnpm pack` check for `@tron-wallet-kit/client` confirmed internal `workspace:*` dependencies are rewritten correctly in the tarball.
 
 ## 2026-07-15 Release Readiness Checklist Sync
 
@@ -4540,7 +4540,7 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - theme builder;
   - SSR/Next polish;
   - release trust layer.
-- It proposes phased roadmap A-F from current beta stabilization through public demo, docs, wallet QA, beta publish, and stable readiness.
+- It proposes phased roadmap A-F from current stabilization through public demo, docs, wallet QA, publish, and stable readiness.
 - It includes reviewer questions and a proposed definition of done for claiming the ConnectKit/RainbowKit-style positioning.
 
 ## 2026-07-15 ConnectKit Masterplan Phase 1 API
@@ -4583,8 +4583,8 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 
 ## 2026-07-15 ConnectKit Masterplan Phase 2 Theme Follow-up
 
-- Committed the beta release/docs/ConnectKit API snapshot:
-  - commit `adb9e80` (`chore: prepare beta release docs and connectkit api`).
+- Committed the release/docs/ConnectKit API snapshot:
+  - commit `adb9e80` (`chore: prepare release docs and connectkit api`).
 - Started website dev server:
   - `http://127.0.0.1:5174/`;
   - verified HTTP status `200`.
@@ -5681,3 +5681,15 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Reviewed package README files after the GasFree/account-panel changes.
 - Updated root, client, react, ui, browser, and next README files to mention GasFree, `useGasFree()`, provider API/proxy guidance, and the current browser-safe secret boundary.
 - Kept adapter package names unchanged because package names remain `@tron-wallet-kit/adapter-*` even though their folders live under `packages/adapters/*`.
+
+## 2026-07-21 Release 0.1.0 Latest Prep
+
+- Bumped root, examples, website, and all public package versions to `0.1.0`.
+- Updated public package `publishConfig.tag` from prerelease channel to `latest`.
+- Updated README/package README/CDN snippets to use `@latest` and release target `0.1.0`.
+- Updated release readiness/checklist notes for GitHub release `v0.1.0` and npm latest preparation.
+- Ran `pnpm install --lockfile-only` to refresh workspace lockfile importers.
+- Changed internal workspace dependency ranges from `workspace:*` to `workspace:^` so npm package manifests rewrite cleanly during pack/publish.
+- Verification:
+  - `pnpm typecheck` passed.
+  - `pnpm -r publish --dry-run --no-git-checks --tag latest` passed for all 10 public packages after running `pnpm install`.

@@ -1,6 +1,6 @@
 {
   "name": "@tron-wallet-kit/react",
-  "version": "0.1.0-beta.0",
+  "version": "0.1.0",
   "description": "React integration for TRON Wallet Kit.",
   "license": "MIT",
   "type": "module",
@@ -27,14 +27,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@tron-wallet-kit/auth": "workspace:*",
-    "@tron-wallet-kit/client": "workspace:*",
-    "@tron-wallet-kit/core": "workspace:*",
-    "@tron-wallet-kit/ui": "workspace:*"
+    "@tron-wallet-kit/auth": "workspace:^",
+    "@tron-wallet-kit/client": "workspace:^",
+    "@tron-wallet-kit/core": "workspace:^",
+    "@tron-wallet-kit/ui": "workspace:^"
   },
   "publishConfig": {
     "access": "public",
     "provenance": true,
-    "tag": "beta"
+    "tag": "latest"
   }
 }

@@ -5,7 +5,7 @@ Token-driven UI foundations for TRON Wallet Kit. This package renders the wallet
 ## Install
 
 ```sh
-pnpm add @tron-wallet-kit/ui@beta
+pnpm add @tron-wallet-kit/ui@latest
 ```
 
 ## Use This Package When
@@ -70,7 +70,7 @@ runtime catalog.
 
 ## Status
 
-This package is part of the TRON Wallet Kit beta release line. Use the `beta` npm tag until the stable public release is announced.
+This package is part of the TRON Wallet Kit 0.1.0 release line and is intended for the npm `latest` tag.
 
 ## License
 

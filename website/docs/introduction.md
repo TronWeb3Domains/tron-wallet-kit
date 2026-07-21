@@ -36,7 +36,7 @@ You get:
 The catalog labels each wallet so the modal never promises something it can't deliver:
 
 <span class="twk-badge live">live</span> verified with the real wallet, shown by default. &nbsp;
-<span class="twk-badge beta">beta</span> expected to work, still under QA. &nbsp;
+<span class="twk-badge qa">qa</span> expected to work, still under QA. &nbsp;
 <span class="twk-badge qa">qa</span> descriptor exists, hidden until verified.
 
 ## Next steps

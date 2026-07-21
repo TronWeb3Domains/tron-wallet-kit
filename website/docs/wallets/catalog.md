@@ -6,7 +6,7 @@ modal only shows wallets that are ready, so users never see a wallet that can't 
 ## Support levels
 
 <span class="twk-badge live">live</span> verified with the real wallet — shown by default. &nbsp;
-<span class="twk-badge beta">beta</span> expected to work, still under QA — shown but flagged. &nbsp;
+<span class="twk-badge qa">qa</span> expected to work, still under QA — shown but flagged. &nbsp;
 <span class="twk-badge qa">qa</span> descriptor exists — hidden until verified.
 
 <WalletTable />

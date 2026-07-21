@@ -5,13 +5,13 @@ Browser/CDN entrypoint for TRON Wallet Kit. This package exposes a single global
 ## Install
 
 ```sh
-pnpm add @tron-wallet-kit/browser@beta
+pnpm add @tron-wallet-kit/browser@latest
 ```
 
 ## CDN Usage
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@tron-wallet-kit/browser@beta/dist/tron-wallet-kit.iife.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tron-wallet-kit/browser@latest/dist/tron-wallet-kit.iife.min.js"></script>
 <script>
   const kit = TronWalletKit.createBrowserKit({
     metadata: {
@@ -47,7 +47,7 @@ panel mode, address copy/QR, and USDT balance when the provider API or resolver 
 
 ## Status
 
-This package is part of the TRON Wallet Kit beta release line. Use the `beta` npm tag until the stable public release is announced.
+This package is part of the TRON Wallet Kit 0.1.0 release line and is intended for the npm `latest` tag.
 
 ## License
 

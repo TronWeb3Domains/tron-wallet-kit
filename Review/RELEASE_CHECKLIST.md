@@ -51,7 +51,7 @@
 | Website docs build | `pnpm --filter @tron-wallet-kit/website build` | Passed on 2026-07-03 |
 | Full workspace build after website/UI updates | `pnpm build` | Passed on 2026-07-03 with expected WalletConnect/IIFE/chunk and HTML global-script warnings |
 | Release readiness full local gate | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` | Passed on 2026-07-14 |
-| Release readiness publish dry-run | `pnpm publish --dry-run --no-git-checks --tag beta` | Passed on 2026-07-14 for all 10 public packages |
+| Release readiness publish dry-run | `pnpm publish --dry-run --no-git-checks --tag latest` | Passed on 2026-07-14 for all 10 public packages |
 | Browser IIFE release size | `Get-ChildItem packages/browser/dist/tron-wallet-kit.iife*.js` | `tron-wallet-kit.iife.js` 3,459,117 bytes; `tron-wallet-kit.iife.min.js` 1,737,483 bytes |
 | Public package tarball size check | `pnpm pack --pack-destination $env:TEMP/twk-release-size-check` | Passed on 2026-07-15; browser tarball 4,057,415 bytes, client 193,361 bytes, ui 175,653 bytes |
 | Public package manifest audit | Node manifest check | Passed on 2026-07-15: version, exports, types, files, sideEffects, publishConfig, README present for all 10 public packages |
@@ -70,6 +70,8 @@
 | Examples on default port 5174 | `Invoke-WebRequest` against `http://127.0.0.1:5174/`, `/react-basic/`, `/html-cdn/`, `/vendor/tron-wallet-kit.iife.min.js` | Passed on 2026-07-04 |
 | P9 browser/IIFE parity | `pnpm build`; check `packages/browser/dist/tron-wallet-kit.iife.js` and `tron-wallet-kit.iife.min.js` | Passed on 2026-07-06 |
 | Ledger descriptor optional peer | `pnpm --filter @tron-wallet-kit/client test` | Descriptor/catalog tested on 2026-07-08; real-device QA pending |
+| Release 0.1.0 typecheck | `pnpm typecheck` | Passed on 2026-07-21 |
+| Release 0.1.0 publish dry-run | `pnpm -r publish --dry-run --no-git-checks --tag latest` | Passed on 2026-07-21 for all 10 public packages |
 
 ## Ledger Hardware QA
 
@@ -83,11 +85,12 @@
 
 ## Release Notes
 
-- `0.1.0-beta.0` release preparation started on 2026-07-14.
-- Root `LICENSE`, `README.md`, `CHANGELOG.md`, package READMEs, CI workflow, beta versions, and package publish metadata have been added.
+- `0.1.0` release preparation started on 2026-07-21.
+- Root `LICENSE`, `README.md`, `CHANGELOG.md`, package READMEs, CI workflow, 0.1.0 versions, and package publish metadata have been added.
 - Full local gates passed on 2026-07-14: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
-- Package publish dry-runs passed on 2026-07-14 for all public packages with `pnpm publish --dry-run --no-git-checks --tag beta`.
+- Package publish dry-runs passed on 2026-07-14 for all public packages with `pnpm publish --dry-run --no-git-checks --tag latest`.
 - Public package manifest audit passed on 2026-07-15 for all 10 public packages: version, exports, types, files, sideEffects, publishConfig, and README are present.
 - Public package tarball size check passed on 2026-07-15 for all 10 public packages.
 - Browser IIFE release size recorded on 2026-07-15: unminified 3,459,117 bytes; minified 1,737,483 bytes.
-- Public stable release is still not ready; publish first with npm tag `beta` after live WalletConnect QA.
+- First stable package line is prepared for npm tag `latest`; run the final dry-run and live WalletConnect QA before publishing.
+- 0.1.0 latest prep passed on 2026-07-21: `pnpm typecheck` and `pnpm -r publish --dry-run --no-git-checks --tag latest`.

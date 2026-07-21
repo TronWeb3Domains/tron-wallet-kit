@@ -1,6 +1,6 @@
 {
   "name": "@tron-wallet-kit/examples",
-  "version": "0.1.0-beta.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,11 +10,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@tron-wallet-kit/adapter-tronlink": "workspace:*",
-    "@tron-wallet-kit/adapter-walletconnect": "workspace:*",
-    "@tron-wallet-kit/auth": "workspace:*",
-    "@tron-wallet-kit/browser": "workspace:*",
-    "@tron-wallet-kit/react": "workspace:*",
+    "@tron-wallet-kit/adapter-tronlink": "workspace:^",
+    "@tron-wallet-kit/adapter-walletconnect": "workspace:^",
+    "@tron-wallet-kit/auth": "workspace:^",
+    "@tron-wallet-kit/browser": "workspace:^",
+    "@tron-wallet-kit/react": "workspace:^",
     "@walletconnect/sign-client": "^2.23.9",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"

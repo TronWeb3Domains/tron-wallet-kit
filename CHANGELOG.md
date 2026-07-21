@@ -1,8 +1,8 @@
 # Changelog
 
-## 0.1.0-beta.0
+## 0.1.0
 
-Initial beta release preparation.
+Initial public release preparation.
 
 ### Added
 
@@ -16,8 +16,8 @@ Initial beta release preparation.
 - React provider, wallet button, hooks, and examples.
 - Browser/CDN IIFE build named `tron-wallet-kit`.
 
-### Beta Notes
+### Release Notes
 
-- Publish with npm tag `beta`, not `latest`.
+- Publish with npm tag `latest`.
 - WalletConnect requires an app-provided project ID.
-- Real-wallet QA is still required before a stable public release.
+- Real-wallet QA is still required before npm publish.

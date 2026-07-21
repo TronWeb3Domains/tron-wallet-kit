@@ -1,6 +1,6 @@
 {
   "name": "@tron-wallet-kit/adapter-walletconnect",
-  "version": "0.1.0-beta.0",
+  "version": "0.1.0",
   "description": "WalletConnect adapter for TRON Wallet Kit.",
   "license": "MIT",
   "type": "module",
@@ -24,12 +24,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@tron-wallet-kit/core": "workspace:*",
+    "@tron-wallet-kit/core": "workspace:^",
     "@walletconnect/sign-client": "^2.23.9"
   },
   "publishConfig": {
     "access": "public",
     "provenance": true,
-    "tag": "beta"
+    "tag": "latest"
   }
 }

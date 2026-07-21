@@ -69,19 +69,19 @@ importers:
   examples:
     dependencies:
       '@tron-wallet-kit/adapter-tronlink':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../packages/adapters/tronlink
       '@tron-wallet-kit/adapter-walletconnect':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../packages/adapters/walletconnect
       '@tron-wallet-kit/auth':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../packages/auth
       '@tron-wallet-kit/browser':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../packages/browser
       '@tron-wallet-kit/react':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../packages/react
       '@walletconnect/sign-client':
         specifier: ^2.23.9
@@ -106,13 +106,13 @@ importers:
   packages/adapters/tronlink:
     dependencies:
       '@tron-wallet-kit/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../core
 
   packages/adapters/tronwallet-bridge:
     dependencies:
       '@tron-wallet-kit/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../core
       '@tronweb3/tronwallet-abstract-adapter':
         specifier: '*'
@@ -124,7 +124,7 @@ importers:
   packages/adapters/walletconnect:
     dependencies:
       '@tron-wallet-kit/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../core
       '@walletconnect/sign-client':
         specifier: ^2.23.9
@@ -133,25 +133,25 @@ importers:
   packages/auth:
     dependencies:
       '@tron-wallet-kit/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
 
   packages/browser:
     dependencies:
       '@tron-wallet-kit/adapter-tronlink':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../adapters/tronlink
       '@tron-wallet-kit/adapter-walletconnect':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../adapters/walletconnect
       '@tron-wallet-kit/client':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../client
       '@tron-wallet-kit/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
       '@tron-wallet-kit/ui':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../ui
 
   packages/client:
@@ -160,19 +160,19 @@ importers:
         specifier: '*'
         version: 1.1.2
       '@tron-wallet-kit/adapter-tronlink':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../adapters/tronlink
       '@tron-wallet-kit/adapter-tronwallet-bridge':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../adapters/tronwallet-bridge
       '@tron-wallet-kit/adapter-walletconnect':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../adapters/walletconnect
       '@tron-wallet-kit/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
       '@tron-wallet-kit/ui':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../ui
       '@tronweb3/tronwallet-adapter-imtoken':
         specifier: '*'
@@ -195,7 +195,7 @@ importers:
   packages/next:
     dependencies:
       '@tron-wallet-kit/react':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../react
       next:
         specifier: '>=14'
@@ -207,16 +207,16 @@ importers:
   packages/react:
     dependencies:
       '@tron-wallet-kit/auth':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../auth
       '@tron-wallet-kit/client':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../client
       '@tron-wallet-kit/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
       '@tron-wallet-kit/ui':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../ui
       react:
         specifier: '>=18'
@@ -225,7 +225,7 @@ importers:
   packages/ui:
     dependencies:
       '@tron-wallet-kit/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
       qr-code-styling:
         specifier: ^1.9.2

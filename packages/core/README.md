@@ -5,7 +5,7 @@ Core contracts, wallet manager, storage, network registry, transaction types, an
 ## Install
 
 ```sh
-pnpm add @tron-wallet-kit/core@beta
+pnpm add @tron-wallet-kit/core@latest
 ```
 
 ## Use This Package When
@@ -78,7 +78,7 @@ them to `confirmed` or `failed`.
 
 ## Status
 
-This package is part of the TRON Wallet Kit beta release line. Use the `beta` npm tag until the stable public release is announced.
+This package is part of the TRON Wallet Kit 0.1.0 release line and is intended for the npm `latest` tag.
 
 ## License
 

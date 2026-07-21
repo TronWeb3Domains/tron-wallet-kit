@@ -5,7 +5,7 @@ Authentication message helpers for TRON Wallet Kit. This package contains Sign-I
 ## Install
 
 ```sh
-pnpm add @tron-wallet-kit/auth@beta
+pnpm add @tron-wallet-kit/auth@latest
 ```
 
 ## Use This Package When
@@ -14,7 +14,7 @@ pnpm add @tron-wallet-kit/auth@beta
 - You want to verify TRON wallet signatures on your auth backend.
 - You are preparing a SIWT-style flow to integrate with `@tron-wallet-kit/react`.
 
-The authentication adapter surface is still beta. Keep backend verification explicit and do not treat this package as a complete auth server.
+The authentication adapter surface is still evolving. Keep backend verification explicit and do not treat this package as a complete auth server.
 
 ## App Metadata Alignment
 
@@ -77,7 +77,7 @@ const state = await auth.signIn();
 
 ## Status
 
-This package is part of the TRON Wallet Kit beta release line. Use the `beta` npm tag until the stable public release is announced.
+This package is part of the TRON Wallet Kit 0.1.0 release line and is intended for the npm `latest` tag.
 
 ## License
 

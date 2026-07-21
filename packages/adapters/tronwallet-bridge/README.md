@@ -5,7 +5,7 @@ Bridge runtime `@tronweb3/tronwallet-adapter` instances into TRON Wallet Kit.
 ## Install
 
 ```sh
-pnpm add @tron-wallet-kit/adapter-tronwallet-bridge@beta
+pnpm add @tron-wallet-kit/adapter-tronwallet-bridge@latest
 ```
 
 ## Usage
@@ -32,7 +32,7 @@ const adapter = createTronwalletBridgeAdapter({
 
 ## Status
 
-This package is part of the TRON Wallet Kit beta release line. Use the `beta` npm tag until the stable public release is announced.
+This package is part of the TRON Wallet Kit 0.1.0 release line and is intended for the npm `latest` tag.
 
 ## License
 

@@ -1,6 +1,6 @@
 {
   "name": "@tron-wallet-kit/ui",
-  "version": "0.1.0-beta.0",
+  "version": "0.1.0",
   "description": "Token-driven UI foundations for TRON Wallet Kit.",
   "license": "MIT",
   "type": "module",
@@ -24,13 +24,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@tron-wallet-kit/core": "workspace:*",
+    "@tron-wallet-kit/core": "workspace:^",
     "qr-code-styling": "^1.9.2",
     "qrcode": "^1.5.4"
   },
   "publishConfig": {
     "access": "public",
     "provenance": true,
-    "tag": "beta"
+    "tag": "latest"
   }
 }

@@ -5,7 +5,7 @@ React integration for TRON Wallet Kit. This package provides the ConnectKit-styl
 ## Install
 
 ```sh
-pnpm add @tron-wallet-kit/react@beta
+pnpm add @tron-wallet-kit/react@latest
 ```
 
 Peer dependency:
@@ -92,7 +92,7 @@ Install the optional auth package and pass an adapter to `TronKitProvider`. The 
 sign-in step after wallet connect and exposes the state through `useTronAuth()`.
 
 ```sh
-pnpm add @tron-wallet-kit/auth@beta
+pnpm add @tron-wallet-kit/auth@latest
 ```
 
 ```tsx
@@ -195,7 +195,7 @@ System-adaptive themes are supported at the provider:
 
 ## Status
 
-This package is part of the TRON Wallet Kit beta release line. Use the `beta` npm tag until the stable public release is announced.
+This package is part of the TRON Wallet Kit 0.1.0 release line and is intended for the npm `latest` tag.
 
 ## License
 
