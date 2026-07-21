@@ -305,6 +305,14 @@ function mapTransaction(transaction: ReturnType<WalletManager["getTransactions"]
     status: mapTransactionStatus(transaction.status),
     txHash: transaction.hash,
     timestamp: new Date(transaction.submittedAt).toISOString(),
+    ...(transaction.kind ? { kind: transaction.kind } : {}),
+    ...(transaction.direction ? { direction: transaction.direction } : {}),
+    ...(transaction.title ? { title: transaction.title } : {}),
+    ...(transaction.subtitle ? { subtitle: transaction.subtitle } : {}),
+    ...(transaction.amountText ? { amountText: transaction.amountText } : {}),
+    ...(transaction.amountTone ? { amountTone: transaction.amountTone } : {}),
+    ...(transaction.token ? { token: transaction.token } : {}),
+    ...(transaction.resource ? { resource: transaction.resource } : {}),
     ...(transaction.explorerUrl ? { explorerUrl: transaction.explorerUrl } : {})
   } as const;
 }

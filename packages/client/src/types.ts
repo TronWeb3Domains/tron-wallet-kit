@@ -217,6 +217,11 @@ export type VoteWitnessRequest = {
   description?: string;
 };
 
+export type WithdrawRewardRequest = {
+  ownerAddress?: string;
+  description?: string;
+};
+
 export type WalletKit = {
   manager: WalletManager;
   modal: WalletModal;
@@ -241,6 +246,7 @@ export type WalletKit = {
   getTronWeb(): Promise<unknown>;
   transactionBuilder: {
     sendTrx(to: string, amountSun: string | number | bigint, from?: string): Promise<TransactionPayload>;
+    withdrawReward(ownerAddress?: string): Promise<TransactionPayload>;
     triggerSmartContract(
       contractAddress: string,
       functionSelector: string,
@@ -259,6 +265,7 @@ export type WalletKit = {
   delegateResource(request: Required<Pick<ResourceRequest, "to">> & ResourceRequest): Promise<TxResult>;
   undelegateResource(request: Required<Pick<ResourceRequest, "to">> & ResourceRequest): Promise<TxResult>;
   voteWitness(request: VoteWitnessRequest): Promise<TxResult>;
+  withdrawReward(request?: WithdrawRewardRequest): Promise<TxResult>;
 };
 
 export type TronIdentity = {

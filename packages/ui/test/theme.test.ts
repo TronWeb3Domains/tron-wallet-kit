@@ -1044,10 +1044,17 @@ describe("wallet kit surfaces", () => {
           label: "Send TRX",
           status: "pending",
           txHash: "abcdef1234567890abcdef1234567890abcdef12",
+          timestamp: "2025-09-23T00:00:00.000Z",
+          kind: "sent",
+          direction: "out",
+          subtitle: "To TAAAAA...BBBBBB",
+          amountText: "-1 TRX",
+          amountTone: "out",
+          token: "TRX",
           explorerUrl: "https://tronscan.org/#/transaction/abcdef1234567890abcdef1234567890abcdef12",
         },
-        { id: "tx-2", label: "Confirmed", status: "success", txHash: "2222222222222222222222222222222222222222" },
-        { id: "tx-3", label: "Failed", status: "failed", txHash: "3333333333333333333333333333333333333333" },
+        { id: "tx-2", label: "Confirmed", status: "success", txHash: "2222222222222222222222222222222222222222", kind: "received", direction: "in", subtitle: "From TCCCCC...DDDDDD", amountText: "+2 TRX", amountTone: "in", token: "TRX" },
+        { id: "tx-3", label: "Failed", status: "failed", txHash: "3333333333333333333333333333333333333333", kind: "contractCall", direction: "neutral", subtitle: "Reverted", amountText: "Contract", amountTone: "muted" },
         { id: "tx-4", label: "Fourth", status: "unknown", txHash: "4444444444444444444444444444444444444444" },
       ],
       showSendButton: true,
@@ -1068,13 +1075,19 @@ describe("wallet kit surfaces", () => {
     expect(html).toContain("twk-tx-section");
     expect(html).toContain("twk-tx-header");
     expect(html).toContain('data-twk-action="tx-history"');
-    expect(html).toContain("View");
-    expect(html).toContain("Send TRX");
-    expect(html).toContain("Confirmed");
-    expect(html).toContain("Failed");
+    expect(html).toContain("Activity");
+    expect(html).toContain("twk-activity-row-compact");
+    expect(html).toContain("Sent");
+    expect(html).toContain("Received");
+    expect(html).toContain("-1 TRX");
+    expect(html).toContain("+2 TRX");
+    expect(html).toContain("From TCCCCC...DDDDDD");
+    expect(html).toContain('class="twk-activity-status twk-activity-status-chip" data-status="failed">Failed</span>');
+    expect(html).not.toContain('data-status="failed">Contract</span>');
     expect(html).not.toContain("Fourth");
+    expect(html).not.toContain("abcdef...cdef12");
     expect(html).toContain('data-status="pending"');
-    expect(html).toContain("twk-tx-link");
+    expect(html).not.toContain("twk-tx-link");
   });
 
   it("keeps recent transactions opt-in when there are no transactions", () => {
@@ -1188,17 +1201,38 @@ describe("wallet kit surfaces", () => {
         address: "TXYZabcdefghijklmnopqrstuvwxyz123456789",
       },
       recentTransactions: [
-        { id: "tx-1", label: "One", status: "pending", txHash: "1111111111111111111111111111111111111111" },
-        { id: "tx-2", label: "Two", status: "success", txHash: "2222222222222222222222222222222222222222" },
-        { id: "tx-3", label: "Three", status: "failed", txHash: "3333333333333333333333333333333333333333" },
-        { id: "tx-4", label: "Four", status: "unknown", txHash: "4444444444444444444444444444444444444444" },
+        { id: "tx-1", label: "One", status: "pending", txHash: "1111111111111111111111111111111111111111", timestamp: "2025-09-23T00:00:00.000Z", kind: "sent", direction: "out", subtitle: "To TAAAAA...BBBBBB", amountTone: "out", token: "TRX" },
+        { id: "tx-2", label: "Two", status: "success", txHash: "2222222222222222222222222222222222222222", timestamp: "2025-09-23T00:00:00.000Z", kind: "received", direction: "in", subtitle: "From TCCCCC...DDDDDD", amountText: "+2 TRX", amountTone: "in", token: "TRX" },
+        { id: "tx-3", label: "Three", status: "failed", txHash: "3333333333333333333333333333333333333333", timestamp: "2025-06-26T00:00:00.000Z", kind: "contractCall", direction: "neutral", subtitle: "trigger()", amountText: "Contract", amountTone: "muted" },
+        { id: "tx-4", label: "Four", status: "unknown", txHash: "4444444444444444444444444444444444444444", timestamp: "2025-01-08T00:00:00.000Z", kind: "unknown", direction: "neutral", amountTone: "muted" },
       ],
     });
 
     expect(html).toContain('data-twk-account-view="tx-history"');
     expect(html).toContain('data-twk-action="account-back"');
-    expect(html).toContain("One");
-    expect(html).toContain("Four");
+    expect(html).toContain("Activity");
+    expect(html).not.toContain("RECENT TRANSACTIONS");
+    expect(html).not.toContain("twk-tx-header");
+    expect(html).toContain("twk-activity-scroll");
+    expect(html).toContain('data-overflow="both"');
+    expect(html).toContain("twk-activity-list");
+    expect(html).toContain("twk-activity-row");
+    expect(html).toContain("twk-activity-month");
+    expect(html).toContain("Sep 23");
+    expect(html).toContain("Jun 26");
+    expect(html).toContain("Jan 08");
+    expect(html).toContain("Sep 23");
+    expect(html).toContain("twk-activity-amount");
+    expect(html).toContain("twk-activity-status twk-activity-status-chip");
+    expect(html).toContain("twk-activity-spinner");
+    expect(html).toContain("+2 TRX");
+    expect(html).toContain("Pending");
+    expect(html).not.toContain('data-status="failed">Contract</span>');
+    expect(html).toContain("From TCCCCC...DDDDDD");
+    expect(html).not.toContain("twk-tx-row");
+    expect(html).not.toContain(">-<");
+    expect(html).toContain("Sent");
+    expect(html).toContain("Transaction");
   });
 
 

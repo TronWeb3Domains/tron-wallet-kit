@@ -197,19 +197,38 @@ describe("WalletManager", () => {
     const storage = new MemoryWalletStorage();
     const first = new WalletManager({ adapters: [createAdapter()], storage, transactionStore: { max: 5 } });
     await first.connect("mock", { network: TRON_MAINNET });
+    first.addTransaction({
+      hash: "mock-resource",
+      status: "confirmed",
+      methodHint: "delegateResource",
+      description: "Delegate Energy",
+      kind: "delegated",
+      direction: "neutral",
+      subtitle: "Energy to TReceiver",
+      amountText: "500 TRX",
+      amountTone: "muted",
+      resource: "energy"
+    });
     await first.submitTransaction({ transaction: { raw_data: {} }, methodHint: "transferTrx", description: "Send TRX" });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     const second = new WalletManager({ adapters: [createAdapter()], autoReconnect: true, storage, transactionStore: { max: 5 } });
     await second.autoReconnect();
 
-    expect(second.getTransactions()).toHaveLength(1);
+    expect(second.getTransactions()).toHaveLength(2);
     expect(second.getTransactions()[0]).toMatchObject({
       hash: "tx-123",
       account: "TMockAddress",
       network: { id: "mainnet" },
       methodHint: "transferTrx",
       description: "Send TRX"
+    });
+    expect(second.getTransactions()[1]).toMatchObject({
+      hash: "mock-resource",
+      kind: "delegated",
+      resource: "energy",
+      amountText: "500 TRX",
+      subtitle: "Energy to TReceiver"
     });
   });
 

@@ -342,6 +342,50 @@ describe("client entrypoints", () => {
     });
   });
 
+  it("builds, signs, broadcasts, and records withdrawReward transactions", async () => {
+    const calls = {
+      withdrawReward: [] as unknown[],
+      sendRawTransaction: [] as Array<Record<string, unknown>>
+    };
+    (globalThis as Record<string, unknown>).__tronWalletKitTronWebForTest = {
+      trx: {
+        sendRawTransaction: async (transaction: Record<string, unknown>) => {
+          calls.sendRawTransaction.push(transaction);
+          return { txID: transaction.txID };
+        }
+      },
+      transactionBuilder: {
+        withdrawReward: async (ownerAddress?: string) => {
+          calls.withdrawReward.push(ownerAddress);
+          return {
+            txID: "reward-hash",
+            ownerAddress,
+            raw_data_hex: "raw-reward"
+          };
+        }
+      },
+      setAddress: () => undefined,
+      contract: () => ({ at: async () => ({}) })
+    };
+    const kit = createWalletKit({ adapters: [createMockAdapter()] });
+
+    await kit.manager.connect("mock");
+    await expect(kit.withdrawReward({ description: "Claim rewards" })).resolves.toMatchObject({ hash: "reward-hash" });
+
+    expect(calls.withdrawReward).toEqual(["T2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"]);
+    expect(calls.sendRawTransaction).toHaveLength(1);
+    expect(kit.manager.getTransactions()[0]).toMatchObject({
+      hash: "reward-hash",
+      methodHint: "withdrawReward",
+      kind: "claimedRewards",
+      direction: "in",
+      subtitle: "Voting rewards",
+      amountTone: "in",
+      token: "TRX"
+    });
+    expect(kit.manager.getTransactions()[0]?.amountText).toBeUndefined();
+  });
+
   it("applies a default feeLimit and retries once when a built transaction expires", async () => {
     const calls = {
       triggerSmartContract: [] as unknown[][],

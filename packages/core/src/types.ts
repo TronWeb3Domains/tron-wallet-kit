@@ -141,6 +141,7 @@ export type TronMethodHint =
   | "freezeBalance"
   | "unfreezeBalance"
   | "voteWitness"
+  | "withdrawReward"
   | "delegateResource"
   | "undelegateResource"
   | "generic";
@@ -173,6 +174,21 @@ export interface SubmitTransactionRequest {
 
 export type WalletTransactionStatus = "submitted" | "confirmed" | "failed" | "unknown";
 
+export type WalletTransactionActivityKind =
+  | "received"
+  | "sent"
+  | "receivedToken"
+  | "sentToken"
+  | "approve"
+  | "staked"
+  | "unstaked"
+  | "delegated"
+  | "undelegated"
+  | "voted"
+  | "claimedRewards"
+  | "contractCall"
+  | "unknown";
+
 export interface TxResult {
   hash: string;
   status?: WalletTransactionStatus;
@@ -189,6 +205,14 @@ export interface WalletTransaction {
   status: WalletTransactionStatus;
   methodHint?: TronMethodHint;
   description?: string;
+  kind?: WalletTransactionActivityKind;
+  direction?: "in" | "out" | "neutral";
+  title?: string;
+  subtitle?: string;
+  amountText?: string;
+  amountTone?: "in" | "out" | "muted";
+  token?: string;
+  resource?: "energy" | "bandwidth";
   submittedAt: number;
   updatedAt: number;
   explorerUrl?: string;

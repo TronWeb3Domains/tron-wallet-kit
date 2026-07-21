@@ -199,22 +199,39 @@ export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
     transferTrc10: (request) =>
       submit("transferTrc10", { tokenId: request.tokenId, to: request.to, amount: String(request.amount) }, request.description),
     transferTrc20: (request) =>
-      transactionRuntime.triggerSmartContract({
-        contractAddress: request.contractAddress,
-        functionSelector: "transfer(address,uint256)",
-        parameters: [
-          { type: "address", value: request.to },
-          { type: "uint256", value: String(request.amount) }
-        ],
-        ...(request.feeLimit !== undefined ? { feeLimit: request.feeLimit } : {}),
-        ...(request.description ? { description: request.description } : {})
-      }),
+      transactionRuntime.signAndSendBuiltTransaction(
+        () =>
+          transactionRuntime.transactionBuilder.triggerSmartContract({
+            contractAddress: request.contractAddress,
+            functionSelector: "transfer(address,uint256)",
+            parameters: [
+              { type: "address", value: request.to },
+              { type: "uint256", value: String(request.amount) }
+            ],
+            ...(request.feeLimit !== undefined ? { feeLimit: request.feeLimit } : {}),
+            ...(request.description ? { description: request.description } : {})
+          }),
+        "transferTrc20",
+        request.description,
+        {
+          to: request.to,
+          amount: String(request.amount),
+          token: "TRC20"
+        }
+      ),
     triggerSmartContract: transactionRuntime.triggerSmartContract,
     freezeBalance: (request) => submit("freezeBalance", { amountSun: String(request.amountSun), resource: request.resource }, request.description),
     unfreezeBalance: (request) => submit("unfreezeBalance", { amountSun: String(request.amountSun), resource: request.resource }, request.description),
     delegateResource: (request) => submit("delegateResource", { to: request.to, amountSun: String(request.amountSun), resource: request.resource }, request.description),
     undelegateResource: (request) => submit("undelegateResource", { to: request.to, amountSun: String(request.amountSun), resource: request.resource }, request.description),
-    voteWitness: (request) => submit("voteWitness", { votes: request.votes }, request.description)
+    voteWitness: (request) => submit("voteWitness", { votes: request.votes }, request.description),
+    withdrawReward: (request = {}) =>
+      transactionRuntime.signAndSendBuiltTransaction(
+        () => transactionRuntime.transactionBuilder.withdrawReward(request.ownerAddress ?? manager.getSession()?.account.address),
+        "withdrawReward",
+        request.description,
+        { ownerAddress: request.ownerAddress ?? manager.getSession()?.account.address }
+      )
   };
 }
 

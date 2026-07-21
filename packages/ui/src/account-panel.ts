@@ -1,14 +1,35 @@
 import { createElementFromHtml } from "./dom";
 import { createActionContentHtml } from "./actions";
-import { backIcon, checkIcon, closeIcon, copyIcon, externalIcon, logoutIcon, qrIcon, sendIcon } from "./icons";
+import {
+  backIcon,
+  checkIcon,
+  closeIcon,
+  copyIcon,
+  externalIcon,
+  logoutIcon,
+  qrIcon,
+  sendIcon,
+  arrowDownIcon,
+  arrowUpIcon,
+  fileCheckIcon,
+  lockClosedIcon,
+  lockOpenIcon,
+  voteIcon,
+  giftIcon,
+  codeIcon,
+  questionIcon
+} from "./icons";
 import { en } from "./locales/en";
 import { escapeAttribute, escapeHtml, shortenAddress } from "./utils";
-import type { AccountPanelLabels, AccountPanelViewModel, AddressQrPanelViewModel, RecentTransactionViewModel } from "./types";
+import type { AccountPanelLabels, AccountPanelViewModel, ActivityLabels, AddressQrPanelViewModel, RecentTransactionViewModel, TransactionKind } from "./types";
 
 const defaultAccountPanelLabels: AccountPanelLabels = en.accountPanel;
+const defaultActivityLabels: ActivityLabels = en.activity;
+const DEFAULT_DATE_LOCALE = "en-US";
 
 export function createAccountPanelHtml(viewModel: AccountPanelViewModel): string {
   const labels = { ...defaultAccountPanelLabels, ...viewModel.labels };
+  const activityLabels = { ...defaultActivityLabels, ...viewModel.activityLabels };
   const hasIdentityName = Boolean(viewModel.account.domain ?? viewModel.account.displayName);
   const displayName = viewModel.account.domain ?? viewModel.account.displayName;
   const balanceText = viewModel.balanceTrx ? `${viewModel.balanceTrx} TRX` : "";
@@ -52,15 +73,15 @@ export function createAccountPanelHtml(viewModel: AccountPanelViewModel): string
     viewModel.transactionsLoading
       ? createTransactionSkeletonRowsHtml(Math.min(3, maxVisibleTransactions))
       : visibleTransactions.length > 0
-      ? visibleTransactions.map(createTransactionRowHtml).join("")
-      : `<div class="twk-tx-empty">${escapeHtml(labels.noTransactions)}</div>`;
+      ? visibleTransactions.map((transaction) => createActivityTransactionRowHtml(transaction, activityLabels, "compact")).join("")
+      : createTransactionEmptyHtml(labels.noTransactions);
   const recent =
     transactionCount > 0 || viewModel.transactionsLoading
       ? `<section class="twk-tx-section" aria-label="${escapeAttribute(labels.recentTransactions)}">
         <div class="twk-tx-header">
           <span>${escapeHtml(labels.recentTransactions)}</span>
           <span class="twk-tx-count${viewModel.transactionsLoading ? " twk-skeleton-pill" : ""}" ${viewModel.transactionsLoading ? 'data-loading="true"' : ""}>${viewModel.transactionsLoading ? '<span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">Loading transactions</span>' : transactionCount > 9 ? "9+" : transactionCount}</span>
-          ${transactionCount > maxVisibleTransactions ? `<button class="twk-tx-header-link" type="button" data-twk-action="tx-history">View ${externalIcon()}</button>` : ""}
+          ${transactionCount > maxVisibleTransactions ? `<button class="twk-tx-header-link" type="button" data-twk-action="tx-history">${escapeHtml(activityLabels.title)}</button>` : ""}
         </div>
         <div class="twk-tx-list"><div class="twk-tx-list-inner">${transactions}</div></div>
       </section>`
@@ -107,29 +128,26 @@ export function createAccountPanelHtml(viewModel: AccountPanelViewModel): string
 
 export function createTransactionHistoryPanelHtml(viewModel: AccountPanelViewModel): string {
   const labels = { ...defaultAccountPanelLabels, ...viewModel.labels };
+  const activityLabels = { ...defaultActivityLabels, ...viewModel.activityLabels };
   const transactionCount = viewModel.recentTransactions?.length ?? 0;
   const transactions =
     viewModel.transactionsLoading
       ? createTransactionSkeletonRowsHtml(3)
       : transactionCount > 0
-      ? viewModel.recentTransactions!.map(createTransactionRowHtml).join("")
-      : `<div class="twk-tx-empty">${escapeHtml(labels.noTransactions)}</div>`;
+      ? createActivityTransactionsHtml(viewModel.recentTransactions!, activityLabels)
+      : createTransactionEmptyHtml(activityLabels.empty);
 
   return `<section class="twk-account-panel" data-twk-account-view="tx-history" aria-labelledby="twk-tx-history-title">
   <header class="twk-header">
     <button class="twk-back" type="button" data-twk-action="account-back" aria-label="${escapeAttribute(labels.back)}">${backIcon()}</button>
     <div class="twk-header-main">
-      <h2 class="twk-title" id="twk-tx-history-title">${escapeHtml(labels.recentTransactions)}</h2>
+      <h2 class="twk-title" id="twk-tx-history-title">${escapeHtml(activityLabels.title)}</h2>
     </div>
     <button class="twk-close" type="button" data-twk-action="close-account" aria-label="${escapeAttribute(labels.close)}">${closeIcon()}</button>
   </header>
   <div class="twk-account-body">
-    <section class="twk-tx-section twk-tx-history-view" aria-label="${escapeAttribute(labels.recentTransactions)}">
-      <div class="twk-tx-header">
-        <span>${escapeHtml(labels.recentTransactions)}</span>
-        <span class="twk-tx-count${viewModel.transactionsLoading ? " twk-skeleton-pill" : ""}" ${viewModel.transactionsLoading ? 'data-loading="true"' : ""}>${viewModel.transactionsLoading ? '<span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">Loading transactions</span>' : transactionCount > 9 ? "9+" : transactionCount}</span>
-      </div>
-      <div class="twk-tx-list"><div class="twk-tx-list-inner">${transactions}</div></div>
+    <section class="twk-activity-section twk-tx-history-view" aria-label="${escapeAttribute(activityLabels.title)}">
+      <div class="twk-tx-list twk-activity-scroll" data-overflow="${transactionCount > 3 ? "both" : "none"}"><div class="twk-tx-list-inner twk-activity-list">${transactions}</div></div>
     </section>
   </div>
 </section>`;
@@ -167,16 +185,165 @@ export function createAddressQrPanelHtml(viewModel: AddressQrPanelViewModel): st
 </section>`;
 }
 
-function createTransactionRowHtml(transaction: RecentTransactionViewModel): string {
-  const txHash = transaction.txHash ? shortenAddress(transaction.txHash) : "";
-  const link = transaction.explorerUrl
-    ? `<a class="twk-tx-link" href="${escapeAttribute(transaction.explorerUrl)}" target="_blank" rel="noreferrer">View ${externalIcon()}</a>`
-    : `<span class="twk-tx-status" data-status="${escapeAttribute(transaction.status)}">${escapeHtml(transaction.status)}</span>`;
-  return `<div class="twk-tx-row" data-twk-transaction-id="${escapeAttribute(transaction.id)}">
-  <span class="twk-tx-icon" data-status="${escapeAttribute(transaction.status)}" aria-hidden="true"></span>
-  <span class="twk-tx-main"><span class="twk-tx-label">${escapeHtml(transaction.label)}</span><span class="twk-tx-hash">${escapeHtml(txHash || transaction.status)}</span></span>
-  ${link}
-</div>`;
+function createActivityTransactionsHtml(transactions: readonly RecentTransactionViewModel[], labels: ActivityLabels): string {
+  let currentGroup = "";
+  return transactions
+    .map((transaction) => {
+      const group = formatTransactionDayGroup(transaction.timestamp);
+      const heading = group && group !== currentGroup ? `<div class="twk-activity-month">${escapeHtml(group)}</div>` : "";
+      if (group) currentGroup = group;
+      return `${heading}${createActivityTransactionRowHtml(transaction, labels)}`;
+    })
+    .join("");
+}
+
+function activityIconSvg(kind: TransactionKind): string {
+  if (kind === "received" || kind === "receivedToken") return arrowDownIcon();
+  if (kind === "sent" || kind === "sentToken") return arrowUpIcon();
+  if (kind === "approve") return fileCheckIcon();
+  if (kind === "staked" || kind === "delegated") return lockClosedIcon();
+  if (kind === "unstaked" || kind === "undelegated") return lockOpenIcon();
+  if (kind === "voted") return voteIcon();
+  if (kind === "claimedRewards") return giftIcon();
+  if (kind === "contractCall") return codeIcon();
+  return questionIcon();
+}
+
+function createActivityTransactionRowHtml(transaction: RecentTransactionViewModel, labels: ActivityLabels, density: "regular" | "compact" = "regular"): string {
+  const date = density === "compact" ? formatRelativeTransactionTime(transaction.timestamp) : "";
+  const kind = transaction.kind ?? fallbackKindFromStatus(transaction.status);
+  const title = transaction.title ?? formatActivityTitle(kind, transaction.token, transaction.resource, labels) ?? transaction.label;
+  const statusSubtitle = transaction.status === "pending" || transaction.status === "failed" ? transaction.subtitle || statusLabel(transaction.status, labels) : "";
+  const resourceSubtitle = transaction.resource ? resourceLabel(transaction.resource, labels) : "";
+  const subtitle = statusSubtitle || transaction.subtitle || resourceSubtitle || (transaction.status === "success" ? "" : statusLabel(transaction.status, labels));
+  const direction = transaction.direction ?? fallbackDirection(kind);
+  const amountTone = transaction.status === "failed" ? "muted" : transaction.amountTone ?? (direction === "in" ? "in" : direction === "out" ? "out" : "muted");
+  const amountText = normalizeActivityAmountText(transaction.amountText);
+  const right = amountText
+    ? `<span class="twk-activity-amount" data-tone="${escapeAttribute(amountTone)}" data-status="${escapeAttribute(transaction.status)}">${escapeHtml(amountText)}</span>`
+    : createActivityStatusChipHtml(transaction.status, labels);
+  const rowClass = density === "compact" ? "twk-activity-row twk-activity-row-compact" : "twk-activity-row";
+  const sideMeta = date ? `<span class="twk-activity-date">${escapeHtml(date)}</span>` : "";
+  const content = `<span class="twk-activity-icon" data-kind="${escapeAttribute(kind)}" data-direction="${escapeAttribute(direction)}" data-status="${escapeAttribute(transaction.status)}" aria-hidden="true">${activityIconSvg(kind)}${activityBadgeIcon(direction, transaction.status)}</span>
+  <span class="twk-activity-main"><span class="twk-activity-title">${escapeHtml(title)}</span><span class="twk-activity-meta" data-status="${escapeAttribute(transaction.status)}">${escapeHtml(subtitle)}</span></span>
+  <span class="twk-activity-side">${right}${sideMeta}</span>`;
+
+  return transaction.explorerUrl
+    ? `<a class="${rowClass}" href="${escapeAttribute(transaction.explorerUrl)}" target="_blank" rel="noreferrer" data-twk-transaction-id="${escapeAttribute(transaction.id)}" data-status="${escapeAttribute(transaction.status)}" aria-label="${escapeAttribute(labels.view)} ${escapeAttribute(title)}">${content}</a>`
+    : `<div class="${rowClass}" data-twk-transaction-id="${escapeAttribute(transaction.id)}" data-status="${escapeAttribute(transaction.status)}">${content}</div>`;
+}
+
+function formatActivityTitle(kind: TransactionKind, token: string | undefined, resource: RecentTransactionViewModel["resource"], labels: ActivityLabels): string {
+  if (kind === "receivedToken") return formatLabel(labels.receivedToken, { token: token ?? "TRC20" });
+  if (kind === "sentToken") return formatLabel(labels.sentToken, { token: token ?? "TRC20" });
+  if (kind === "approve") return formatLabel(labels.approve, { token: token ?? "TRC20" });
+  if (kind === "delegated") return formatLabel(labels.delegated, { resource: resourceLabel(resource, labels) || labels.energy });
+  if (kind === "undelegated") return formatLabel(labels.undelegated, { resource: resourceLabel(resource, labels) || labels.energy });
+  return labels[kind] ?? labels.unknown;
+}
+
+function resourceLabel(resource: RecentTransactionViewModel["resource"], labels: ActivityLabels): string {
+  if (resource === "bandwidth") return labels.bandwidth;
+  if (resource === "energy") return labels.energy;
+  return "";
+}
+
+function formatLabel(template: string, vars: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (_match, key: string) => String(vars[key] ?? ""));
+}
+
+function fallbackKindFromStatus(status: RecentTransactionViewModel["status"]): TransactionKind {
+  return status === "unknown" ? "unknown" : "contractCall";
+}
+
+function fallbackDirection(kind: TransactionKind): "in" | "out" | "neutral" {
+  if (kind === "received" || kind === "receivedToken" || kind === "claimedRewards") return "in";
+  if (kind === "sent" || kind === "sentToken") return "out";
+  return "neutral";
+}
+
+function normalizeActivityAmountText(amountText: string | undefined): string {
+  if (!amountText) return "";
+  const normalized = amountText.trim();
+  return /\d/.test(normalized) ? normalized : "";
+}
+
+function createActivityStatusChipHtml(status: RecentTransactionViewModel["status"], labels: ActivityLabels): string {
+  if (status !== "pending" && status !== "failed") return "";
+  const label = status === "pending" ? labels.pending : labels.failed;
+  return `<span class="twk-activity-status twk-activity-status-chip" data-status="${escapeAttribute(status)}">${escapeHtml(label)}</span>`;
+}
+
+function statusLabel(status: RecentTransactionViewModel["status"], labels: ActivityLabels): string {
+  if (status === "pending") return labels.pending;
+  if (status === "failed") return labels.failed;
+  if (status === "success") return labels.confirmed;
+  return labels.unknown;
+}
+
+function activityBadgeIcon(direction: "in" | "out" | "neutral", status: RecentTransactionViewModel["status"]): string {
+  if (status === "pending") {
+    return `<span class="twk-activity-badge" data-status="pending"><svg class="twk-activity-spinner" width="52" height="52" viewBox="0 0 52 52" fill="none" aria-hidden="true"><circle cx="26" cy="26" r="23" stroke="currentColor" stroke-opacity=".18" stroke-width="2.4"></circle><path d="M49 26a23 23 0 0 1-23 23" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></path></svg></span>`;
+  }
+  if (status === "failed") {
+    return `<span class="twk-activity-badge" data-status="failed"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></span>`;
+  }
+  if (direction === "in") {
+    return `<span class="twk-activity-badge" data-direction="in"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 7h10v10M17 7 6 18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
+  }
+  if (direction === "out") {
+    return `<span class="twk-activity-badge" data-direction="out"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17V7h10M7 7l11 11" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
+  }
+  return "";
+}
+
+function formatTransactionDayGroup(timestamp?: string): string {
+  const date = parseTransactionDate(timestamp);
+  if (!date) return "";
+  const today = startOfLocalDay(new Date());
+  const target = startOfLocalDay(date);
+  const diffDays = Math.round((today.getTime() - target.getTime()) / 86_400_000);
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  return new Intl.DateTimeFormat(DEFAULT_DATE_LOCALE, { day: "2-digit", month: "short" }).format(date);
+}
+
+function formatTransactionDate(timestamp?: string): string {
+  const date = parseTransactionDate(timestamp);
+  if (!date) return "";
+  return new Intl.DateTimeFormat(DEFAULT_DATE_LOCALE, { day: "2-digit", month: "short" }).format(date);
+}
+
+function formatRelativeTransactionTime(timestamp?: string): string {
+  const date = parseTransactionDate(timestamp);
+  if (!date) return "";
+  const diffMs = Date.now() - date.getTime();
+  if (!Number.isFinite(diffMs)) return "";
+  const absMs = Math.abs(diffMs);
+  const suffix = diffMs < 0 ? "from now" : "ago";
+  const minute = 60_000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  if (absMs < minute) return "now";
+  if (absMs < hour) return `${Math.max(1, Math.round(absMs / minute))}m ${suffix}`;
+  if (absMs < day) return `${Math.round(absMs / hour)}h ${suffix}`;
+  if (absMs < 2 * day && diffMs >= 0) return "Yesterday";
+  if (absMs < 7 * day) return `${Math.round(absMs / day)}d ${suffix}`;
+  return formatTransactionDate(timestamp);
+}
+
+function parseTransactionDate(timestamp?: string): Date | null {
+  if (!timestamp) return null;
+  const date = new Date(timestamp);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function startOfLocalDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function createTransactionEmptyHtml(label: string): string {
+  return `<div class="twk-tx-empty"><span class="twk-tx-empty-icon" aria-hidden="true">${codeIcon()}</span><span>${escapeHtml(label)}</span></div>`;
 }
 
 function createTransactionSkeletonRowsHtml(count: number): string {

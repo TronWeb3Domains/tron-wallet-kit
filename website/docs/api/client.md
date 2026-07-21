@@ -92,6 +92,7 @@ await kit.triggerSmartContract({
 });
 await kit.freezeBalance({ amountSun: 1_000_000n, resource: "ENERGY" });
 await kit.voteWitness({ votes: [{ witnessAddress: "T...", voteCount: 3 }] });
+await kit.withdrawReward({ description: "Claim voting rewards" });
 ```
 
 `triggerSmartContract` also accepts `function` as a compatibility alias, but new code should use

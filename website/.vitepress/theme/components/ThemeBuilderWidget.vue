@@ -261,8 +261,8 @@ onBeforeUnmount(() => { clearTimeout(reopenTimer); try { buttonCtl?.destroy?.();
 
         <div class="tbx-preview-col">
           <div class="tbx-devbar">
-            <button class="tbx-dev" :class="{ active: device === 'desktop' }" @click="device = 'desktop'">🖥 Desktop</button>
-            <button class="tbx-dev" :class="{ active: device === 'mobile' }" @click="device = 'mobile'">📱 Mobile</button>
+            <button class="tbx-dev" :class="{ active: device === 'desktop' }" @click="device = 'desktop'">Desktop</button>
+            <button class="tbx-dev" :class="{ active: device === 'mobile' }" @click="device = 'mobile'">Mobile</button>
           </div>
           <div class="tbx-stage" :class="device === 'mobile' ? 'is-mobile' : 'is-desktop'">
             <template v-if="device === 'mobile'">
@@ -294,10 +294,10 @@ onBeforeUnmount(() => { clearTimeout(reopenTimer); try { buttonCtl?.destroy?.();
 .tbx-brand { font-size: 13px; font-weight: 600; color: var(--vp-c-text-2); }
 .tbx-inner { max-width: 1400px; margin: 0 auto; padding: 28px 24px 80px; }
 .tbx-head { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
-.tbx-title { font-size: 28px; font-weight: 700; margin: 0 0 4px; }
+.tbx-title { font-family: var(--twk-display, "Space Grotesk", ui-sans-serif, system-ui, sans-serif); font-size: 30px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 4px; }
 .tbx-sub { font-size: 14px; color: var(--vp-c-text-2); margin: 0; }
 .tbx-presets { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.tbx-presets-lab { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--vp-c-text-3); }
+.tbx-presets-lab { font-size: 12px; font-weight: 500; color: var(--vp-c-text-3); }
 .tbx-preset { padding: 6px 14px; border-radius: 8px; border: 1px solid var(--vp-c-divider); background: var(--vp-c-bg); color: var(--vp-c-text-1); font-size: 13px; cursor: pointer; text-transform: capitalize; }
 .tbx-preset.active { background: var(--vp-c-brand-soft); border-color: var(--vp-c-brand-1); color: var(--vp-c-brand-1); }
 
@@ -306,13 +306,13 @@ onBeforeUnmount(() => { clearTimeout(reopenTimer); try { buttonCtl?.destroy?.();
 .tbx-controls { background: var(--vp-c-bg-soft); border: 1px solid var(--vp-c-divider); border-radius: 12px; overflow: hidden; position: sticky; top: 64px; max-height: calc(100vh - 96px); overflow-y: auto; }
 .tbx-group { border-bottom: 1px solid var(--vp-c-divider); }
 .tbx-group:last-child { border-bottom: none; }
-.tbx-ghd { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: none; border: none; cursor: pointer; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--vp-c-text-1); }
+.tbx-ghd { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; background: none; border: none; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--vp-c-text-1); }
 .tbx-arrow { font-size: 12px; color: var(--vp-c-text-3); transition: transform 0.2s; }
 .tbx-arrow:not(.open) { transform: rotate(-90deg); }
 .tbx-gbd { padding: 0 14px 12px; display: flex; flex-direction: column; gap: 10px; }
 .tbx-field { display: flex; flex-direction: column; gap: 5px; }
-.tbx-lab { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: var(--vp-c-text-3); display: flex; justify-content: space-between; }
-.tbx-lab b { color: var(--vp-c-brand-1); font-family: var(--vp-font-family-mono); font-weight: 500; text-transform: none; letter-spacing: 0; }
+.tbx-lab { font-size: 12px; font-weight: 500; color: var(--vp-c-text-2); display: flex; justify-content: space-between; }
+.tbx-lab b { color: var(--vp-c-brand-1); font-family: var(--vp-font-family-mono); font-weight: 500; letter-spacing: 0; }
 .tbx-field select { padding: 4px 8px; border: 1px solid var(--vp-c-divider); border-radius: 6px; background: var(--vp-c-bg); color: var(--vp-c-text-1); font-size: 12px; }
 .tbx-field input[type="range"] { width: 100%; accent-color: var(--vp-c-brand-1); }
 .tbx-chips { display: flex; gap: 5px; flex-wrap: wrap; }
@@ -396,7 +396,7 @@ onBeforeUnmount(() => { clearTimeout(reopenTimer); try { buttonCtl?.destroy?.();
   pointer-events: none;
 }
 .tbx-code { margin-top: 28px; border: 1px solid var(--vp-c-divider); border-radius: 12px; overflow: hidden; }
-.tbx-code-hd { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: var(--vp-c-bg-mute); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--vp-c-text-2); }
+.tbx-code-hd { display: flex; align-items: center; justify-content: space-between; padding: 11px 16px; background: var(--vp-c-bg-mute); font-size: 13px; font-weight: 500; color: var(--vp-c-text-2); }
 .tbx-copy { font-size: 12px; padding: 4px 16px; border-radius: 6px; border: 1px solid var(--vp-c-brand-1); background: var(--vp-c-brand-1); color: #fff; cursor: pointer; text-transform: none; letter-spacing: 0; }
 .tbx-code pre { margin: 0; padding: 16px; font-size: 12px; overflow-x: auto; background: var(--vp-c-bg-alt); }
 

@@ -3,6 +3,7 @@
   "compilerOptions": {
     "paths": {
       "@tron-wallet-kit/adapter-tronwallet-bridge": ["../adapters/tronwallet-bridge/src/index.ts"],
+      "@tron-wallet-kit/auth": ["../auth/src/index.ts"],
       "@tron-wallet-kit/client": ["../client/src/index.ts"],
       "@tron-wallet-kit/core": ["../core/src/index.ts"],
       "@tron-wallet-kit/ui": ["../ui/src/index.ts"],

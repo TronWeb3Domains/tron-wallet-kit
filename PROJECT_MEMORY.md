@@ -5312,3 +5312,241 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm check:quality` passed.
 - Remaining:
   - deeper per-wallet adapter docs beyond TronLink/WalletConnect.
+
+## 2026-07-17 Account Activity UI Polish
+
+- Polished account panel recent transactions:
+  - the compact account preview now uses an `Activity` header action instead of duplicating the row-level `View` links;
+  - the full transaction sub-view now renders an activity-style list with month grouping, larger status icons, transaction metadata, date, and explorer action;
+  - removed the nested transaction-list scrollbar for short full-history lists so the modal can use available vertical space naturally.
+- Added `activity` to account panel labels and covered the new activity markup in UI tests.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed;
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot` passed;
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed;
+  - `pnpm --filter @tron-wallet-kit/ui build` passed.
+- Remaining:
+  - visual QA the account panel in `react-basic` and website theme-builder across desktop/mobile after the CSS build.
+
+## 2026-07-17 Activity Panel Redesign Spec Implementation
+
+- Read `Review/ACTIVITY_PANEL_REDESIGN_SPEC.md` and upgraded the Activity full view beyond the initial polish.
+- UI changes:
+  - added `activity` label group to the localization pack and kept `accountPanel.recentTransactions` for the compact preview only;
+  - full Activity view now drops the compact `RECENT TRANSACTIONS` caption/count pill;
+  - activity rows now use structured anatomy: icon/status badge, localized title/subtitle, amount/date/explorer side column;
+  - row-level explorer is the whole activity row when an explorer URL exists.
+- Runtime/model changes:
+  - extended recent transaction view models with optional `kind`, `direction`, `title`, `subtitle`, `amountText`, `amountTone`, and `token`;
+  - extended core stored transactions with the same optional activity metadata;
+  - client transaction runtime records best-effort activity metadata for transfer TRX/TRC10/TRC20, resources, vote, and contract calls.
+- Docs:
+  - updated `website/docs/configuration/localization.md` with `activity` label overrides and placeholder guidance.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/core typecheck` passed;
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed;
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed;
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed;
+  - `pnpm --filter @tron-wallet-kit/core test -- --run --reporter=dot` passed;
+  - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed;
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot` passed;
+  - `pnpm --filter @tron-wallet-kit/core build` passed;
+  - `pnpm --filter @tron-wallet-kit/client build` passed;
+  - `pnpm --filter @tron-wallet-kit/ui build` passed;
+  - `pnpm --filter @tron-wallet-kit/website build` passed.
+- Remaining:
+  - visual QA Activity rows with real transactions;
+  - later indexer-backed history/detail view remains out of scope per spec.
+
+## 2026-07-17 Runtime English + Activity UX Audit
+
+- Used `ui-ux-pro-max` checklist to review the Activity/account panel UI for accessibility, interaction clarity, layout stability, and color-token discipline.
+- Audited runtime source strings in `packages/`, `examples/`, and `website/` source while excluding generated public bundles:
+  - no Vietnamese runtime labels were found;
+  - only the close glyph `x`/`×` appeared as an icon-like character in source;
+  - generated public IIFE files still contained dependency locale regex noise and were rebuilt/copied from the fresh browser package.
+- Activity UI hardening:
+  - activity status badges now include direction/error SVG glyphs instead of relying on color-only dots;
+  - resource transactions now store a normalized `resource` value so labels can render localized `Energy`/`Bandwidth`;
+  - TRX transfer metadata is treated as an app-submitted outbound transaction instead of guessing a received direction from the `to` field.
+- Browser/CDN sync:
+  - rebuilt `@tron-wallet-kit/browser`;
+  - copied fresh `tron-wallet-kit.iife.js` and `tron-wallet-kit.iife.min.js` into `website/public/` and `examples/public/vendor/`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/core typecheck` passed;
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed;
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed;
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed;
+  - `pnpm --filter @tron-wallet-kit/core test -- --run --reporter=dot` passed;
+  - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed;
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot` passed;
+  - `pnpm --filter @tron-wallet-kit/core build` passed;
+  - `pnpm --filter @tron-wallet-kit/client build` passed;
+  - `pnpm --filter @tron-wallet-kit/ui build` passed;
+  - `pnpm --filter @tron-wallet-kit/react build` passed;
+  - `pnpm --filter @tron-wallet-kit/browser build` passed;
+  - `pnpm --filter @tron-wallet-kit/website build` passed.
+- Remaining:
+  - visual QA the updated Activity badge icons in light/dark/mobile;
+  - decide later whether to remove or keep the optional Chinese locale pack before npm release.
+
+## 2026-07-17 Activity Date Locale Fix
+
+- Fixed an Activity panel localization leak where transaction month/date used the browser locale through `Intl.DateTimeFormat(undefined, ...)`.
+- The default kit Activity date formatter now uses `en-US`, so English runtime UI does not render Vietnamese dates on Vietnamese browsers.
+- Added UI test expectations for `September 2025` and `Sep 23` to lock this behavior.
+
+## 2026-07-18 Activity Scroll Fade + Pending Polish
+
+- Read `Review/RECENT_TX_AND_ACTIVITY_UI_POLISH_SPEC.md` and applied the next Activity UI polish pass.
+- Activity full-history view now uses an internal touch scroll region with hidden native scrollbars and top/bottom fade masking when the list overflows.
+- Pending activity rows no longer use the small offset spinner badge; they now render a token-colored spinner ring around the transaction icon to keep the row aligned and calmer.
+- Added UI test coverage for the Activity scroll wrapper, overflow state, and pending spinner markup.
+
+## 2026-07-18 React Basic TRON Activity Mock Samples
+
+- Upgraded the `react-basic` `Add mock tx` action from one generic TRX item to a rotating TRON activity sample set:
+  - sent/received TRX;
+  - sent/received TRC20 tokens;
+  - approve;
+  - contract call pending/failed;
+  - stake Energy;
+  - delegate Bandwidth;
+  - vote SR;
+  - claim rewards.
+- Each mock now carries Activity metadata (`kind`, `direction`, `title`, `subtitle`, `amountText`, `amountTone`, `token`, and `resource` where relevant) so the account panel can be visually QA'd against realistic TRON cases.
+- Fixed `WalletManager.addTransaction()` to retain `resource` metadata for Energy/Bandwidth transactions and added core test coverage for persisted resource metadata.
+
+## 2026-07-18 Withdraw Reward Transaction Hint
+
+- Promoted `withdrawReward` to an official `TronMethodHint`.
+- Added `kit.transactionBuilder.withdrawReward(ownerAddress?)` and `kit.withdrawReward({ ownerAddress?, description? })`.
+- Runtime behavior:
+  - uses TronWeb `transactionBuilder.withdrawReward` when available;
+  - falls back to `transactionBuilder.withdrawBlockRewards` for TronWeb compatibility;
+  - signs and broadcasts through the existing transaction pipeline.
+- Activity metadata maps `withdrawReward` to `claimedRewards`, incoming tone, `Voting rewards` subtitle, and TRX token labeling.
+- React basic mock `Claim rewards` now uses `methodHint: "withdrawReward"`.
+- Docs updated in client API, transaction overview, and resources/governance pages.
+
+## 2026-07-18 React Basic Random Activity Mock Picker
+
+- Read `Review/HALLMARK_AUDIT_RECENT_TX.md`; compact Recent Transactions still needs a follow-up redesign to share the Activity row language.
+- Fixed the `react-basic` `Add mock tx` picker so it no longer advances by persisted mock count modulo sample length.
+- The picker now uses browser crypto randomness when available and avoids repeating the immediately previous sample, so QA gets a more balanced spread across TRX, token, approve, contract, staking, delegation, voting, reward, pending, and failed cases.
+
+## 2026-07-18 Compact Recent Transactions Hallmark Audit Fix
+
+- Implemented the `Review/HALLMARK_AUDIT_RECENT_TX.md` high-priority compact Recent Transactions fixes.
+- Compact recent rows now reuse the Activity row model with a compact density:
+  - meaningful `kind`/`direction` icon and status/direction badge;
+  - structured title and subtitle instead of raw transaction hashes;
+  - right-aligned signed amount plus compact relative/absolute time;
+  - row-level explorer link without a separate noisy `View` glyph.
+- Recent section header is now sentence case with normal letter spacing and medium weight.
+- Removed the unused text-glyph activity icon helper and changed fallback amount behavior so rows no longer show bare token tickers without numbers.
+- Rebuilt UI/browser bundles and synced IIFE files into website/examples.
+
+## 2026-07-18 Recent Transactions & Activity UI/UX Polish
+
+- Audited and polished the Recent Transactions & Activity UI/UX to remove the generic "AI Slop" style.
+- Created `Review/RECENT_TX_AND_ACTIVITY_UI_POLISH_SPEC.md` documenting the design specifications.
+- Upgraded Recent Transactions rows:
+  - Replaced the static dot indicators with status-specific SVG check/cross/spinner icons.
+  - Made the entire row an interactive hoverable anchor tag if an explorer URL is present, improving clickability.
+  - Removed full-width row borders (`border-top`) in favor of clean cards with rounded corners (`border-radius: 8px`) and interactive background hover states.
+- Upgraded Activity view list:
+  - Replaced text-based circle placeholders ("TRX", "USDT") with custom Phosphor-style SVG icons for all transaction kinds (incoming/outgoing arrows, lock closed/open for stake/unstake, file check for approvals, vote checkbox, claimed rewards gift, and contract code brackets).
+  - Configured soft, translucent background tones and full-intensity icon colors based on transaction kind and direction using `color-mix`.
+- Monorepo & toolchain fixes:
+  - Fixed a workspace typechecking error in `@tron-wallet-kit/next` by adding the missing `@tron-wallet-kit/auth` path mapping to `packages/next/tsconfig.json`.
+  - Excluded the `website/public/**` directory in `eslint.config.js` to prevent compiled assets from failing ESLint runs.
+  - Rebuilt the browser IIFE bundles and verified that all 198 tests in the workspace pass successfully.
+
+## 2026-07-18 Activity Hallmark Refinement Pass
+
+- Continued `Review/HALLMARK_AUDIT_RECENT_TX.md` after the compact-row fix.
+- Full Activity now groups transactions by day (`Today`, `Yesterday`, or `17 Jul`) instead of month and removes repeated per-row dates.
+- Activity rows are tighter and clearer: 34px semantic icon, denser padding, amount as the right-column visual anchor, tabular numerals, and explorer glyph visible only on hover/focus.
+- Compact Recent rows were scaled down one step from full Activity so the Recent block reads as a supporting summary below the account hero.
+- Empty Recent/Activity state now uses `Your activity will show up here.` with a subtle token-driven icon treatment.
+- Verified with `pnpm --filter @tron-wallet-kit/ui typecheck`, `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot`, `pnpm --filter @tron-wallet-kit/ui build`, `pnpm --filter @tron-wallet-kit/browser build`, `pnpm --filter @tron-wallet-kit/website build`, and `pnpm --filter @tron-wallet-kit/examples build`. Examples still show the known Rollup PURE annotation and chunk-size warnings.
+
+## 2026-07-18 React Basic Mock Toast Dismiss Fix
+
+- Fixed the `react-basic` Add mock tx toast dismiss bug.
+- Root cause: the example rendered a standalone toast HTML string with `dangerouslySetInnerHTML`, so the close button had markup but no toast-controller click listener.
+- Removed the manual `toastHtml` state/render path and let `kit.manager.addTransaction()` emit the transaction event consumed by the kit's mounted toast controller (`ui.toast: true`).
+- Verified `examples/react-basic/src/main.tsx` no longer references `toastHtml`, `setToastHtml`, or `createTransactionToastContainerHtml`.
+- Verified with `pnpm --filter @tron-wallet-kit/examples build`; build passes with the known Rollup PURE annotation and chunk-size warnings.
+
+## 2026-07-18 Activity Right Column Normalization
+
+- Tightened the Activity/Recent right-column rule after review feedback.
+- The right column now renders only numeric/quantity text as `.twk-activity-amount`; bare tickers or words such as `USDT`, `Contract`, or `Pending` are no longer treated as amounts.
+- Pending rows without a numeric amount now render a quiet token-driven status chip; failed rows without a numeric amount leave the right column empty and carry the failure in the subtitle.
+- Updated React Basic mock samples:
+  - Approve USDT now shows `1,000 USDT` as the allowance amount and uses the subtitle for spender context.
+  - Pending contract rows rely on the status chip instead of `amountText: "Pending"`.
+  - Failed contract rows use title `Contract` and no fake amount text.
+- Gave outgoing Activity icons a subtle token-driven tint so sent rows visually match the rest of the icon system.
+- Verified with `pnpm --filter @tron-wallet-kit/ui typecheck`, `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot`, `pnpm --filter @tron-wallet-kit/ui build`, `pnpm --filter @tron-wallet-kit/browser build`, `pnpm --filter @tron-wallet-kit/website build`, and `pnpm --filter @tron-wallet-kit/examples build`.
+
+## 2026-07-18 Activity Lined Ledger Follow-Up
+
+- Continued `Review/HALLMARK_AUDIT_RECENT_TX.md` and implemented the chosen Option A `lined ledger` direction.
+- Full Activity now renders one bordered ledger frame with hairline row separators and day subheaders inside the frame.
+- Compact Recent uses the same hairline row language inside its existing card without adding a double border.
+- Renamed/standardized status chips to `.twk-activity-status` while keeping compatibility class `.twk-activity-status-chip` in markup.
+- Pending/failed rows without a real amount now render a status chip; rows with a real amount keep the amount as the visual anchor.
+- Client transaction metadata no longer emits bare fallback `amountText` values such as `TRX`, token tickers, `Contract`, or `-` when no real amount is known.
+- Updated `Review/HALLMARK_AUDIT_RECENT_TX.md` with an implementation status section for reviewer handoff.
+- Verified with UI/client typecheck and tests plus client/UI/browser/website/examples builds. Examples still show the known Rollup PURE annotation and chunk-size warnings.
+
+## 2026-07-18 Activity Divider Softening
+
+- Adjusted the Activity/Recent divider treatment after visual QA.
+- Recent Transactions no longer renders row divider lines; compact rows return to soft rounded hover surfaces inside the existing recent card.
+- Full Activity no longer uses an outer ledger border or day-header divider; it keeps only a subtle bottom divider between rows.
+- Rebuilt UI/browser bundles and synced IIFE files into website/examples.
+- Verified with `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot`, `pnpm --filter @tron-wallet-kit/ui typecheck`, `pnpm --filter @tron-wallet-kit/ui build`, `pnpm --filter @tron-wallet-kit/browser build`, `pnpm --filter @tron-wallet-kit/examples build`, and `pnpm --filter @tron-wallet-kit/website build`. Examples still show the known Rollup PURE annotation and chunk-size warnings.
+
+## 2026-07-18 Activity Wallet-List Style Spacing
+
+- Removed Activity row divider lines entirely after visual QA showed the ledger still felt cramped.
+- Activity now follows the wallet-list presentation language more closely: separate item rhythm, rounded hover surfaces, no visible grid lines.
+- Increased Activity list gap and day header spacing so large groups breathe better inside the modal.
+- Rebuilt UI/browser bundles and synced IIFE files into website/examples.
+- Verified with `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot`, `pnpm --filter @tron-wallet-kit/ui typecheck`, `pnpm --filter @tron-wallet-kit/ui build`, `pnpm --filter @tron-wallet-kit/browser build`, `pnpm --filter @tron-wallet-kit/examples build`, and `pnpm --filter @tron-wallet-kit/website build`. Examples still show the known Rollup PURE annotation and chunk-size warnings.
+
+## 2026-07-18 Activity Row Hover Alignment
+
+- Fixed Activity row hover alignment after visual QA showed the hover block and row content did not share the same vertical center.
+- The row main content and right column now explicitly align to the row center.
+- In full Activity, explorer icons sit on the same right-column line as the amount instead of creating an extra line below it.
+- Compact Recent keeps its amount/time stack so the relative timestamp remains readable.
+- Rebuilt UI/browser bundles and synced IIFE files into website/examples.
+- Verified with `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot`, `pnpm --filter @tron-wallet-kit/ui typecheck`, `pnpm --filter @tron-wallet-kit/ui build`, `pnpm --filter @tron-wallet-kit/browser build`, `pnpm --filter @tron-wallet-kit/examples build`, and `pnpm --filter @tron-wallet-kit/website build`. Examples still show the known Rollup PURE annotation and chunk-size warnings.
+
+## 2026-07-18 Activity External Glyph Removal
+
+- Removed the per-row external-link glyph from Activity and Recent transaction rows after visual QA showed it made the right column feel uneven.
+- Rows still open their explorer URL when available; the click affordance is now the row itself instead of a separate icon.
+- Reduced compact Recent transaction typography one step so it reads as supporting account content rather than competing with the account hero.
+- Rebuilt UI/browser bundles and synced IIFE files into website/examples.
+- Verified with `pnpm --filter @tron-wallet-kit/ui typecheck`, `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot`, `pnpm --filter @tron-wallet-kit/ui build`, `pnpm --filter @tron-wallet-kit/browser build`, `pnpm --filter @tron-wallet-kit/examples build`, and `pnpm --filter @tron-wallet-kit/website build`. Examples still show the known Rollup PURE annotation and chunk-size warnings.
+
+## 2026-07-21 Activity Row Height Alignment
+
+- Adjusted full Activity transaction rows after visual QA showed the hover surface and row contents still felt slightly tight vertically.
+- Set `.twk-activity-row` `min-height` to `55px` while keeping the compact Recent Transactions override unchanged.
+- Rebuilt UI/browser bundles and synced IIFE files into website/examples.
+- Verified with `pnpm --filter @tron-wallet-kit/ui typecheck`, `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot`, `pnpm --filter @tron-wallet-kit/ui build`, `pnpm --filter @tron-wallet-kit/browser build`, `pnpm --filter @tron-wallet-kit/examples build`, and `pnpm --filter @tron-wallet-kit/website build`. Examples still show the known Rollup PURE annotation and chunk-size warnings.
+
+## 2026-07-21 GasFree Integration Spec Read
+
+- Read `Review/GASFREE_INTEGRATION_SPEC.md`.
+- Key boundary: GasFree is a client/app-layer feature only; core/adapters should not own GasFree API calls.
+- Phase 1 scope is low risk: `gasFree.enabled`, lazy SDK address derivation, Account Panel General/GasFree display mode, copy/QR for the GasFree address, and USDT balance from an app-provided GasFree API.
+- Phase 2 scope is separate: optional `signTypedData` capability, headless `kit.gasFree.transfer()` primitive, provider relay, toast/recent transaction integration, and localized `WalletKitError` mapping.
+- Hard UX rule: no default send form inside the account panel; any built-in send widget must remain opt-in and deferred.

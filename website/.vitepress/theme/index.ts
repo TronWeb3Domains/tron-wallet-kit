@@ -4,6 +4,7 @@ import WalletTable from "./components/WalletTable.vue";
 import ThemeBuilder from "./components/ThemeBuilder.vue";
 import ThemeBuilderWidget from "./components/ThemeBuilderWidget.vue";
 import PlaygroundWidget from "./components/PlaygroundWidget.vue";
+import HomeLanding from "./components/HomeLanding.vue";
 import "./custom.css";
 
 const theme: Theme = {
@@ -13,6 +14,7 @@ const theme: Theme = {
     app.component("ThemeBuilder", ThemeBuilder);
     app.component("ThemeBuilderWidget", ThemeBuilderWidget);
     app.component("PlaygroundWidget", PlaygroundWidget);
+    app.component("HomeLanding", HomeLanding);
   },
 };
 

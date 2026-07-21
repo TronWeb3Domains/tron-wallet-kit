@@ -10,6 +10,7 @@ export function resolveLabelPack(locale?: string, overrides?: WalletUiLabels): W
   return {
     connectModal: { ...BUILTIN_LOCALES.en.connectModal, ...base.connectModal, ...overrides?.connectModal },
     accountPanel: { ...BUILTIN_LOCALES.en.accountPanel, ...base.accountPanel, ...overrides?.accountPanel },
+    activity: { ...BUILTIN_LOCALES.en.activity, ...base.activity, ...overrides?.activity },
     walletButton: { ...BUILTIN_LOCALES.en.walletButton, ...base.walletButton, ...overrides?.walletButton },
     toast: { ...BUILTIN_LOCALES.en.toast, ...base.toast, ...overrides?.toast },
     errors: {

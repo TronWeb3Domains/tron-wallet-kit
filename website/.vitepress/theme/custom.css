@@ -95,6 +95,7 @@
   padding: 0 !important;
   letter-spacing: normal !important;
   line-height: inherit;
+  font-family: inherit !important;
 }
 .vp-doc [data-twk-root] p { margin: 0; }
 .vp-doc [data-twk-root] a { font-weight: inherit; text-decoration: none; }
@@ -103,3 +104,23 @@
 .vp-doc [data-twk-root] ol,
 .vp-doc [data-twk-root] li { margin: 0; padding: 0; list-style: none; }
 .vp-doc [data-twk-root] hr { display: none; }
+
+/* ── Hallmark redesign: display/body type pairing across all docs pages ──
+   Body stays the VitePress base (Inter); headings get a distinctive display
+   face (Space Grotesk) so every inner page shares the landing's voice.
+   The [data-twk-root] reset above forces font-family:inherit, so the injected
+   wallet modal titles are unaffected. */
+:root { --twk-display: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, sans-serif; }
+
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3,
+.vp-doc h4,
+.VPDoc .vp-doc h1,
+h1.tbx-title {
+  font-family: var(--twk-display);
+  letter-spacing: -0.015em;
+}
+.vp-doc h1 { font-weight: 600; }
+.vp-doc h2 { font-weight: 600; }
+.vp-doc h3 { font-weight: 500; }

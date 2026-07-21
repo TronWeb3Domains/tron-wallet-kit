@@ -13,6 +13,8 @@ export type TronDomainTronWeb = BalanceTronWeb & {
   toSun?(value: string | number): number | string;
   transactionBuilder?: {
     sendTrx?(to: string, amountSun: number, from?: string): Promise<Record<string, unknown>>;
+    withdrawReward?(ownerAddress?: string): Promise<Record<string, unknown>>;
+    withdrawBlockRewards?(ownerAddress?: string): Promise<Record<string, unknown>>;
     triggerSmartContract?(
       contractAddress: string,
       functionSelector: string,

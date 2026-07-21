@@ -304,6 +304,14 @@ export class WalletManager {
       updatedAt: now,
       ...(input.methodHint ? { methodHint: input.methodHint } : {}),
       ...(input.description ? { description: input.description } : {}),
+      ...(input.kind ? { kind: input.kind } : {}),
+      ...(input.direction ? { direction: input.direction } : {}),
+      ...(input.title ? { title: input.title } : {}),
+      ...(input.subtitle ? { subtitle: input.subtitle } : {}),
+      ...(input.amountText ? { amountText: input.amountText } : {}),
+      ...(input.amountTone ? { amountTone: input.amountTone } : {}),
+      ...(input.token ? { token: input.token } : {}),
+      ...(input.resource ? { resource: input.resource } : {}),
       ...(explorerUrl ? { explorerUrl } : {}),
       ...(input.raw !== undefined ? { raw: input.raw } : {})
     };

@@ -1024,6 +1024,7 @@ function createWalletButtonAccountPanelHtml(input: WalletButtonAccountPanelModel
       balanceLoading: input.balanceLoading,
       ...((input.explorerAccountUrl || input.session.network.explorerAccountUrl) ? { explorerUrl: (input.explorerAccountUrl || input.session.network.explorerAccountUrl)!.replace("{address}", input.session.account.address) } : {}),
       copyState: input.copyState,
+      activityLabels: input.kit.uiConfig.labels.activity,
       recentTransactions: transactions,
       ...(input.showRecentTransactions !== undefined ? { showRecentTransactions: input.showRecentTransactions } : {}),
       ...(input.maxVisibleTransactions ? { maxVisibleTransactions: input.maxVisibleTransactions } : {}),
@@ -1154,6 +1155,7 @@ export function AccountPanel(props: AccountPanelProps) {
     ...(props.balanceLoading !== undefined ? { balanceLoading: props.balanceLoading } : {}),
     ...(props.addressQr ? { addressQr: props.addressQr } : {}),
     ...(props.copyState ? { copyState: props.copyState } : {}),
+    activityLabels: kit.uiConfig.labels.activity,
     recentTransactions: props.recentTransactions ?? kit.manager.getTransactions(5).map(mapTransaction),
     ...(props.showDisconnectButton !== undefined ? { showDisconnectButton: props.showDisconnectButton } : {})
   });
@@ -1212,6 +1214,14 @@ function mapTransaction(transaction: ReturnType<WalletKit["manager"]["getTransac
     status: transaction.status === "confirmed" ? "success" : transaction.status === "submitted" ? "pending" : transaction.status,
     txHash: transaction.hash,
     timestamp: new Date(transaction.submittedAt).toISOString(),
+    ...(transaction.kind ? { kind: transaction.kind } : {}),
+    ...(transaction.direction ? { direction: transaction.direction } : {}),
+    ...(transaction.title ? { title: transaction.title } : {}),
+    ...(transaction.subtitle ? { subtitle: transaction.subtitle } : {}),
+    ...(transaction.amountText ? { amountText: transaction.amountText } : {}),
+    ...(transaction.amountTone ? { amountTone: transaction.amountTone } : {}),
+    ...(transaction.token ? { token: transaction.token } : {}),
+    ...(transaction.resource ? { resource: transaction.resource } : {}),
     ...(transaction.explorerUrl ? { explorerUrl: transaction.explorerUrl } : {})
   } as const;
 }

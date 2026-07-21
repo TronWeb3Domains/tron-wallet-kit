@@ -113,6 +113,7 @@ freeze, delegate, undelegate, and vote flows.
 await kit.freezeBalance({ amountSun: 1_000_000n, resource: "ENERGY" });
 await kit.delegateResource({ amountSun: 1_000_000n, resource: "ENERGY", to: "T..." });
 await kit.voteWitness({ votes: [{ witnessAddress: "T...", voteCount: 3 }] });
+await kit.withdrawReward({ description: "Claim voting rewards" });
 ```
 
 ## Errors

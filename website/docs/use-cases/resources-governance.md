@@ -53,6 +53,18 @@ await kit.voteWitness({
 });
 ```
 
+## Claim rewards
+
+Use `withdrawReward` after voting rewards are available. The helper builds the reward withdrawal
+transaction, asks the connected wallet to sign, broadcasts it, and records Activity as claimed
+rewards.
+
+```ts
+await kit.withdrawReward({
+  description: "Claim voting rewards"
+});
+```
+
 ## Product guidance
 
 - Treat resource and vote actions like high-impact transactions.

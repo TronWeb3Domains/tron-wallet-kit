@@ -292,7 +292,30 @@ export type RecentTransactionViewModel = {
   txHash?: string;
   timestamp?: string;
   explorerUrl?: string;
+  kind?: TransactionKind;
+  direction?: "in" | "out" | "neutral";
+  title?: string;
+  subtitle?: string;
+  amountText?: string;
+  amountTone?: "in" | "out" | "muted";
+  token?: string;
+  resource?: "energy" | "bandwidth";
 };
+
+export type TransactionKind =
+  | "received"
+  | "sent"
+  | "receivedToken"
+  | "sentToken"
+  | "approve"
+  | "staked"
+  | "unstaked"
+  | "delegated"
+  | "undelegated"
+  | "voted"
+  | "claimedRewards"
+  | "contractCall"
+  | "unknown";
 
 export type AccountPanelLabels = {
   title: string;
@@ -310,6 +333,33 @@ export type AccountPanelLabels = {
   qrAlt: string;
 };
 
+export type ActivityLabels = {
+  title: string;
+  empty: string;
+  received: string;
+  sent: string;
+  receivedToken: string;
+  sentToken: string;
+  approve: string;
+  staked: string;
+  unstaked: string;
+  delegated: string;
+  undelegated: string;
+  voted: string;
+  claimedRewards: string;
+  contractCall: string;
+  unknown: string;
+  from: string;
+  to: string;
+  energy: string;
+  bandwidth: string;
+  votes: string;
+  pending: string;
+  failed: string;
+  confirmed: string;
+  view: string;
+};
+
 export type DisplayWalletAccount = WalletAccount & {
   domain?: string;
   displayName?: string;
@@ -317,6 +367,7 @@ export type DisplayWalletAccount = WalletAccount & {
 
 export type AccountPanelViewModel = {
   labels?: Partial<AccountPanelLabels>;
+  activityLabels?: Partial<ActivityLabels>;
   account: DisplayWalletAccount;
   networkName?: string;
   balanceTrx?: string;
@@ -362,6 +413,7 @@ export type ToastLabels = {
 export type WalletKitLabelPack = {
   connectModal: ConnectModalLabels;
   accountPanel: AccountPanelLabels;
+  activity: ActivityLabels;
   walletButton: WalletButtonLabels;
   toast: ToastLabels;
   errors: WalletKitErrorMessageCatalog;
@@ -370,6 +422,7 @@ export type WalletKitLabelPack = {
 export type WalletUiLabels = {
   connectModal?: Partial<ConnectModalLabels>;
   accountPanel?: Partial<AccountPanelLabels>;
+  activity?: Partial<ActivityLabels>;
   walletButton?: Partial<WalletButtonLabels>;
   toast?: Partial<ToastLabels>;
   errors?: WalletKitErrorMessageCatalog;

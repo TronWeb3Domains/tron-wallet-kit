@@ -1,8 +1,9 @@
 import { StrictMode, useEffect, useMemo, useState } from "react";
 import { createTronAuthenticationAdapter } from "@tron-wallet-kit/auth";
+import type { WalletTransaction } from "@tron-wallet-kit/core";
 import { createRoot } from "react-dom/client";
 import { TronConnectButton, TronKitProvider, getDefaultConfig, useTronKit, useWalletSession, useWalletStatus } from "@tron-wallet-kit/react";
-import { createQrDataUrl, createThemeStyleProperties, createTransactionToastContainerHtml, getThemeNames, type ThemeName, type WalletListConfig } from "@tron-wallet-kit/ui";
+import { createQrDataUrl, createThemeStyleProperties, getThemeNames, type ThemeName, type WalletListConfig } from "@tron-wallet-kit/ui";
 
 const walletConnectProjectId = ((import.meta as ImportMeta & { env?: { VITE_WALLETCONNECT_PROJECT_ID?: string } }).env?.VITE_WALLETCONNECT_PROJECT_ID) || "a4109c95d50e5c136cdafaf9fc44c105";
 const kitFontFamily = 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
@@ -24,6 +25,154 @@ const allWalletPresets: Record<AllWalletsPreset, "all" | string[]> = {
   all: "all",
   core: ["tronlink", "tokenpocket", "okx", "bitget", "trust", "walletconnect"]
 };
+
+type MockTransactionSample = Omit<
+  Partial<WalletTransaction>,
+  "id" | "adapterId" | "account" | "network" | "submittedAt" | "updatedAt" | "hash" | "raw"
+>;
+
+const mockTransactionSamples = [
+  {
+    status: "submitted",
+    methodHint: "transferTrx",
+    description: "Send TRX",
+    kind: "sent",
+    direction: "out",
+    title: "Sent",
+    subtitle: "To TReceiver...9KJ2",
+    amountText: "-12.5 TRX",
+    amountTone: "out",
+    token: "TRX"
+  },
+  {
+    status: "confirmed",
+    methodHint: "transferTrx",
+    description: "Receive TRX",
+    kind: "received",
+    direction: "in",
+    title: "Received",
+    subtitle: "From TSender...4A8m",
+    amountText: "+25 TRX",
+    amountTone: "in",
+    token: "TRX"
+  },
+  {
+    status: "confirmed",
+    methodHint: "triggerSmartContract",
+    description: "Send USDT",
+    kind: "sentToken",
+    direction: "out",
+    title: "Sent USDT",
+    subtitle: "TRC20 transfer to TReceiver...2Zp9",
+    amountText: "-50 USDT",
+    amountTone: "out",
+    token: "USDT"
+  },
+  {
+    status: "confirmed",
+    methodHint: "triggerSmartContract",
+    description: "Receive USDD",
+    kind: "receivedToken",
+    direction: "in",
+    title: "Received USDD",
+    subtitle: "TRC20 transfer from TSender...7Nm1",
+    amountText: "+120 USDD",
+    amountTone: "in",
+    token: "USDD"
+  },
+  {
+    status: "confirmed",
+    methodHint: "triggerSmartContract",
+    description: "Approve USDT",
+    kind: "approve",
+    direction: "neutral",
+    title: "Approve USDT",
+    subtitle: "To TSpender...USDT",
+    amountText: "1,000 USDT",
+    amountTone: "muted",
+    token: "USDT"
+  },
+  {
+    status: "submitted",
+    methodHint: "triggerSmartContract",
+    description: "Contract call",
+    kind: "contractCall",
+    direction: "neutral",
+    title: "Contract",
+    subtitle: "triggerSmartContract",
+    amountTone: "muted"
+  },
+  {
+    status: "confirmed",
+    methodHint: "freezeBalance",
+    description: "Stake TRX for Energy",
+    kind: "staked",
+    direction: "neutral",
+    title: "Staked",
+    subtitle: "Energy",
+    amountText: "1,000 TRX",
+    amountTone: "muted",
+    resource: "energy",
+    token: "TRX"
+  },
+  {
+    status: "confirmed",
+    methodHint: "delegateResource",
+    description: "Delegate Bandwidth",
+    kind: "delegated",
+    direction: "neutral",
+    title: "Delegated",
+    subtitle: "Bandwidth to TReceiver...BW9",
+    amountText: "500 TRX",
+    amountTone: "muted",
+    resource: "bandwidth",
+    token: "TRX"
+  },
+  {
+    status: "confirmed",
+    methodHint: "voteWitness",
+    description: "Vote SR",
+    kind: "voted",
+    direction: "neutral",
+    title: "Voted",
+    subtitle: "2 SR candidates",
+    amountText: "5 votes",
+    amountTone: "muted"
+  },
+  {
+    status: "confirmed",
+    methodHint: "withdrawReward",
+    description: "Claim rewards",
+    kind: "claimedRewards",
+    direction: "in",
+    title: "Claimed",
+    subtitle: "Voting rewards",
+    amountText: "+3.42 TRX",
+    amountTone: "in",
+    token: "TRX"
+  },
+  {
+    status: "failed",
+    methodHint: "triggerSmartContract",
+    description: "Failed contract call",
+    kind: "contractCall",
+    direction: "neutral",
+    title: "Contract",
+    subtitle: "Reverted by contract",
+    amountTone: "muted"
+  }
+] as const satisfies readonly MockTransactionSample[];
+
+function pickMockTransactionSampleIndex(previousIndex: number | undefined): number {
+  const count = mockTransactionSamples.length;
+  if (count <= 1) return 0;
+  const randomValue =
+    typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function"
+      ? crypto.getRandomValues(new Uint32Array(1))[0] ?? Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)
+      : Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+  const next = randomValue % (count - 1);
+  return previousIndex === undefined || next < previousIndex ? next : next + 1;
+}
 
 function ExampleApp() {
   const [themeName, setThemeName] = useState<ThemeName>("default");
@@ -178,9 +327,9 @@ function ExampleWorkspace(props: ExampleWorkspaceProps) {
   const session = useWalletSession();
   const status = useWalletStatus();
   const [log, setLog] = useState("Ready.");
+  const [lastMockTransactionSampleIndex, setLastMockTransactionSampleIndex] = useState<number | undefined>();
   const [walletConnectQr, setWalletConnectQr] = useState<string | undefined>();
   const [walletConnectUri, setWalletConnectUri] = useState("");
-  const [toastHtml, setToastHtml] = useState("");
   const [gateDiagnostics, setGateDiagnostics] = useState("");
   const [trxRecipient, setTrxRecipient] = useState("");
   const [trxAmountSun, setTrxAmountSun] = useState("1000000");
@@ -288,23 +437,20 @@ function ExampleWorkspace(props: ExampleWorkspaceProps) {
       setLog("Connect a wallet before adding a mock transaction.");
       return;
     }
-    const hash = `mock-${Date.now()}`;
+    const sampleIndex = pickMockTransactionSampleIndex(lastMockTransactionSampleIndex);
+    setLastMockTransactionSampleIndex(sampleIndex);
+    const sample = mockTransactionSamples[sampleIndex] ?? mockTransactionSamples[0];
+    const hash = `mock-${String(sampleIndex + 1).padStart(2, "0")}-${Date.now()}`;
     const transaction = kit.manager.addTransaction({
       hash,
-      status: "submitted",
-      methodHint: "transferTrx",
-      description: "Mock TRX transaction"
+      ...sample,
+      raw: {
+        mock: true,
+        contractType: sample.kind,
+        sample: sample.description
+      }
     });
-    setToastHtml(
-      createTransactionToastContainerHtml([
-        {
-          id: transaction.id,
-          label: "Mock transaction submitted",
-          status: "pending",
-          txHash: hash
-        }
-      ])
-    );
+    setLog(formatJson({ action: "addMockTransaction", sample: sample.description, transaction }));
   };
 
   const openConnect = () => kit.openModal();
@@ -565,8 +711,6 @@ function ExampleWorkspace(props: ExampleWorkspaceProps) {
           </section>
         </div>
       </section>
-
-      {toastHtml ? <div className="twk-root" data-twk-root="true" style={kitThemeStyle} dangerouslySetInnerHTML={{ __html: toastHtml }} /> : null}
     </main>
   );
 }

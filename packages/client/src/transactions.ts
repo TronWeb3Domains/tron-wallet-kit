@@ -1,8 +1,9 @@
-import { WalletKitError, type SignTransactionRequest, type TransactionPayload, type TronMethodHint, type TxResult, type WalletManager } from "@tron-wallet-kit/core";
+import { WalletKitError, type SignTransactionRequest, type TransactionPayload, type TronMethodHint, type TxResult, type WalletManager, type WalletTransactionActivityKind } from "@tron-wallet-kit/core";
 import { getSharedTronWeb, type TronDomainTronWeb } from "./tronweb";
 import type { TriggerSmartContractRequest } from "./types";
 
 export type SendTrxBuilder = (to: string, amountSun: string | number | bigint, from?: string) => Promise<TransactionPayload>;
+export type WithdrawRewardBuilder = (ownerAddress?: string) => Promise<TransactionPayload>;
 
 export type TriggerSmartContractBuilder = {
   (
@@ -17,6 +18,7 @@ export type TriggerSmartContractBuilder = {
 
 export type WalletTransactionBuilder = {
   sendTrx: SendTrxBuilder;
+  withdrawReward: WithdrawRewardBuilder;
   triggerSmartContract: TriggerSmartContractBuilder;
 };
 
@@ -36,7 +38,12 @@ export type TransactionRuntime = {
   getTronWeb(): Promise<TronDomainTronWeb>;
   sendRawTransaction(transaction: TransactionPayload): Promise<TxResult>;
   signAndSendTransaction(transaction: TransactionPayload | SignTransactionRequest, methodHint?: TronMethodHint, description?: string): Promise<TxResult>;
-  signAndSendBuiltTransaction(buildTransaction: () => Promise<TransactionPayload>, methodHint?: TronMethodHint, description?: string): Promise<TxResult>;
+  signAndSendBuiltTransaction(
+    buildTransaction: () => Promise<TransactionPayload>,
+    methodHint?: TronMethodHint,
+    description?: string,
+    activitySource?: TransactionPayload
+  ): Promise<TxResult>;
   triggerSmartContract: TriggerSmartContractExecutor;
 };
 
@@ -102,6 +109,18 @@ export function createTransactionRuntime(manager: WalletManager, options: Transa
     return tronWeb.transactionBuilder.sendTrx(to, toSafeNumber(amountSun), ownerAddress);
   };
 
+  const buildWithdrawReward: WithdrawRewardBuilder = async (ownerAddress) => {
+    const session = manager.getSession();
+    const tronWeb = await getTronWebForSession();
+    const builder = tronWeb.transactionBuilder;
+    const owner = ownerAddress ?? session?.account.address;
+    const withdrawReward = builder?.withdrawReward ?? builder?.withdrawBlockRewards;
+    if (!withdrawReward) {
+      throw new WalletKitError("CONFIGURATION_ERROR", "TronWeb transactionBuilder.withdrawReward is not available.");
+    }
+    return withdrawReward.call(builder, owner);
+  };
+
   const buildTriggerSmartContract = (async (
     requestOrContractAddress: TriggerSmartContractRequest | string,
     functionSelector?: string,
@@ -138,7 +157,12 @@ export function createTransactionRuntime(manager: WalletManager, options: Transa
     return transaction;
   }) as TriggerSmartContractBuilder;
 
-  const broadcastRawTransaction = async (transaction: TransactionPayload, methodHint?: TronMethodHint, description?: string): Promise<TxResult> => {
+  const broadcastRawTransaction = async (
+    transaction: TransactionPayload,
+    methodHint?: TronMethodHint,
+    description?: string,
+    activitySource?: TransactionPayload
+  ): Promise<TxResult> => {
     const tronWeb = await getTronWebForSession();
     if (!tronWeb.trx?.sendRawTransaction) {
       throw new WalletKitError("CONFIGURATION_ERROR", "TronWeb trx.sendRawTransaction is not available.");
@@ -152,7 +176,8 @@ export function createTransactionRuntime(manager: WalletManager, options: Transa
       status: "submitted",
       raw,
       ...(methodHint ? { methodHint } : {}),
-      ...(description ? { description } : {})
+      ...(description ? { description } : {}),
+      ...buildActivityMetadata(activitySource ?? transaction, methodHint, manager.getSession()?.account.address)
     });
     return { hash, status: "submitted", ...(walletTransaction.explorerUrl ? { explorerUrl: walletTransaction.explorerUrl } : {}), raw };
   };
@@ -165,25 +190,27 @@ export function createTransactionRuntime(manager: WalletManager, options: Transa
     description?: string
   ): Promise<TxResult> => {
     const request = normalizeSignRequest(transactionOrRequest, methodHint);
-    await resolveTransactionPreview(request, description, previewResolver, previewConfirmer);
-    const signed = await manager.signTransaction(request);
+    const { activitySource, ...signRequest } = request as SignTransactionRequest & { activitySource?: TransactionPayload };
+    await resolveTransactionPreview(signRequest, description, previewResolver, previewConfirmer);
+    const signed = await manager.signTransaction(signRequest);
     const transaction = signed.signedTransaction ?? signed.transaction;
     if (!transaction) throw new WalletKitError("INVALID_TRANSACTION_SIGNATURE", "Wallet did not return a signed transaction.");
-    return broadcastRawTransaction(transaction, request.methodHint ?? methodHint, description);
+    return broadcastRawTransaction(transaction, signRequest.methodHint ?? methodHint, description, activitySource ?? signRequest.transaction);
   };
 
   const signAndSendBuiltTransaction = async (
     buildTransaction: () => Promise<TransactionPayload>,
     methodHint?: TronMethodHint,
-    description?: string
+    description?: string,
+    activitySource?: TransactionPayload
   ): Promise<TxResult> => {
     try {
       const transaction = await buildTransaction();
-      return await signAndSendTransaction({ transaction, ...(methodHint ? { methodHint } : {}) }, methodHint, description);
+      return await signAndSendTransaction({ transaction, ...(methodHint ? { methodHint } : {}), ...(activitySource ? { activitySource } : {}) }, methodHint, description);
     } catch (error) {
       if (!isTransactionExpirationError(error)) throw error;
       const transaction = await buildTransaction();
-      return signAndSendTransaction({ transaction, ...(methodHint ? { methodHint } : {}) }, methodHint, description);
+      return signAndSendTransaction({ transaction, ...(methodHint ? { methodHint } : {}), ...(activitySource ? { activitySource } : {}) }, methodHint, description);
     }
   };
 
@@ -199,6 +226,7 @@ export function createTransactionRuntime(manager: WalletManager, options: Transa
   return {
     transactionBuilder: {
       sendTrx: buildSendTrx,
+      withdrawReward: buildWithdrawReward,
       triggerSmartContract: buildTriggerSmartContract
     },
     getTronWeb: getTronWebForSession,
@@ -249,6 +277,16 @@ export function createDefaultTransactionPreview(request: SignTransactionRequest,
     return {
       title: "Smart contract",
       summary: description ?? buildContractSummary(transaction),
+      ...(details.length > 0 ? { details } : {}),
+      raw: transaction
+    };
+  }
+
+  if (methodHint === "withdrawReward") {
+    addDetail("Owner", transaction.ownerAddress);
+    return {
+      title: "Claim rewards",
+      summary: description ?? "Claim available TRON voting rewards.",
       ...(details.length > 0 ? { details } : {}),
       raw: transaction
     };
@@ -334,6 +372,178 @@ function buildContractSummary(transaction: TransactionPayload): string {
     return `Call ${functionSelector}.`;
   }
   return "Call a TRON smart contract.";
+}
+
+type TransactionActivityMetadata = {
+  kind?: WalletTransactionActivityKind;
+  direction?: "in" | "out" | "neutral";
+  subtitle?: string;
+  amountText?: string;
+  amountTone?: "in" | "out" | "muted";
+  token?: string;
+  resource?: "energy" | "bandwidth";
+};
+
+function buildActivityMetadata(transaction: TransactionPayload, methodHint: TronMethodHint | undefined, accountAddress: string | undefined): TransactionActivityMetadata {
+  if (methodHint === "transferTrx") {
+    const to = stringValue(transaction.to);
+    const amount = transaction.amountSun ?? transaction.amount;
+    const formattedAmount = formatSunLikeValue(amount);
+    return {
+      kind: "sent",
+      direction: "out",
+      ...(to ? { subtitle: `To ${shortenMiddle(to)}` } : {}),
+      ...(formattedAmount ? { amountText: `-${formattedAmount} TRX` } : {}),
+      amountTone: "out",
+      token: "TRX"
+    };
+  }
+
+  if (methodHint === "transferTrc10") {
+    const to = stringValue(transaction.to);
+    const token = stringValue(transaction.tokenId) ?? "TRC10";
+    const amount = stringValue(transaction.amount);
+    return {
+      kind: "sentToken",
+      direction: "out",
+      ...(to ? { subtitle: `To ${shortenMiddle(to)}` } : {}),
+      ...(amount ? { amountText: `-${amount} ${token}` } : {}),
+      amountTone: "out",
+      token
+    };
+  }
+
+  if (methodHint === "transferTrc20") {
+    const to = stringValue(transaction.to) ?? extractParameterValue(transaction.parameters, "address");
+    const token = stringValue(transaction.token) ?? "TRC20";
+    const amount = stringValue(transaction.amount) ?? extractParameterValue(transaction.parameters, "uint256");
+    return {
+      kind: "sentToken",
+      direction: "out",
+      ...(to ? { subtitle: `To ${shortenMiddle(to)}` } : {}),
+      ...(amount ? { amountText: `-${amount} ${token}` } : {}),
+      amountTone: "out",
+      token
+    };
+  }
+
+  if (methodHint === "freezeBalance") {
+    const resource = normalizeResource(transaction.resource);
+    const amount = formatSunLikeValue(transaction.amountSun);
+    return {
+      kind: "staked",
+      direction: "neutral",
+      ...(resource ? { resource } : {}),
+      ...(amount ? { amountText: `${amount} TRX` } : {}),
+      amountTone: "muted",
+      token: "TRX"
+    };
+  }
+
+  if (methodHint === "unfreezeBalance") {
+    const resource = normalizeResource(transaction.resource);
+    const amount = formatSunLikeValue(transaction.amountSun);
+    return {
+      kind: "unstaked",
+      direction: "neutral",
+      ...(resource ? { resource } : {}),
+      ...(amount ? { amountText: `${amount} TRX` } : {}),
+      amountTone: "muted",
+      token: "TRX"
+    };
+  }
+
+  if (methodHint === "delegateResource" || methodHint === "undelegateResource") {
+    const to = stringValue(transaction.to);
+    const resource = normalizeResource(transaction.resource);
+    const amount = formatSunLikeValue(transaction.amountSun);
+    return {
+      kind: methodHint === "delegateResource" ? "delegated" : "undelegated",
+      direction: "neutral",
+      ...(resource ? { resource } : {}),
+      ...(to ? { subtitle: `To ${shortenMiddle(to)}` } : {}),
+      ...(amount ? { amountText: `${amount} TRX` } : {}),
+      amountTone: "muted",
+      token: "TRX"
+    };
+  }
+
+  if (methodHint === "voteWitness") {
+    const votes = Array.isArray(transaction.votes)
+      ? transaction.votes.reduce((total, vote) => total + numberValue((vote as Record<string, unknown>).voteCount), 0)
+      : 0;
+    return {
+      kind: "voted",
+      direction: "neutral",
+      ...(votes > 0 ? { subtitle: `${votes} votes`, amountText: `${votes} votes` } : {}),
+      amountTone: "muted"
+    };
+  }
+
+  if (methodHint === "withdrawReward") {
+    return {
+      kind: "claimedRewards",
+      direction: "in",
+      subtitle: "Voting rewards",
+      amountTone: "in",
+      token: "TRX"
+    };
+  }
+
+  if (methodHint === "triggerSmartContract") {
+    const functionSelector = stringValue(transaction.functionSelector ?? transaction.function);
+    return {
+      kind: inferTriggerKind(functionSelector),
+      direction: "neutral",
+      ...(functionSelector ? { subtitle: functionSelector } : {}),
+      amountTone: "muted"
+    };
+  }
+
+  return {
+    kind: "unknown",
+    direction: "neutral",
+    amountTone: "muted"
+  };
+}
+
+function inferTriggerKind(functionSelector: string | undefined): WalletTransactionActivityKind {
+  if (!functionSelector) return "contractCall";
+  if (/^approve\(/i.test(functionSelector)) return "approve";
+  if (/^transfer\(/i.test(functionSelector)) return "sentToken";
+  return "contractCall";
+}
+
+function stringValue(value: unknown): string | undefined {
+  if (typeof value === "string" && value.length > 0) return value;
+  if (typeof value === "number" || typeof value === "bigint") return String(value);
+  return undefined;
+}
+
+function numberValue(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+}
+
+function normalizeResource(value: unknown): "energy" | "bandwidth" | undefined {
+  const resource = stringValue(value)?.toUpperCase();
+  if (resource === "ENERGY") return "energy";
+  if (resource === "BANDWIDTH") return "bandwidth";
+  return undefined;
+}
+
+function extractParameterValue(parameters: unknown, type: string): string | undefined {
+  if (!Array.isArray(parameters)) return undefined;
+  const match = parameters.find((parameter) => {
+    if (!parameter || typeof parameter !== "object") return false;
+    return (parameter as Record<string, unknown>).type === type;
+  });
+  if (!match || typeof match !== "object") return undefined;
+  return stringValue((match as Record<string, unknown>).value);
 }
 
 function formatSunLikeValue(value: unknown): string {

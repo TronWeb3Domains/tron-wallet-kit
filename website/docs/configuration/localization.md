@@ -36,6 +36,35 @@ getDefaultConfig({
 
 Overrides are merged over the locale, so you only specify what changes.
 
+## Activity labels
+
+The compact account panel still uses `accountPanel.recentTransactions` and
+`accountPanel.noTransactions`. The full activity view uses the separate `activity` label group
+so transaction types, status, and counterparty subtitles can be localized without changing the
+compact panel copy.
+
+```ts
+getDefaultConfig({
+  metadata: { name: "My dApp" },
+  ui: {
+    labels: {
+      activity: {
+        title: "Activity",
+        sent: "Sent",
+        received: "Received",
+        to: "To {address}",
+        from: "From {address}",
+        pending: "Pending",
+        failed: "Failed",
+      },
+    },
+  },
+});
+```
+
+Activity labels support simple `{placeholder}` interpolation for built-in formatters such as
+`receivedToken`, `sentToken`, `delegated`, `undelegated`, `from`, `to`, and `votes`.
+
 ## Adding a language
 
 Provide a full label pack as `labels` (starting from a built-in as a base) and set a matching

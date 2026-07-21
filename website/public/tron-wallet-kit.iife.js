@@ -59590,20 +59590,25 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
     WALLET_ICONS: () => WALLET_ICONS,
     WALLET_KIT_ERROR_DEFINITIONS: () => WALLET_KIT_ERROR_DEFINITIONS,
     WALLET_STORAGE_VERSION: () => WALLET_STORAGE_VERSION,
+    WALLET_TRANSACTION_STORAGE_VERSION: () => WALLET_TRANSACTION_STORAGE_VERSION,
     WalletConnectAdapter: () => WalletConnectAdapter,
     WalletEventEmitter: () => WalletEventEmitter,
     WalletKitError: () => WalletKitError,
     WalletKitErrorCode: () => WalletKitErrorCode,
     WalletManager: () => WalletManager,
+    WalletTransactionStore: () => WalletTransactionStore,
     actionSpinnerIcon: () => actionSpinnerIcon,
     applyThemeToElement: () => applyThemeToElement,
     applyWalletListConfig: () => applyWalletListConfig,
+    arrowDownIcon: () => arrowDownIcon,
+    arrowUpIcon: () => arrowUpIcon,
     backIcon: () => backIcon,
     buildAdapters: () => buildAdapters,
     buildCatalog: () => buildCatalog,
     buildCatalogItem: () => buildCatalogItem,
     checkIcon: () => checkIcon,
     closeIcon: () => closeIcon,
+    codeIcon: () => codeIcon,
     configureSharedTronWeb: () => configureSharedTronWeb,
     copyIcon: () => copyIcon,
     copyToClipboard: () => copyToClipboard,
@@ -59616,6 +59621,7 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
     createConnectModalElement: () => createConnectModalElement,
     createConnectModalHtml: () => createConnectModalHtml,
     createDefaultAdapters: () => createDefaultAdapters,
+    createDefaultTransactionPreview: () => createDefaultTransactionPreview,
     createDefaultTronwalletBridgeAdapter: () => createDefaultTronwalletBridgeAdapter,
     createDefaultTrxBalanceResolver: () => createDefaultTrxBalanceResolver,
     createDefaultWalletUiConfig: () => createDefaultWalletUiConfig,
@@ -59628,6 +59634,7 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
     createThemeStyleProperties: () => createThemeStyleProperties,
     createThemeStyleText: () => createThemeStyleText,
     createTransactionHistoryPanelHtml: () => createTransactionHistoryPanelHtml,
+    createTransactionPreviewDialog: () => createTransactionPreviewDialog,
     createTransactionRuntime: () => createTransactionRuntime,
     createTransactionToastContainerHtml: () => createTransactionToastContainerHtml,
     createTransactionToastHtml: () => createTransactionToastHtml,
@@ -59656,6 +59663,7 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
     escapeAttribute: () => escapeAttribute,
     escapeHtml: () => escapeHtml,
     externalIcon: () => externalIcon,
+    fileCheckIcon: () => fileCheckIcon,
     filterWalletOptions: () => filterWalletOptions,
     formatExplorerUrl: () => formatExplorerUrl,
     formatWalletError: () => formatWalletError,
@@ -59666,9 +59674,12 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
     getThemeNames: () => getThemeNames,
     getTronWalletRegistryItem: () => getTronWalletRegistryItem,
     getWalletIcon: () => getWalletIcon,
+    giftIcon: () => giftIcon,
     isTronAddress: () => isTronAddress,
     isWalletDescriptor: () => isWalletDescriptor,
     linkIcon: () => linkIcon,
+    lockClosedIcon: () => lockClosedIcon,
+    lockOpenIcon: () => lockOpenIcon,
     logoutIcon: () => logoutIcon,
     mapAdapterToWalletOption: () => mapAdapterToWalletOption,
     mergeWalletOptionsWithCatalog: () => mergeWalletOptionsWithCatalog,
@@ -59677,8 +59688,10 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
     normalizeTrxAmount: () => normalizeTrxAmount,
     normalizeWalletError: () => normalizeWalletError,
     qrIcon: () => qrIcon,
+    questionIcon: () => questionIcon,
     refreshIcon: () => refreshIcon,
     renderWalletQr: () => renderWalletQr,
+    resolveAppMetadata: () => resolveAppMetadata,
     resolveBalanceTronWeb: () => resolveBalanceTronWeb,
     resolveIdentityResolver: () => resolveIdentityResolver,
     resolveLabelPack: () => resolveLabelPack,
@@ -59698,6 +59711,7 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
     strategyFromLegacyConfig: () => strategyFromLegacyConfig,
     themePresets: () => themePresets,
     toThemeConfig: () => toThemeConfig,
+    voteIcon: () => voteIcon,
     walletIcon: () => walletIcon,
     walletIcons: () => walletIcons,
     withAcquireAddressDefaults: () => withAcquireAddressDefaults,
@@ -60140,6 +60154,59 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
 
   // ../core/src/types.ts
   var WALLET_STORAGE_VERSION = 1;
+  var WALLET_TRANSACTION_STORAGE_VERSION = 1;
+
+  // ../core/src/tx-store.ts
+  var WalletTransactionStore = class {
+    max;
+    staleSubmittedMs;
+    storage;
+    keyPrefix;
+    constructor(options) {
+      this.storage = options.storage;
+      this.keyPrefix = options.keyPrefix ?? "transactions";
+      this.max = Math.max(1, Math.trunc(options.max ?? 20));
+      this.staleSubmittedMs = Math.max(0, Math.trunc(options.staleSubmittedMs ?? 10 * 60 * 1e3));
+    }
+    async load(account, networkId) {
+      const serialized = await this.storage.getItem(this.getKey(account, networkId));
+      if (!serialized) return [];
+      try {
+        const parsed = JSON.parse(serialized);
+        const transactions = Array.isArray(parsed) ? parsed : parsed.version === WALLET_TRANSACTION_STORAGE_VERSION && Array.isArray(parsed.transactions) ? parsed.transactions : [];
+        return this.normalize(transactions);
+      } catch {
+        await this.storage.removeItem(this.getKey(account, networkId));
+        return [];
+      }
+    }
+    async save(account, networkId, transactions) {
+      const normalized = this.normalize(transactions);
+      const envelope = {
+        version: WALLET_TRANSACTION_STORAGE_VERSION,
+        transactions: normalized,
+        updatedAt: Date.now()
+      };
+      await this.storage.setItem(this.getKey(account, networkId), JSON.stringify(envelope));
+    }
+    async clear(account, networkId) {
+      await this.storage.removeItem(this.getKey(account, networkId));
+    }
+    normalize(transactions) {
+      const now = Date.now();
+      return transactions.filter(isValidWalletTransaction).sort((a3, b5) => b5.submittedAt - a3.submittedAt).slice(0, this.max).map(
+        (transaction) => transaction.status === "submitted" && this.staleSubmittedMs > 0 && now - transaction.submittedAt > this.staleSubmittedMs ? { ...transaction, status: "unknown", updatedAt: now } : transaction
+      );
+    }
+    getKey(account, networkId) {
+      return `${this.keyPrefix}:${networkId}:${account}`;
+    }
+  };
+  function isValidWalletTransaction(value) {
+    if (!value || typeof value !== "object") return false;
+    const transaction = value;
+    return typeof transaction.id === "string" && typeof transaction.hash === "string" && typeof transaction.adapterId === "string" && typeof transaction.account === "string" && typeof transaction.submittedAt === "number" && typeof transaction.updatedAt === "number" && Boolean(transaction.network);
+  }
 
   // ../core/src/utils.ts
   function formatExplorerUrl(template, value) {
@@ -60157,10 +60224,16 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
   var WalletManager = class {
     constructor(config = {}) {
       this.config = config;
-      this.appName = config.appName;
+      this.appName = config.appName ?? config.metadata?.name;
       this.registry = new NetworkRegistry(config.networks);
       this.storage = config.storage ?? new MemoryWalletStorage();
       this.storageKey = config.storageKey ?? "session";
+      this.transactionStore = config.transactionStore === false || config.transactionStore?.enabled === false ? null : new WalletTransactionStore({
+        storage: this.storage,
+        keyPrefix: config.transactionStore?.storageKey ?? `${this.storageKey}:transactions`,
+        ...config.transactionStore?.max !== void 0 ? { max: config.transactionStore.max } : {},
+        ...config.transactionStore?.staleSubmittedMs !== void 0 ? { staleSubmittedMs: config.transactionStore.staleSubmittedMs } : {}
+      });
       this.config.adapters?.forEach((adapter2) => this.register(adapter2));
     }
     config;
@@ -60169,6 +60242,7 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
     storage;
     storageKey;
     appName;
+    transactionStore;
     adapters = /* @__PURE__ */ new Map();
     transactions = [];
     session = null;
@@ -60406,10 +60480,20 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
         updatedAt: now,
         ...input.methodHint ? { methodHint: input.methodHint } : {},
         ...input.description ? { description: input.description } : {},
+        ...input.kind ? { kind: input.kind } : {},
+        ...input.direction ? { direction: input.direction } : {},
+        ...input.title ? { title: input.title } : {},
+        ...input.subtitle ? { subtitle: input.subtitle } : {},
+        ...input.amountText ? { amountText: input.amountText } : {},
+        ...input.amountTone ? { amountTone: input.amountTone } : {},
+        ...input.token ? { token: input.token } : {},
+        ...input.resource ? { resource: input.resource } : {},
         ...explorerUrl ? { explorerUrl } : {},
         ...input.raw !== void 0 ? { raw: input.raw } : {}
       };
       this.transactions.unshift(transaction);
+      this.applyTransactionLimitAndStaleness();
+      void this.persistTransactions();
       this.events.emit("tx_submitted", { transaction });
       return transaction;
     }
@@ -60418,11 +60502,13 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
       if (!transaction) return null;
       transaction.status = status;
       transaction.updatedAt = Date.now();
+      void this.persistTransactions();
       if (status === "confirmed") this.events.emit("tx_confirmed", { transaction });
       if (status === "failed") this.events.emit("tx_failed", { transaction, error });
       return transaction;
     }
     getTransactions(limit) {
+      this.applyTransactionLimitAndStaleness();
       return typeof limit === "number" ? this.transactions.slice(0, limit) : [...this.transactions];
     }
     async authenticate(request2) {
@@ -60432,10 +60518,14 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
       this.events.emit("qr", { adapterId, uri });
     }
     async setSession(session) {
+      const previous = this.session;
       this.session = session;
       this.activeAdapterId = session.adapterId;
       const envelope = { version: WALLET_STORAGE_VERSION, session: createStoredSession(session), updatedAt: Date.now() };
       await this.storage.setItem(this.storageKey, JSON.stringify(envelope));
+      if (!previous || previous.account.address !== session.account.address || previous.network.id !== session.network.id) {
+        await this.loadTransactionsForSession(session);
+      }
     }
     async cancelPendingConnection(exceptAdapterId) {
       const pending = this.pendingAdapterId;
@@ -60625,6 +60715,7 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
         updatedAt: Date.now()
       };
       this.events.emit("accountChanged", { account, session: this.session });
+      this.transactions.length = 0;
       void this.setSession(this.session);
     }
     handleAdapterNetworkChanged(adapterId, network) {
@@ -60641,7 +60732,28 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
         updatedAt: Date.now()
       };
       this.events.emit("networkChanged", { network, session: this.session });
+      this.transactions.length = 0;
       void this.setSession(this.session);
+    }
+    async loadTransactionsForSession(session) {
+      if (!this.transactionStore) {
+        this.applyTransactionLimitAndStaleness();
+        return;
+      }
+      const loaded = await this.transactionStore.load(session.account.address, session.network.id);
+      this.transactions.length = 0;
+      this.transactions.push(...loaded);
+    }
+    async persistTransactions() {
+      const session = this.session;
+      if (!session || !this.transactionStore) return;
+      await this.transactionStore.save(session.account.address, session.network.id, this.transactions);
+    }
+    applyTransactionLimitAndStaleness() {
+      if (!this.transactionStore) return;
+      const normalized = this.transactionStore.normalize(this.transactions);
+      this.transactions.length = 0;
+      this.transactions.push(...normalized);
     }
   };
   function createStoredSession(session) {
@@ -61750,10 +61862,34 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
     return createFallbackWalletAdapter(probedBridgeAdapter, createInjectedTronAdapter(bridgeConfig.injectedFallback));
   }
 
-  // ../../node_modules/.pnpm/@walletconnect+sign-client@_36e186740fe3c27f85031987593a5a45/node_modules/@walletconnect/sign-client/dist/index.js
+  // ../client/src/app-metadata.ts
+  function resolveAppMetadata(config = {}) {
+    const name2 = nonEmptyString(config.metadata?.name) ?? nonEmptyString(config.appName) ?? "TRON dApp";
+    const metadataIcons = normalizeIcons(config.metadata?.icons);
+    const legacyIcons = normalizeIcons(config.appIcons);
+    return {
+      name: name2,
+      description: nonEmptyString(config.metadata?.description) ?? nonEmptyString(config.appDescription) ?? `${name2} TRON wallet connection`,
+      url: nonEmptyString(config.metadata?.url) ?? nonEmptyString(config.appUrl) ?? getCurrentOrigin(),
+      icons: metadataIcons.length ? metadataIcons : legacyIcons
+    };
+  }
+  function getCurrentOrigin() {
+    const origin2 = typeof globalThis.location === "object" && globalThis.location?.origin ? globalThis.location.origin : void 0;
+    return origin2 && origin2 !== "null" ? origin2 : "https://trxdomains.xyz";
+  }
+  function nonEmptyString(value) {
+    return typeof value === "string" && value.trim().length > 0 ? value.trim() : void 0;
+  }
+  function normalizeIcons(value) {
+    if (!Array.isArray(value)) return [];
+    return value.filter((icon) => typeof icon === "string" && icon.trim().length > 0).map((icon) => icon.trim());
+  }
+
+  // ../../node_modules/.pnpm/@walletconnect+sign-client@2.23.9_typescript@5.9.3_zod@4.4.3/node_modules/@walletconnect/sign-client/dist/index.js
   var import_events9 = __toESM(require_events(), 1);
 
-  // ../../node_modules/.pnpm/@walletconnect+core@2.23.9_typescript@5.9.3_zod@3.25.76/node_modules/@walletconnect/core/dist/index.js
+  // ../../node_modules/.pnpm/@walletconnect+core@2.23.9_typescript@5.9.3_zod@4.4.3/node_modules/@walletconnect/core/dist/index.js
   var import_events8 = __toESM(require_events(), 1);
 
   // ../../node_modules/.pnpm/@walletconnect+heartbeat@1.2.2/node_modules/@walletconnect/heartbeat/dist/index.es.js
@@ -63184,7 +63320,7 @@ ${new this._window.XMLSerializer().serializeToString(e4)}`;
     }
   };
 
-  // ../../node_modules/.pnpm/@walletconnect+core@2.23.9_typescript@5.9.3_zod@3.25.76/node_modules/@walletconnect/core/dist/index.js
+  // ../../node_modules/.pnpm/@walletconnect+core@2.23.9_typescript@5.9.3_zod@4.4.3/node_modules/@walletconnect/core/dist/index.js
   var import_time4 = __toESM(require_cjs(), 1);
 
   // ../../node_modules/.pnpm/@walletconnect+relay-auth@1.1.0/node_modules/@walletconnect/relay-auth/dist/index.es.js
@@ -65592,7 +65728,7 @@ if (cid) {
     return output3;
   }
 
-  // ../../node_modules/.pnpm/@walletconnect+utils@2.23.9_typescript@5.9.3_zod@3.25.76/node_modules/@walletconnect/utils/dist/index.js
+  // ../../node_modules/.pnpm/@walletconnect+utils@2.23.9_typescript@5.9.3_zod@4.4.3/node_modules/@walletconnect/utils/dist/index.js
   var import_time3 = __toESM(require_cjs(), 1);
   var import_window_getters = __toESM(require_cjs2(), 1);
   var import_window_metadata = __toESM(require_cjs3(), 1);
@@ -65981,15 +66117,15 @@ if (cid) {
   var gen = (suffix, blockLen, outputLen) => createHasher(() => new Keccak(blockLen, suffix, outputLen));
   var keccak_256 = /* @__PURE__ */ (() => gen(1, 136, 256 / 8))();
 
-  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@3.25.76/node_modules/ox/_esm/core/version.js
+  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@4.4.3/node_modules/ox/_esm/core/version.js
   var version2 = "0.1.1";
 
-  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@3.25.76/node_modules/ox/_esm/core/internal/errors.js
+  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@4.4.3/node_modules/ox/_esm/core/internal/errors.js
   function getVersion() {
     return version2;
   }
 
-  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@3.25.76/node_modules/ox/_esm/core/Errors.js
+  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@4.4.3/node_modules/ox/_esm/core/Errors.js
   var BaseError = class _BaseError extends Error {
     constructor(shortMessage, options = {}) {
       const details = (() => {
@@ -66862,7 +66998,7 @@ if (cid) {
     };
   }
 
-  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@3.25.76/node_modules/ox/_esm/core/internal/bytes.js
+  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@4.4.3/node_modules/ox/_esm/core/internal/bytes.js
   function assertSize(bytes3, size_) {
     if (size(bytes3) > size_)
       throw new SizeOverflowError({
@@ -66905,7 +67041,7 @@ if (cid) {
     return paddedBytes;
   }
 
-  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@3.25.76/node_modules/ox/_esm/core/internal/hex.js
+  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@4.4.3/node_modules/ox/_esm/core/internal/hex.js
   function assertSize2(hex, size_) {
     if (size2(hex) > size_)
       throw new SizeOverflowError2({
@@ -66961,7 +67097,7 @@ if (cid) {
     return `0x${data}`;
   }
 
-  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@3.25.76/node_modules/ox/_esm/core/Json.js
+  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@4.4.3/node_modules/ox/_esm/core/Json.js
   var bigIntSuffix = "#__bigint";
   function stringify2(value, replacer, space) {
     return JSON.stringify(value, (key, value2) => {
@@ -66973,7 +67109,7 @@ if (cid) {
     }, space);
   }
 
-  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@3.25.76/node_modules/ox/_esm/core/Hex.js
+  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@4.4.3/node_modules/ox/_esm/core/Hex.js
   var hexes3 = /* @__PURE__ */ Array.from({ length: 256 }, (_v, i3) => i3.toString(16).padStart(2, "0"));
   function assert(value, options = {}) {
     const { strict = false } = options;
@@ -67032,8 +67168,8 @@ if (cid) {
         value: `${value}${suffix}`
       });
     }
-    const stringValue = (signed && value_ < 0 ? (1n << BigInt(size3 * 8)) + BigInt(value_) : value_).toString(16);
-    const hex = `0x${stringValue}`;
+    const stringValue2 = (signed && value_ < 0 ? (1n << BigInt(size3 * 8)) + BigInt(value_) : value_).toString(16);
+    const hex = `0x${stringValue2}`;
     if (size3)
       return padLeft(hex, size3);
     return hex;
@@ -67140,7 +67276,7 @@ if (cid) {
     }
   };
 
-  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@3.25.76/node_modules/ox/_esm/core/Bytes.js
+  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@4.4.3/node_modules/ox/_esm/core/Bytes.js
   var encoder = /* @__PURE__ */ new TextEncoder();
   function assert2(value) {
     if (value instanceof Uint8Array)
@@ -67245,7 +67381,7 @@ if (cid) {
     }
   };
 
-  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@3.25.76/node_modules/ox/_esm/core/Hash.js
+  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@4.4.3/node_modules/ox/_esm/core/Hash.js
   function keccak256(value, options = {}) {
     const { as = typeof value === "string" ? "Hex" : "Bytes" } = options;
     const bytes3 = keccak_256(from4(value));
@@ -67254,7 +67390,7 @@ if (cid) {
     return fromBytes(bytes3);
   }
 
-  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@3.25.76/node_modules/ox/_esm/core/internal/lru.js
+  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@4.4.3/node_modules/ox/_esm/core/internal/lru.js
   var LruMap = class extends Map {
     constructor(size3) {
       super();
@@ -67285,13 +67421,13 @@ if (cid) {
     }
   };
 
-  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@3.25.76/node_modules/ox/_esm/core/Caches.js
+  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@4.4.3/node_modules/ox/_esm/core/Caches.js
   var caches = {
     checksum: /* @__PURE__ */ new LruMap(8192)
   };
   var checksum = caches.checksum;
 
-  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@3.25.76/node_modules/ox/_esm/core/PublicKey.js
+  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@4.4.3/node_modules/ox/_esm/core/PublicKey.js
   function assert3(publicKey, options = {}) {
     const { compressed } = options;
     const { prefix, x: x7, y: y6 } = publicKey;
@@ -67443,7 +67579,7 @@ if (cid) {
     }
   };
 
-  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@3.25.76/node_modules/ox/_esm/core/Address.js
+  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@4.4.3/node_modules/ox/_esm/core/Address.js
   var addressRegex = /^0x[a-fA-F0-9]{40}$/;
   function assert4(value, options = {}) {
     const { strict = true } = options;
@@ -67533,7 +67669,7 @@ if (cid) {
     }
   };
 
-  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@3.25.76/node_modules/ox/_esm/core/Solidity.js
+  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@4.4.3/node_modules/ox/_esm/core/Solidity.js
   var maxInt8 = 2n ** (8n - 1n) - 1n;
   var maxInt16 = 2n ** (16n - 1n) - 1n;
   var maxInt24 = 2n ** (24n - 1n) - 1n;
@@ -67631,7 +67767,7 @@ if (cid) {
   var maxUint248 = 2n ** 248n - 1n;
   var maxUint256 = 2n ** 256n - 1n;
 
-  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@3.25.76/node_modules/ox/_esm/core/Signature.js
+  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@4.4.3/node_modules/ox/_esm/core/Signature.js
   var Signature_exports = {};
   __export(Signature_exports, {
     InvalidRError: () => InvalidRError,
@@ -69205,7 +69341,7 @@ if (cid) {
     }
   }, sha2562);
 
-  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@3.25.76/node_modules/ox/_esm/core/Signature.js
+  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@4.4.3/node_modules/ox/_esm/core/Signature.js
   function assert5(signature, options = {}) {
     const { recovered } = options;
     if (typeof signature.r === "undefined")
@@ -72055,7 +72191,7 @@ if (cid) {
   var genBase58 = /* @__NO_SIDE_EFFECTS__ */ (abc) => /* @__PURE__ */ chain(/* @__PURE__ */ radix(58), /* @__PURE__ */ alphabet2(abc), /* @__PURE__ */ join(""));
   var base58 = /* @__PURE__ */ genBase58("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz");
 
-  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@3.25.76/node_modules/ox/_esm/core/Secp256k1.js
+  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@4.4.3/node_modules/ox/_esm/core/Secp256k1.js
   var Secp256k1_exports = {};
   __export(Secp256k1_exports, {
     createKeyPair: () => createKeyPair,
@@ -72069,10 +72205,10 @@ if (cid) {
     verify: () => verify
   });
 
-  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@3.25.76/node_modules/ox/_esm/core/internal/entropy.js
+  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@4.4.3/node_modules/ox/_esm/core/internal/entropy.js
   var extraEntropy = false;
 
-  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@3.25.76/node_modules/ox/_esm/core/Secp256k1.js
+  // ../../node_modules/.pnpm/ox@0.9.3_typescript@5.9.3_zod@4.4.3/node_modules/ox/_esm/core/Secp256k1.js
   var noble = secp256k1;
   function createKeyPair(options = {}) {
     const { as = "Hex" } = options;
@@ -75331,7 +75467,7 @@ if (cid) {
   // ../../node_modules/.pnpm/@walletconnect+relay-api@1.0.11/node_modules/@walletconnect/relay-api/dist/index.es.js
   var C2 = { waku: { publish: "waku_publish", batchPublish: "waku_batchPublish", subscribe: "waku_subscribe", batchSubscribe: "waku_batchSubscribe", subscription: "waku_subscription", unsubscribe: "waku_unsubscribe", batchUnsubscribe: "waku_batchUnsubscribe", batchFetchMessages: "waku_batchFetchMessages" }, irn: { publish: "irn_publish", batchPublish: "irn_batchPublish", subscribe: "irn_subscribe", batchSubscribe: "irn_batchSubscribe", subscription: "irn_subscription", unsubscribe: "irn_unsubscribe", batchUnsubscribe: "irn_batchUnsubscribe", batchFetchMessages: "irn_batchFetchMessages" }, iridium: { publish: "iridium_publish", batchPublish: "iridium_batchPublish", subscribe: "iridium_subscribe", batchSubscribe: "iridium_batchSubscribe", subscription: "iridium_subscription", unsubscribe: "iridium_unsubscribe", batchUnsubscribe: "iridium_batchUnsubscribe", batchFetchMessages: "iridium_batchFetchMessages" } };
 
-  // ../../node_modules/.pnpm/@walletconnect+utils@2.23.9_typescript@5.9.3_zod@3.25.76/node_modules/@walletconnect/utils/dist/index.js
+  // ../../node_modules/.pnpm/@walletconnect+utils@2.23.9_typescript@5.9.3_zod@4.4.3/node_modules/@walletconnect/utils/dist/index.js
   var import_blakejs = __toESM(require_blakejs(), 1);
   var G3 = ":";
   function ae2(e2) {
@@ -77062,7 +77198,7 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
     return isEqualWith(a3, b5, noop);
   }
 
-  // ../../node_modules/.pnpm/@walletconnect+core@2.23.9_typescript@5.9.3_zod@3.25.76/node_modules/@walletconnect/core/dist/index.js
+  // ../../node_modules/.pnpm/@walletconnect+core@2.23.9_typescript@5.9.3_zod@4.4.3/node_modules/@walletconnect/core/dist/index.js
   var import_window_getters2 = __toESM(require_cjs2(), 1);
   var ct3 = "wc";
   var lt3 = 2;
@@ -78774,7 +78910,7 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
   };
   var Ji = Ce4;
 
-  // ../../node_modules/.pnpm/@walletconnect+sign-client@_36e186740fe3c27f85031987593a5a45/node_modules/@walletconnect/sign-client/dist/index.js
+  // ../../node_modules/.pnpm/@walletconnect+sign-client@2.23.9_typescript@5.9.3_zod@4.4.3/node_modules/@walletconnect/sign-client/dist/index.js
   var import_time5 = __toESM(require_cjs(), 1);
   var be5 = "wc";
   var Ae4 = 2;
@@ -80513,6 +80649,10 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
         return createWalletConnectAdapter({
           projectId: config.walletConnectProjectId,
           ...config.walletconnect,
+          appMetadata: {
+            ...config.metadata ?? {},
+            ...config.walletconnect?.appMetadata ?? {}
+          },
           ...walletConnectIcon ? { metadata: { ...config.walletconnect?.metadata, icon: walletConnectIcon } } : {},
           ...config.walletConnectNetwork ? { network: config.walletConnectNetwork } : {},
           ...config.onWalletConnectUri ? { onUri: config.onWalletConnectUri } : {}
@@ -81673,21 +81813,24 @@ ${e2.length}`, n5 = new TextEncoder().encode(t + e2);
 
   // ../client/src/client.ts
   function createDefaultAdapters(config = {}) {
+    const appMetadata = resolveAppMetadata(config);
     const requestedDescriptors = resolveWalletDescriptors(config.wallets);
     const requested = new Set(requestedDescriptors.map((wallet) => wallet.id));
     for (const walletId of config.disabledWallets ?? []) requested.delete(walletId);
     return buildAdapters(
       requestedDescriptors.filter((wallet) => requested.has(wallet.id)),
-      config
+      { ...config, metadata: appMetadata }
     );
   }
   function createWalletClient(config = {}) {
     const networks = config.networks;
     const registry = new NetworkRegistry(networks);
     const network = registry.resolve(config.network);
+    const appMetadata = resolveAppMetadata(config);
     const adapters = [...config.adapters ?? [], ...createDefaultAdapters(config), ...createTronWeb3AdapterBridges(config.tronweb3Adapters)];
     return new WalletManager({
-      ...config.appName ? { appName: config.appName } : {},
+      metadata: appMetadata,
+      appName: appMetadata.name,
       network,
       ...networks ? { networks } : {},
       ...config.storage ?? (config.useBrowserStorage ? createBrowserWalletStorage() : void 0) ? { storage: config.storage ?? createBrowserWalletStorage() } : {},
@@ -81745,6 +81888,10 @@ ${selector} .twk-modal, ${selector} .twk-account-panel {
 }
 ${selector} .twk-modal:focus, ${selector} .twk-inline:focus {
   outline: none;
+}
+${selector} .twk-header-spacer {
+  flex: 0 0 40px;
+  height: 40px;
 }
 ${selector} .twk-inline {
   background: var(--twk-surface);
@@ -81898,6 +82045,87 @@ ${selector} .twk-primary:hover {
   border-color: var(--twk-accent);
 }
 ${selector} .twk-primary .twk-action-icon { opacity: 0.78; }
+${selector} .twk-action[data-tone="primary"] {
+  background: var(--twk-accent);
+  border-color: var(--twk-accent);
+  color: var(--twk-accent-text);
+}
+${selector} .twk-action[data-tone="primary"]:hover {
+  background: var(--twk-accent);
+  border-color: var(--twk-accent);
+}
+${selector} .twk-transaction-preview {
+  width: min(420px, calc(100vw - 32px));
+}
+${selector} .twk-transaction-preview-body {
+  gap: 14px;
+  padding: 12px 20px 18px;
+}
+${selector} .twk-transaction-preview-summary {
+  background: var(--twk-surface-muted);
+  border: 1px solid var(--twk-border);
+  border-radius: var(--twk-wallet-radius);
+  color: var(--twk-text);
+  font-size: 15px;
+  line-height: 1.45;
+  margin: 0;
+  overflow-wrap: anywhere;
+  padding: 14px;
+}
+${selector} .twk-transaction-preview-details {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+${selector} .twk-transaction-preview-detail {
+  align-items: start;
+  border-bottom: 1px solid color-mix(in srgb, var(--twk-border) 55%, transparent);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(84px, .4fr) 1fr;
+  padding: 8px 0;
+}
+${selector} .twk-transaction-preview-detail dt {
+  color: var(--twk-text-muted);
+  font-size: 12px;
+  font-weight: 560;
+  line-height: 1.35;
+}
+${selector} .twk-transaction-preview-detail dd {
+  color: var(--twk-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+${selector} .twk-transaction-preview-raw {
+  color: var(--twk-text-muted);
+  font-size: 12px;
+}
+${selector} .twk-transaction-preview-raw pre {
+  background: var(--twk-surface-muted);
+  border: 1px solid var(--twk-border);
+  border-radius: var(--twk-wallet-radius);
+  color: var(--twk-text);
+  margin: 8px 0 0;
+  max-height: 160px;
+  overflow: auto;
+  padding: 10px;
+  white-space: pre-wrap;
+}
+${selector} .twk-transaction-preview-footer {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 1fr;
+  padding: 0 20px 20px;
+}
+${selector} .twk-transaction-preview-button {
+  min-width: 0;
+  width: 100%;
+}
 ${selector} .twk-connect-button {
   background: var(--twk-surface);
   border-color: var(--twk-border);
@@ -82959,14 +83187,14 @@ ${selector} .twk-tx-header {
   border-radius: 0;
   color: var(--twk-text-muted);
   display: flex;
-  font-size: 10px;
-  font-weight: 650;
+  font-size: 13px;
+  font-weight: 500;
   gap: 8px;
   justify-content: space-between;
-  letter-spacing: .07em;
+  letter-spacing: 0;
   min-height: 34px;
   padding: 0 10px;
-  text-transform: uppercase;
+  text-transform: none;
   width: 100%;
 }
 ${selector} .twk-tx-header-link {
@@ -82977,7 +83205,7 @@ ${selector} .twk-tx-header-link {
   color: var(--twk-accent);
   display: inline-flex;
   font-size: 11px;
-  font-weight: 650;
+  font-weight: 500;
   gap: 4px;
   height: 28px;
   justify-content: center;
@@ -82999,7 +83227,7 @@ ${selector} .twk-tx-count {
   color: var(--twk-text-muted);
   display: inline-flex;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 500;
   justify-content: center;
   min-height: 16px;
   min-width: 18px;
@@ -83021,16 +83249,30 @@ ${selector} .twk-tx-list-inner {
   min-height: 0;
   overflow: hidden;
 }
-${selector} .twk-tx-row {
-  border-top: 1px solid var(--twk-border);
+${selector} .twk-tx-section .twk-tx-list-inner {
   display: grid;
-  gap: 8px;
-  grid-template-columns: 24px minmax(0, 1fr) auto;
-  min-height: 42px;
-  padding: 7px 10px;
+  gap: 0;
+  padding: 0 4px 6px;
 }
-${selector} .twk-tx-row:first-child {
-  border-top: 0;
+${selector} .twk-tx-section .twk-activity-list {
+  border: 0;
+  border-radius: 0;
+  gap: 0;
+}
+${selector} .twk-tx-row {
+  align-items: center;
+  border-radius: 8px;
+  color: var(--twk-text);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  min-height: 48px;
+  padding: 8px 10px;
+  text-decoration: none;
+  transition: background-color .15s ease;
+}
+${selector} .twk-tx-row:hover {
+  background: var(--twk-surface-hover);
 }
 ${selector} .twk-tx-skeleton-row {
   pointer-events: none;
@@ -83067,31 +83309,58 @@ ${selector} .twk-tx-skeleton-row .twk-skeleton-button {
   width: 54px;
 }
 ${selector} .twk-tx-empty {
-  border-top: 1px solid var(--twk-border);
+  align-items: center;
   color: var(--twk-text-muted);
+  display: grid;
   font-size: 12px;
+  gap: 8px;
+  justify-items: center;
   line-height: 1.4;
-  min-height: 42px;
-  padding: 12px 10px;
+  min-height: 74px;
+  padding: 14px 10px 16px;
   text-align: center;
 }
+${selector} .twk-tx-empty-icon {
+  align-items: center;
+  background: color-mix(in srgb, var(--twk-accent) 10%, var(--twk-surface-muted));
+  border-radius: 999px;
+  color: var(--twk-accent);
+  display: inline-flex;
+  height: 30px;
+  justify-content: center;
+  width: 30px;
+}
+${selector} .twk-tx-empty-icon svg {
+  height: 15px;
+  width: 15px;
+}
 ${selector} .twk-tx-icon {
+  align-items: center;
   align-self: center;
   background: var(--twk-surface-muted);
   border-radius: 999px;
+  color: var(--twk-text-muted);
+  display: inline-flex;
   height: 24px;
+  justify-content: center;
   position: relative;
   width: 24px;
+  transition: background-color .15s ease, color .15s ease;
 }
-${selector} .twk-tx-icon::after {
-  background: currentColor;
-  border-radius: 999px;
-  content: "";
-  height: 8px;
-  left: 8px;
-  position: absolute;
-  top: 8px;
-  width: 8px;
+${selector} .twk-tx-icon[data-status="success"] {
+  background: color-mix(in srgb, var(--twk-success) 12%, var(--twk-surface-muted));
+  color: var(--twk-success);
+}
+${selector} .twk-tx-icon[data-status="failed"] {
+  background: color-mix(in srgb, var(--twk-danger) 12%, var(--twk-surface-muted));
+  color: var(--twk-danger);
+}
+${selector} .twk-tx-icon[data-status="pending"] {
+  background: color-mix(in srgb, var(--twk-warning) 12%, var(--twk-surface-muted));
+  color: var(--twk-warning);
+}
+${selector} .twk-tx-spinner {
+  animation: twk-spin .9s linear infinite;
 }
 ${selector} .twk-tx-icon[data-status="pending"]::before {
   animation: twk-pulse 1.4s ease-out infinite;
@@ -83127,7 +83396,7 @@ ${selector} .twk-tx-hash {
 ${selector} .twk-tx-status {
   align-self: center;
   font-size: 11px;
-  font-weight: 650;
+  font-weight: 500;
   line-height: 1.25;
   text-transform: capitalize;
 }
@@ -83137,7 +83406,7 @@ ${selector} .twk-tx-link {
   color: var(--twk-accent);
   display: inline-flex;
   font-size: 11px;
-  font-weight: 650;
+  font-weight: 500;
   gap: 4px;
   line-height: 1.25;
   text-decoration: none;
@@ -83145,9 +83414,327 @@ ${selector} .twk-tx-link {
 ${selector} .twk-tx-link:hover {
   text-decoration: none;
 }
+${selector} .twk-tx-section .twk-activity-row {
+  border-bottom: 0;
+  border-radius: 8px;
+  gap: 8px;
+  grid-template-columns: 28px minmax(0, 1fr) minmax(54px, auto);
+  min-height: 42px;
+  padding: 7px 10px;
+}
+${selector} .twk-tx-section .twk-activity-row:last-child {
+  border-bottom: 0;
+}
+${selector} .twk-tx-section .twk-activity-row[data-status="failed"] {
+  opacity: .78;
+}
+${selector} .twk-tx-section .twk-activity-icon {
+  height: 28px;
+  width: 28px;
+}
+${selector} .twk-tx-section .twk-activity-icon > svg {
+  height: 14px;
+  width: 14px;
+}
+${selector} .twk-tx-section .twk-activity-badge {
+  border-width: 2px;
+  bottom: -3px;
+  height: 13px;
+  right: -3px;
+  width: 13px;
+}
+${selector} .twk-tx-section .twk-activity-badge svg {
+  height: 8px;
+  width: 8px;
+}
+${selector} .twk-tx-section .twk-activity-badge[data-status="pending"] {
+  height: 38px;
+  inset: -5px;
+  width: 38px;
+}
+${selector} .twk-tx-section .twk-activity-badge[data-status="pending"] .twk-activity-spinner {
+  height: 38px;
+  width: 38px;
+}
+${selector} .twk-tx-section .twk-activity-title {
+  font-size: 12.5px;
+  font-weight: 500;
+}
+${selector} .twk-tx-section .twk-activity-meta {
+  font-size: 11px;
+  font-weight: 400;
+}
+${selector} .twk-tx-section .twk-activity-side {
+  gap: 2px;
+  min-width: 54px;
+}
+${selector} .twk-tx-section .twk-activity-amount {
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+${selector} .twk-tx-section .twk-activity-status {
+  font-size: 10.5px;
+  min-height: 19px;
+  padding: 1px 8px;
+}
+${selector} .twk-tx-section .twk-activity-date {
+  color: var(--twk-text-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
 ${selector} .twk-tx-history-view .twk-tx-list-inner {
-  max-height: 468px;
-  overflow: auto;
+  max-height: none;
+  overflow: visible;
+}
+${selector} .twk-activity-scroll {
+  max-height: min(560px, 68vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 2px 18px;
+  position: relative;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+}
+${selector} .twk-activity-scroll::-webkit-scrollbar {
+  display: none;
+  height: 0;
+  width: 0;
+}
+${selector} .twk-activity-scroll[data-overflow="top"] {
+  mask-image: linear-gradient(to bottom, transparent, black 28px);
+}
+${selector} .twk-activity-scroll[data-overflow="bottom"] {
+  mask-image: linear-gradient(to bottom, black calc(100% - 32px), transparent);
+}
+${selector} .twk-activity-scroll[data-overflow="both"] {
+  mask-image: linear-gradient(to bottom, transparent, black 28px, black calc(100% - 32px), transparent);
+}
+${selector} .twk-activity-section {
+  display: grid;
+  min-height: 0;
+}
+${selector} .twk-activity-list {
+  display: grid;
+  border: 0;
+  border-radius: 0;
+  gap: 8px;
+  overflow: visible;
+}
+${selector} .twk-activity-month {
+  color: var(--twk-text-muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.3;
+  padding: 14px 14px 2px;
+}
+${selector} .twk-activity-row {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+  color: var(--twk-text);
+  display: grid;
+  gap: 11px;
+  grid-template-columns: 34px minmax(0, 1fr) minmax(82px, auto);
+  min-height: 55px;
+  padding: 9px 14px;
+  text-decoration: none;
+  transition: background-color .16s ease, opacity .16s ease;
+}
+${selector} .twk-activity-row:hover {
+  background: var(--twk-surface-hover);
+  text-decoration: none;
+}
+${selector} .twk-activity-row[data-status="failed"] {
+  opacity: .72;
+}
+${selector} .twk-activity-icon {
+  align-items: center;
+  align-self: center;
+  background: var(--twk-surface-muted);
+  border-radius: 999px;
+  color: var(--twk-text-muted);
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  position: relative;
+  width: 34px;
+  transition: background-color .15s ease, color .15s ease;
+}
+${selector} .twk-activity-icon svg {
+  display: block;
+}
+${selector} .twk-activity-icon[data-direction="in"] {
+  background: color-mix(in srgb, var(--twk-success) 12%, var(--twk-surface-muted));
+  color: var(--twk-success);
+}
+${selector} .twk-activity-icon[data-direction="out"] {
+  background: color-mix(in srgb, var(--twk-text-muted) 10%, var(--twk-surface-muted));
+  color: var(--twk-text);
+}
+${selector} .twk-activity-icon[data-kind="staked"],
+${selector} .twk-activity-icon[data-kind="delegated"] {
+  background: color-mix(in srgb, var(--twk-warning) 12%, var(--twk-surface-muted));
+  color: var(--twk-warning);
+}
+${selector} .twk-activity-icon[data-kind="unstaked"],
+${selector} .twk-activity-icon[data-kind="undelegated"] {
+  background: var(--twk-surface-muted);
+  color: var(--twk-text-muted);
+}
+${selector} .twk-activity-icon[data-kind="approve"],
+${selector} .twk-activity-icon[data-kind="voted"],
+${selector} .twk-activity-icon[data-kind="contractCall"] {
+  background: color-mix(in srgb, var(--twk-accent) 12%, var(--twk-surface-muted));
+  color: var(--twk-accent);
+}
+${selector} .twk-activity-icon[data-kind="claimedRewards"] {
+  background: color-mix(in srgb, var(--twk-success) 12%, var(--twk-surface-muted));
+  color: var(--twk-success);
+}
+${selector} .twk-activity-icon[data-status="failed"] {
+  background: color-mix(in srgb, var(--twk-danger) 12%, var(--twk-surface-muted));
+  color: var(--twk-danger);
+}
+${selector} .twk-activity-icon[data-status="pending"] {
+  background: color-mix(in srgb, var(--twk-warning) 12%, var(--twk-surface-muted));
+  color: var(--twk-warning);
+}
+${selector} .twk-activity-badge {
+  align-items: center;
+  background: var(--twk-surface);
+  border: 2px solid var(--twk-surface);
+  border-radius: 999px;
+  color: var(--twk-success);
+  display: flex;
+  font-size: 11px;
+  font-weight: 800;
+  height: 15px;
+  justify-content: center;
+  line-height: 1;
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 15px;
+}
+${selector} .twk-activity-badge svg {
+  height: 9px;
+  width: 9px;
+}
+${selector} .twk-activity-badge[data-direction="in"] {
+  background: var(--twk-success);
+  color: var(--twk-success-text, var(--twk-surface));
+}
+${selector} .twk-activity-badge[data-direction="out"] {
+  background: var(--twk-text-muted);
+  color: var(--twk-surface);
+}
+${selector} .twk-activity-badge[data-status="pending"] {
+  background: transparent;
+  border: 0;
+  bottom: auto;
+  color: var(--twk-warning);
+  display: flex;
+  height: 44px;
+  inset: -5px;
+  right: auto;
+  width: 44px;
+}
+${selector} .twk-activity-badge[data-status="pending"] .twk-activity-spinner {
+  animation: twk-spin 1s linear infinite;
+  height: 44px;
+  width: 44px;
+}
+${selector} .twk-activity-badge[data-status="failed"] {
+  background: var(--twk-danger);
+  color: var(--twk-surface);
+  display: flex;
+}
+${selector} .twk-activity-main {
+  align-self: center;
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+${selector} .twk-activity-title {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+${selector} .twk-activity-meta {
+  color: var(--twk-text-muted);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.28;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+${selector} .twk-activity-meta[data-status="pending"] {
+  color: var(--twk-warning);
+}
+${selector} .twk-activity-meta[data-status="failed"] {
+  color: var(--twk-danger);
+}
+${selector} .twk-activity-side {
+  align-content: center;
+  align-items: flex-end;
+  align-self: center;
+  color: var(--twk-text-muted);
+  display: grid;
+  gap: 2px;
+  justify-items: end;
+  min-width: 82px;
+}
+${selector} .twk-activity-amount {
+  color: var(--twk-text);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+${selector} .twk-activity-amount[data-tone="in"] {
+  color: var(--twk-success);
+}
+${selector} .twk-activity-amount[data-tone="muted"] {
+  color: var(--twk-text-muted);
+}
+${selector} .twk-activity-amount[data-status="failed"] {
+  text-decoration: line-through;
+}
+${selector} .twk-activity-status {
+  align-items: center;
+  background: color-mix(in srgb, var(--twk-warning) 12%, var(--twk-surface-muted));
+  border-radius: 999px;
+  color: var(--twk-warning);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 500;
+  justify-content: center;
+  line-height: 1;
+  min-height: 22px;
+  padding: 0 8px;
+  white-space: nowrap;
+}
+${selector} .twk-activity-status[data-status="failed"] {
+  background: color-mix(in srgb, var(--twk-danger) 12%, var(--twk-surface-muted));
+  color: var(--twk-danger);
+}
+${selector} .twk-activity-date {
+  align-items: center;
+  display: inline-flex;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 ${selector} .twk-tx-icon[data-status="pending"], ${selector} .twk-tx-status[data-status="pending"], ${selector} .twk-toast[data-status="pending"] .twk-toast-icon { color: var(--twk-warning); }
 ${selector} .twk-tx-icon[data-status="success"], ${selector} .twk-tx-status[data-status="success"], ${selector} .twk-toast[data-status="success"] .twk-toast-icon { color: var(--twk-success); }
@@ -83254,7 +83841,7 @@ ${selector} .twk-toast-link:hover, ${selector} .twk-toast-dismiss:hover { backgr
   ${selector} .twk-toast, ${selector} .twk-toast-spinner, ${selector} .twk-action-spin, ${selector} .twk-connecting-ring-accent, ${selector} .twk-tx-icon::before, ${selector} .twk-skeleton::after, ${selector} .twk-qr-skeleton::after, ${selector} .twk-wallet-row, ${selector} .twk-wallet-card { animation: none; }
   ${selector} .twk-close, ${selector} .twk-back, ${selector} .twk-action, ${selector} .twk-address-qr-action, ${selector} .twk-tx-header-link, ${selector} .twk-wallet-row, ${selector} .twk-wallet-card, ${selector} .twk-search-trigger, ${selector} .twk-connect-button { transition: none; }
 }
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   ${selector} .twk-overlay {
     align-items: end;
     padding: max(12px, env(safe-area-inset-top)) 0 0;
@@ -83605,6 +84192,33 @@ ${variables}
   function searchIcon() {
     return `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   }
+  function arrowDownIcon() {
+    return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>`;
+  }
+  function arrowUpIcon() {
+    return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>`;
+  }
+  function fileCheckIcon() {
+    return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="m9 15 2 2 4-4"/></svg>`;
+  }
+  function lockClosedIcon() {
+    return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
+  }
+  function lockOpenIcon() {
+    return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>`;
+  }
+  function voteIcon() {
+    return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>`;
+  }
+  function giftIcon() {
+    return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path></svg>`;
+  }
+  function codeIcon() {
+    return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>`;
+  }
+  function questionIcon() {
+    return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
+  }
 
   // ../ui/src/locales/en.ts
   var en2 = {
@@ -83647,9 +84261,35 @@ ${variables}
       explorer: "Explorer",
       showQr: "QR",
       lightQr: "Light QR",
-      noTransactions: "No recent transactions",
+      noTransactions: "Your activity will show up here.",
       recentTransactions: "Recent transactions",
       qrAlt: "TRON address QR"
+    },
+    activity: {
+      title: "Activity",
+      empty: "Your activity will show up here.",
+      received: "Received",
+      sent: "Sent",
+      receivedToken: "Received {token}",
+      sentToken: "Sent {token}",
+      approve: "Approve {token}",
+      staked: "Staked TRX",
+      unstaked: "Unstaked TRX",
+      delegated: "Delegated {resource}",
+      undelegated: "Undelegated {resource}",
+      voted: "Voted",
+      claimedRewards: "Claimed rewards",
+      contractCall: "Contract",
+      unknown: "Transaction",
+      from: "From {address}",
+      to: "To {address}",
+      energy: "Energy",
+      bandwidth: "Bandwidth",
+      votes: "{count} votes",
+      pending: "Pending",
+      failed: "Failed",
+      confirmed: "Confirmed",
+      view: "View"
     },
     walletButton: {
       connect: "Connect Wallet",
@@ -83737,8 +84377,11 @@ ${variables}
 
   // ../ui/src/account-panel.ts
   var defaultAccountPanelLabels = en2.accountPanel;
+  var defaultActivityLabels = en2.activity;
+  var DEFAULT_DATE_LOCALE = "en-US";
   function createAccountPanelHtml(viewModel) {
     const labels = { ...defaultAccountPanelLabels, ...viewModel.labels };
+    const activityLabels = { ...defaultActivityLabels, ...viewModel.activityLabels };
     const hasIdentityName = Boolean(viewModel.account.domain ?? viewModel.account.displayName);
     const displayName = viewModel.account.domain ?? viewModel.account.displayName;
     const balanceText = viewModel.balanceTrx ? `${viewModel.balanceTrx} TRX` : "";
@@ -83757,12 +84400,12 @@ ${variables}
     const transactionCount = viewModel.recentTransactions?.length ?? 0;
     const maxVisibleTransactions = Math.max(1, Math.trunc(viewModel.maxVisibleTransactions ?? 3));
     const visibleTransactions = viewModel.recentTransactions?.slice(0, maxVisibleTransactions) ?? [];
-    const transactions = viewModel.transactionsLoading ? createTransactionSkeletonRowsHtml(Math.min(3, maxVisibleTransactions)) : visibleTransactions.length > 0 ? visibleTransactions.map(createTransactionRowHtml).join("") : `<div class="twk-tx-empty">${escapeHtml(labels.noTransactions)}</div>`;
+    const transactions = viewModel.transactionsLoading ? createTransactionSkeletonRowsHtml(Math.min(3, maxVisibleTransactions)) : visibleTransactions.length > 0 ? visibleTransactions.map((transaction) => createActivityTransactionRowHtml(transaction, activityLabels, "compact")).join("") : createTransactionEmptyHtml(labels.noTransactions);
     const recent = transactionCount > 0 || viewModel.transactionsLoading ? `<section class="twk-tx-section" aria-label="${escapeAttribute(labels.recentTransactions)}">
         <div class="twk-tx-header">
           <span>${escapeHtml(labels.recentTransactions)}</span>
           <span class="twk-tx-count${viewModel.transactionsLoading ? " twk-skeleton-pill" : ""}" ${viewModel.transactionsLoading ? 'data-loading="true"' : ""}>${viewModel.transactionsLoading ? '<span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">Loading transactions</span>' : transactionCount > 9 ? "9+" : transactionCount}</span>
-          ${transactionCount > maxVisibleTransactions ? `<button class="twk-tx-header-link" type="button" data-twk-action="tx-history">View ${externalIcon()}</button>` : ""}
+          ${transactionCount > maxVisibleTransactions ? `<button class="twk-tx-header-link" type="button" data-twk-action="tx-history">${escapeHtml(activityLabels.title)}</button>` : ""}
         </div>
         <div class="twk-tx-list"><div class="twk-tx-list-inner">${transactions}</div></div>
       </section>` : "";
@@ -83806,23 +84449,20 @@ ${variables}
   }
   function createTransactionHistoryPanelHtml(viewModel) {
     const labels = { ...defaultAccountPanelLabels, ...viewModel.labels };
+    const activityLabels = { ...defaultActivityLabels, ...viewModel.activityLabels };
     const transactionCount = viewModel.recentTransactions?.length ?? 0;
-    const transactions = viewModel.transactionsLoading ? createTransactionSkeletonRowsHtml(3) : transactionCount > 0 ? viewModel.recentTransactions.map(createTransactionRowHtml).join("") : `<div class="twk-tx-empty">${escapeHtml(labels.noTransactions)}</div>`;
+    const transactions = viewModel.transactionsLoading ? createTransactionSkeletonRowsHtml(3) : transactionCount > 0 ? createActivityTransactionsHtml(viewModel.recentTransactions, activityLabels) : createTransactionEmptyHtml(activityLabels.empty);
     return `<section class="twk-account-panel" data-twk-account-view="tx-history" aria-labelledby="twk-tx-history-title">
   <header class="twk-header">
     <button class="twk-back" type="button" data-twk-action="account-back" aria-label="${escapeAttribute(labels.back)}">${backIcon()}</button>
     <div class="twk-header-main">
-      <h2 class="twk-title" id="twk-tx-history-title">${escapeHtml(labels.recentTransactions)}</h2>
+      <h2 class="twk-title" id="twk-tx-history-title">${escapeHtml(activityLabels.title)}</h2>
     </div>
     <button class="twk-close" type="button" data-twk-action="close-account" aria-label="${escapeAttribute(labels.close)}">${closeIcon()}</button>
   </header>
   <div class="twk-account-body">
-    <section class="twk-tx-section twk-tx-history-view" aria-label="${escapeAttribute(labels.recentTransactions)}">
-      <div class="twk-tx-header">
-        <span>${escapeHtml(labels.recentTransactions)}</span>
-        <span class="twk-tx-count${viewModel.transactionsLoading ? " twk-skeleton-pill" : ""}" ${viewModel.transactionsLoading ? 'data-loading="true"' : ""}>${viewModel.transactionsLoading ? '<span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">Loading transactions</span>' : transactionCount > 9 ? "9+" : transactionCount}</span>
-      </div>
-      <div class="twk-tx-list"><div class="twk-tx-list-inner">${transactions}</div></div>
+    <section class="twk-activity-section twk-tx-history-view" aria-label="${escapeAttribute(activityLabels.title)}">
+      <div class="twk-tx-list twk-activity-scroll" data-overflow="${transactionCount > 3 ? "both" : "none"}"><div class="twk-tx-list-inner twk-activity-list">${transactions}</div></div>
     </section>
   </div>
 </section>`;
@@ -83854,14 +84494,141 @@ ${variables}
   </div>
 </section>`;
   }
-  function createTransactionRowHtml(transaction) {
-    const txHash = transaction.txHash ? shortenAddress(transaction.txHash) : "";
-    const link = transaction.explorerUrl ? `<a class="twk-tx-link" href="${escapeAttribute(transaction.explorerUrl)}" target="_blank" rel="noreferrer">View ${externalIcon()}</a>` : `<span class="twk-tx-status" data-status="${escapeAttribute(transaction.status)}">${escapeHtml(transaction.status)}</span>`;
-    return `<div class="twk-tx-row" data-twk-transaction-id="${escapeAttribute(transaction.id)}">
-  <span class="twk-tx-icon" data-status="${escapeAttribute(transaction.status)}" aria-hidden="true"></span>
-  <span class="twk-tx-main"><span class="twk-tx-label">${escapeHtml(transaction.label)}</span><span class="twk-tx-hash">${escapeHtml(txHash || transaction.status)}</span></span>
-  ${link}
-</div>`;
+  function createActivityTransactionsHtml(transactions, labels) {
+    let currentGroup = "";
+    return transactions.map((transaction) => {
+      const group = formatTransactionDayGroup(transaction.timestamp);
+      const heading = group && group !== currentGroup ? `<div class="twk-activity-month">${escapeHtml(group)}</div>` : "";
+      if (group) currentGroup = group;
+      return `${heading}${createActivityTransactionRowHtml(transaction, labels)}`;
+    }).join("");
+  }
+  function activityIconSvg(kind) {
+    if (kind === "received" || kind === "receivedToken") return arrowDownIcon();
+    if (kind === "sent" || kind === "sentToken") return arrowUpIcon();
+    if (kind === "approve") return fileCheckIcon();
+    if (kind === "staked" || kind === "delegated") return lockClosedIcon();
+    if (kind === "unstaked" || kind === "undelegated") return lockOpenIcon();
+    if (kind === "voted") return voteIcon();
+    if (kind === "claimedRewards") return giftIcon();
+    if (kind === "contractCall") return codeIcon();
+    return questionIcon();
+  }
+  function createActivityTransactionRowHtml(transaction, labels, density = "regular") {
+    const date = density === "compact" ? formatRelativeTransactionTime(transaction.timestamp) : "";
+    const kind = transaction.kind ?? fallbackKindFromStatus(transaction.status);
+    const title = transaction.title ?? formatActivityTitle(kind, transaction.token, transaction.resource, labels) ?? transaction.label;
+    const statusSubtitle = transaction.status === "pending" || transaction.status === "failed" ? transaction.subtitle || statusLabel(transaction.status, labels) : "";
+    const resourceSubtitle = transaction.resource ? resourceLabel(transaction.resource, labels) : "";
+    const subtitle = statusSubtitle || transaction.subtitle || resourceSubtitle || (transaction.status === "success" ? "" : statusLabel(transaction.status, labels));
+    const direction = transaction.direction ?? fallbackDirection(kind);
+    const amountTone = transaction.status === "failed" ? "muted" : transaction.amountTone ?? (direction === "in" ? "in" : direction === "out" ? "out" : "muted");
+    const amountText = normalizeActivityAmountText(transaction.amountText);
+    const right = amountText ? `<span class="twk-activity-amount" data-tone="${escapeAttribute(amountTone)}" data-status="${escapeAttribute(transaction.status)}">${escapeHtml(amountText)}</span>` : createActivityStatusChipHtml(transaction.status, labels);
+    const rowClass = density === "compact" ? "twk-activity-row twk-activity-row-compact" : "twk-activity-row";
+    const sideMeta = date ? `<span class="twk-activity-date">${escapeHtml(date)}</span>` : "";
+    const content = `<span class="twk-activity-icon" data-kind="${escapeAttribute(kind)}" data-direction="${escapeAttribute(direction)}" data-status="${escapeAttribute(transaction.status)}" aria-hidden="true">${activityIconSvg(kind)}${activityBadgeIcon(direction, transaction.status)}</span>
+  <span class="twk-activity-main"><span class="twk-activity-title">${escapeHtml(title)}</span><span class="twk-activity-meta" data-status="${escapeAttribute(transaction.status)}">${escapeHtml(subtitle)}</span></span>
+  <span class="twk-activity-side">${right}${sideMeta}</span>`;
+    return transaction.explorerUrl ? `<a class="${rowClass}" href="${escapeAttribute(transaction.explorerUrl)}" target="_blank" rel="noreferrer" data-twk-transaction-id="${escapeAttribute(transaction.id)}" data-status="${escapeAttribute(transaction.status)}" aria-label="${escapeAttribute(labels.view)} ${escapeAttribute(title)}">${content}</a>` : `<div class="${rowClass}" data-twk-transaction-id="${escapeAttribute(transaction.id)}" data-status="${escapeAttribute(transaction.status)}">${content}</div>`;
+  }
+  function formatActivityTitle(kind, token, resource, labels) {
+    if (kind === "receivedToken") return formatLabel(labels.receivedToken, { token: token ?? "TRC20" });
+    if (kind === "sentToken") return formatLabel(labels.sentToken, { token: token ?? "TRC20" });
+    if (kind === "approve") return formatLabel(labels.approve, { token: token ?? "TRC20" });
+    if (kind === "delegated") return formatLabel(labels.delegated, { resource: resourceLabel(resource, labels) || labels.energy });
+    if (kind === "undelegated") return formatLabel(labels.undelegated, { resource: resourceLabel(resource, labels) || labels.energy });
+    return labels[kind] ?? labels.unknown;
+  }
+  function resourceLabel(resource, labels) {
+    if (resource === "bandwidth") return labels.bandwidth;
+    if (resource === "energy") return labels.energy;
+    return "";
+  }
+  function formatLabel(template, vars) {
+    return template.replace(/\{(\w+)\}/g, (_match, key) => String(vars[key] ?? ""));
+  }
+  function fallbackKindFromStatus(status) {
+    return status === "unknown" ? "unknown" : "contractCall";
+  }
+  function fallbackDirection(kind) {
+    if (kind === "received" || kind === "receivedToken" || kind === "claimedRewards") return "in";
+    if (kind === "sent" || kind === "sentToken") return "out";
+    return "neutral";
+  }
+  function normalizeActivityAmountText(amountText) {
+    if (!amountText) return "";
+    const normalized = amountText.trim();
+    return /\d/.test(normalized) ? normalized : "";
+  }
+  function createActivityStatusChipHtml(status, labels) {
+    if (status !== "pending" && status !== "failed") return "";
+    const label = status === "pending" ? labels.pending : labels.failed;
+    return `<span class="twk-activity-status twk-activity-status-chip" data-status="${escapeAttribute(status)}">${escapeHtml(label)}</span>`;
+  }
+  function statusLabel(status, labels) {
+    if (status === "pending") return labels.pending;
+    if (status === "failed") return labels.failed;
+    if (status === "success") return labels.confirmed;
+    return labels.unknown;
+  }
+  function activityBadgeIcon(direction, status) {
+    if (status === "pending") {
+      return `<span class="twk-activity-badge" data-status="pending"><svg class="twk-activity-spinner" width="52" height="52" viewBox="0 0 52 52" fill="none" aria-hidden="true"><circle cx="26" cy="26" r="23" stroke="currentColor" stroke-opacity=".18" stroke-width="2.4"></circle><path d="M49 26a23 23 0 0 1-23 23" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></path></svg></span>`;
+    }
+    if (status === "failed") {
+      return `<span class="twk-activity-badge" data-status="failed"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></span>`;
+    }
+    if (direction === "in") {
+      return `<span class="twk-activity-badge" data-direction="in"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 7h10v10M17 7 6 18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
+    }
+    if (direction === "out") {
+      return `<span class="twk-activity-badge" data-direction="out"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17V7h10M7 7l11 11" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
+    }
+    return "";
+  }
+  function formatTransactionDayGroup(timestamp) {
+    const date = parseTransactionDate(timestamp);
+    if (!date) return "";
+    const today = startOfLocalDay(/* @__PURE__ */ new Date());
+    const target = startOfLocalDay(date);
+    const diffDays = Math.round((today.getTime() - target.getTime()) / 864e5);
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Yesterday";
+    return new Intl.DateTimeFormat(DEFAULT_DATE_LOCALE, { day: "2-digit", month: "short" }).format(date);
+  }
+  function formatTransactionDate(timestamp) {
+    const date = parseTransactionDate(timestamp);
+    if (!date) return "";
+    return new Intl.DateTimeFormat(DEFAULT_DATE_LOCALE, { day: "2-digit", month: "short" }).format(date);
+  }
+  function formatRelativeTransactionTime(timestamp) {
+    const date = parseTransactionDate(timestamp);
+    if (!date) return "";
+    const diffMs = Date.now() - date.getTime();
+    if (!Number.isFinite(diffMs)) return "";
+    const absMs = Math.abs(diffMs);
+    const suffix = diffMs < 0 ? "from now" : "ago";
+    const minute = 6e4;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+    if (absMs < minute) return "now";
+    if (absMs < hour) return `${Math.max(1, Math.round(absMs / minute))}m ${suffix}`;
+    if (absMs < day) return `${Math.round(absMs / hour)}h ${suffix}`;
+    if (absMs < 2 * day && diffMs >= 0) return "Yesterday";
+    if (absMs < 7 * day) return `${Math.round(absMs / day)}d ${suffix}`;
+    return formatTransactionDate(timestamp);
+  }
+  function parseTransactionDate(timestamp) {
+    if (!timestamp) return null;
+    const date = new Date(timestamp);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  function startOfLocalDay(date) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  }
+  function createTransactionEmptyHtml(label) {
+    return `<div class="twk-tx-empty"><span class="twk-tx-empty-icon" aria-hidden="true">${codeIcon()}</span><span>${escapeHtml(label)}</span></div>`;
   }
   function createTransactionSkeletonRowsHtml(count) {
     return Array.from({ length: Math.max(1, count) }, () => `<div class="twk-tx-row twk-tx-skeleton-row twk-skeleton-row" data-loading="true" aria-hidden="true">
@@ -84311,6 +85078,14 @@ ${variables}
       status: mapTransactionStatus(transaction.status),
       txHash: transaction.hash,
       timestamp: new Date(transaction.submittedAt).toISOString(),
+      ...transaction.kind ? { kind: transaction.kind } : {},
+      ...transaction.direction ? { direction: transaction.direction } : {},
+      ...transaction.title ? { title: transaction.title } : {},
+      ...transaction.subtitle ? { subtitle: transaction.subtitle } : {},
+      ...transaction.amountText ? { amountText: transaction.amountText } : {},
+      ...transaction.amountTone ? { amountTone: transaction.amountTone } : {},
+      ...transaction.token ? { token: transaction.token } : {},
+      ...transaction.resource ? { resource: transaction.resource } : {},
       ...transaction.explorerUrl ? { explorerUrl: transaction.explorerUrl } : {}
     };
   }
@@ -84365,6 +85140,32 @@ ${variables}
       noTransactions: "\u6682\u65E0\u8FD1\u671F\u4EA4\u6613",
       recentTransactions: "\u8FD1\u671F\u4EA4\u6613",
       qrAlt: "TRON \u5730\u5740\u4E8C\u7EF4\u7801"
+    },
+    activity: {
+      title: "\u6D3B\u52A8\u8BB0\u5F55",
+      empty: "\u6682\u65E0\u6D3B\u52A8",
+      received: "\u6536\u6B3E",
+      sent: "\u8F6C\u8D26",
+      receivedToken: "\u6536\u5230 {token}",
+      sentToken: "\u53D1\u9001 {token}",
+      approve: "\u6388\u6743 {token}",
+      staked: "\u8D28\u62BC TRX",
+      unstaked: "\u89E3\u9664\u8D28\u62BC TRX",
+      delegated: "\u4EE3\u7406 {resource}",
+      undelegated: "\u53D6\u6D88\u4EE3\u7406 {resource}",
+      voted: "\u6295\u7968",
+      claimedRewards: "\u9886\u53D6\u5956\u52B1",
+      contractCall: "\u5408\u7EA6\u8C03\u7528",
+      unknown: "\u4EA4\u6613",
+      from: "\u6765\u81EA {address}",
+      to: "\u53D1\u9001\u81F3 {address}",
+      energy: "\u80FD\u91CF",
+      bandwidth: "\u5E26\u5BBD",
+      votes: "{count} \u7968",
+      pending: "\u5F85\u786E\u8BA4",
+      failed: "\u5931\u8D25",
+      confirmed: "\u5DF2\u786E\u8BA4",
+      view: "\u67E5\u770B"
     },
     walletButton: {
       connect: "\u8FDE\u63A5\u94B1\u5305",
@@ -84457,6 +85258,7 @@ ${variables}
     return {
       connectModal: { ...BUILTIN_LOCALES.en.connectModal, ...base3.connectModal, ...overrides?.connectModal },
       accountPanel: { ...BUILTIN_LOCALES.en.accountPanel, ...base3.accountPanel, ...overrides?.accountPanel },
+      activity: { ...BUILTIN_LOCALES.en.activity, ...base3.activity, ...overrides?.activity },
       walletButton: { ...BUILTIN_LOCALES.en.walletButton, ...base3.walletButton, ...overrides?.walletButton },
       toast: { ...BUILTIN_LOCALES.en.toast, ...base3.toast, ...overrides?.toast },
       errors: {
@@ -84530,6 +85332,12 @@ ${variables}
         disconnect: config.accountPanel?.disconnect ?? true,
         maxVisibleTransactions: config.accountPanel?.maxVisibleTransactions ?? config.maxVisibleTransactions ?? 3,
         explorerAccountUrl: config.accountPanel?.explorerAccountUrl ?? ""
+      },
+      transactionPreview: {
+        enabled: config.transactionPreview?.enabled ?? true,
+        confirmLabel: config.transactionPreview?.confirmLabel ?? "Confirm",
+        cancelLabel: config.transactionPreview?.cancelLabel ?? "Cancel",
+        showRaw: config.transactionPreview?.showRaw ?? false
       },
       toast: config.toast ? {
         position: typeof config.toast === "object" ? config.toast.position ?? "bottom-right" : "bottom-right",
@@ -84976,10 +85784,10 @@ ${variables}
     const disabled = isWalletDisabled(wallet);
     const isConnecting = selectedWalletId === wallet.id || wallet.status === "connecting";
     const badge = wallet.badge ?? resolveWalletBadge(wallet, labels);
-    const statusLabel = wallet.disabledReason ?? (disabled ? labels.unavailable : isConnecting ? labels.connecting : badge.label);
+    const statusLabel2 = wallet.disabledReason ?? (disabled ? labels.unavailable : isConnecting ? labels.connecting : badge.label);
     const rowBadgeLabel = wallet.readyState === "loading" ? labels.checking : isConnecting ? labels.connecting : badge.label;
     const rowBadgeTone = wallet.readyState === "loading" ? "muted" : badge.tone;
-    return `<button class="twk-wallet-row" type="button" data-twk-wallet-id="${escapeAttribute(wallet.id)}" data-twk-adapter-id="${escapeAttribute(wallet.adapterId ?? wallet.id)}" data-twk-platforms="${escapeAttribute(getWalletPlatforms(wallet).join(" "))}" data-availability="${escapeAttribute(resolveWalletAvailabilityState(wallet))}" aria-label="${escapeAttribute(`${wallet.name}: ${statusLabel}`)}" ${disabled ? "disabled" : ""}>
+    return `<button class="twk-wallet-row" type="button" data-twk-wallet-id="${escapeAttribute(wallet.id)}" data-twk-adapter-id="${escapeAttribute(wallet.adapterId ?? wallet.id)}" data-twk-platforms="${escapeAttribute(getWalletPlatforms(wallet).join(" "))}" data-availability="${escapeAttribute(resolveWalletAvailabilityState(wallet))}" aria-label="${escapeAttribute(`${wallet.name}: ${statusLabel2}`)}" ${disabled ? "disabled" : ""}>
   <span class="twk-wallet-main">
     ${createWalletIconHtml(wallet, wallet.readyState !== "loading")}
     ${createWalletNameHtml(wallet, wallet.readyState !== "loading")}
@@ -84991,9 +85799,9 @@ ${variables}
     const disabled = isWalletDisabled(wallet);
     const isConnecting = selectedWalletId === wallet.id || wallet.status === "connecting";
     const badge = wallet.badge ?? resolveWalletBadge(wallet, labels);
-    const statusLabel = wallet.disabledReason ?? (disabled ? labels.unavailable : isConnecting ? labels.connecting : badge.label);
+    const statusLabel2 = wallet.disabledReason ?? (disabled ? labels.unavailable : isConnecting ? labels.connecting : badge.label);
     const indicator = createWalletStatusIndicatorHtml(wallet, labels, isConnecting);
-    return `<button class="twk-wallet-card" type="button" data-twk-wallet-id="${escapeAttribute(wallet.id)}" data-twk-adapter-id="${escapeAttribute(wallet.adapterId ?? wallet.id)}" data-twk-platforms="${escapeAttribute(getWalletPlatforms(wallet).join(" "))}" data-availability="${escapeAttribute(resolveWalletAvailabilityState(wallet))}" aria-label="${escapeAttribute(`${wallet.name}: ${statusLabel}`)}" ${disabled ? "disabled" : ""} ${wallet.readyState === "loading" ? 'data-loading="true"' : ""}>
+    return `<button class="twk-wallet-card" type="button" data-twk-wallet-id="${escapeAttribute(wallet.id)}" data-twk-adapter-id="${escapeAttribute(wallet.adapterId ?? wallet.id)}" data-twk-platforms="${escapeAttribute(getWalletPlatforms(wallet).join(" "))}" data-availability="${escapeAttribute(resolveWalletAvailabilityState(wallet))}" aria-label="${escapeAttribute(`${wallet.name}: ${statusLabel2}`)}" ${disabled ? "disabled" : ""} ${wallet.readyState === "loading" ? 'data-loading="true"' : ""}>
     <span class="twk-wallet-icon-wrap">${createWalletIconHtml(wallet, true)}${indicator}</span>
     ${createWalletNameHtml(wallet, true)}
   </button>`;
@@ -85839,6 +86647,119 @@ ${variables}
     };
   }
 
+  // ../ui/src/transaction-preview.ts
+  function createTransactionPreviewDialog(options = {}) {
+    const documentRef = options.document ?? globalThis.document;
+    let root = null;
+    let mounted = false;
+    let pending = null;
+    let currentTheme = options;
+    const confirmLabel = options.confirmLabel ?? "Confirm";
+    const cancelLabel = options.cancelLabel ?? "Cancel";
+    const showRaw = options.showRaw ?? false;
+    const mount = (target) => {
+      if (mounted) return;
+      ensureWalletKitStyles(documentRef);
+      root = createWalletKitRoot(currentTheme, documentRef);
+      root.dataset.twkTransactionPreviewRoot = "true";
+      const container = resolveTarget(target, documentRef) ?? documentRef.body;
+      container.append(root);
+      mounted = true;
+    };
+    const render = () => {
+      if (!root || !pending) return;
+      const { preview } = pending;
+      const details = preview.details?.length ? `<dl class="twk-transaction-preview-details">${preview.details.map(
+        (detail) => `<div class="twk-transaction-preview-detail"><dt>${escapeHtml2(detail.label)}</dt><dd>${escapeHtml2(detail.value)}</dd></div>`
+      ).join("")}</dl>` : "";
+      const raw = showRaw && preview.raw !== void 0 ? `<details class="twk-transaction-preview-raw"><summary>Raw transaction</summary><pre>${escapeHtml2(formatRaw(preview.raw))}</pre></details>` : "";
+      root.innerHTML = `
+      <div class="twk-overlay" data-twk-transaction-preview="true">
+        <section class="twk-modal twk-transaction-preview" role="dialog" aria-modal="true" aria-labelledby="twk-transaction-preview-title" tabindex="-1">
+          <header class="twk-header">
+            <span class="twk-header-spacer" aria-hidden="true"></span>
+            <div class="twk-header-main">
+              <h2 class="twk-title" id="twk-transaction-preview-title">${escapeHtml2(preview.title ?? "Review transaction")}</h2>
+            </div>
+            <button class="twk-close" type="button" data-twk-preview-action="cancel" aria-label="${escapeHtml2(cancelLabel)}">
+              <span aria-hidden="true">\xD7</span>
+            </button>
+          </header>
+          <div class="twk-body twk-transaction-preview-body">
+            <p class="twk-transaction-preview-summary">${escapeHtml2(preview.summary)}</p>
+            ${details}
+            ${raw}
+          </div>
+          <footer class="twk-transaction-preview-footer">
+            <button class="twk-action twk-transaction-preview-button" type="button" data-twk-preview-action="cancel">${escapeHtml2(cancelLabel)}</button>
+            <button class="twk-action twk-transaction-preview-button" type="button" data-twk-preview-action="confirm" data-tone="primary">${escapeHtml2(confirmLabel)}</button>
+          </footer>
+        </section>
+      </div>`;
+      root.querySelectorAll("[data-twk-preview-action]").forEach((button) => {
+        button.addEventListener("click", () => close(button.dataset.twkPreviewAction === "confirm"));
+      });
+      const panel = root.querySelector(".twk-transaction-preview");
+      panel?.focus({ preventScroll: true });
+    };
+    const close = (result = false) => {
+      const confirmation = pending;
+      pending = null;
+      if (root) root.innerHTML = "";
+      confirmation?.resolve(result);
+    };
+    return {
+      confirm(preview) {
+        if (!mounted) mount();
+        close(false);
+        return new Promise((resolve) => {
+          pending = { preview, resolve };
+          render();
+        });
+      },
+      mount,
+      close,
+      destroy() {
+        close(false);
+        root?.remove();
+        root = null;
+        mounted = false;
+      },
+      setTheme(config) {
+        currentTheme = config;
+        if (root) applyThemeToElement(root, config);
+      }
+    };
+  }
+  function resolveTarget(target, documentRef) {
+    if (!target) return null;
+    if (typeof target !== "string") return target;
+    return documentRef.querySelector(target);
+  }
+  function escapeHtml2(value) {
+    return value.replace(/[&<>"']/g, (char) => {
+      switch (char) {
+        case "&":
+          return "&amp;";
+        case "<":
+          return "&lt;";
+        case ">":
+          return "&gt;";
+        case '"':
+          return "&quot;";
+        default:
+          return "&#39;";
+      }
+    });
+  }
+  function formatRaw(raw) {
+    try {
+      return JSON.stringify(raw, null, 2);
+    } catch {
+      return String(raw);
+    }
+  }
+
   // ../client/src/tronweb.ts
   var balanceTronWebPathsByWallet = {
     tronlink: ["tronLink.tronWeb", "tron.tronWeb", "tronWeb"],
@@ -86039,7 +86960,9 @@ ${variables}
 
   // ../client/src/transactions.ts
   var DEFAULT_CONTRACT_FEE_LIMIT_SUN = 1e8;
-  function createTransactionRuntime(manager) {
+  function createTransactionRuntime(manager, options = {}) {
+    const previewResolver = resolvePreviewResolver(options.transactionPreview);
+    const previewConfirmer = resolvePreviewConfirmer(options.transactionPreview);
     const getTronWebForSession = async () => {
       const session = manager.getSession();
       return getSharedTronWeb(manager, session?.network, getEffectiveWalletId(manager));
@@ -86053,12 +86976,23 @@ ${variables}
       }
       return tronWeb.transactionBuilder.sendTrx(to3, toSafeNumber3(amountSun), ownerAddress);
     };
-    const buildTriggerSmartContract2 = (async (requestOrContractAddress, functionSelector, options, parameters, issuerAddress) => {
+    const buildWithdrawReward = async (ownerAddress) => {
+      const session = manager.getSession();
+      const tronWeb = await getTronWebForSession();
+      const builder = tronWeb.transactionBuilder;
+      const owner = ownerAddress ?? session?.account.address;
+      const withdrawReward = builder?.withdrawReward ?? builder?.withdrawBlockRewards;
+      if (!withdrawReward) {
+        throw new WalletKitError("CONFIGURATION_ERROR", "TronWeb transactionBuilder.withdrawReward is not available.");
+      }
+      return withdrawReward.call(builder, owner);
+    };
+    const buildTriggerSmartContract2 = (async (requestOrContractAddress, functionSelector, options2, parameters, issuerAddress) => {
       const session = manager.getSession();
       const request2 = typeof requestOrContractAddress === "string" ? {
         contractAddress: requestOrContractAddress,
         functionSelector: functionSelector ?? "",
-        ...options ? { options } : {},
+        ...options2 ? { options: options2 } : {},
         ...parameters ? { parameters } : {},
         issuerAddress: issuerAddress ?? session?.account.address
       } : normalizeTriggerRequest(requestOrContractAddress, session?.account.address);
@@ -86079,7 +87013,7 @@ ${variables}
       }
       return transaction;
     });
-    const broadcastRawTransaction = async (transaction, methodHint, description) => {
+    const broadcastRawTransaction = async (transaction, methodHint, description, activitySource) => {
       const tronWeb = await getTronWebForSession();
       if (!tronWeb.trx?.sendRawTransaction) {
         throw new WalletKitError("CONFIGURATION_ERROR", "TronWeb trx.sendRawTransaction is not available.");
@@ -86093,26 +87027,29 @@ ${variables}
         status: "submitted",
         raw,
         ...methodHint ? { methodHint } : {},
-        ...description ? { description } : {}
+        ...description ? { description } : {},
+        ...buildActivityMetadata(activitySource ?? transaction, methodHint, manager.getSession()?.account.address)
       });
       return { hash: hash3, status: "submitted", ...walletTransaction.explorerUrl ? { explorerUrl: walletTransaction.explorerUrl } : {}, raw };
     };
     const sendRawTransaction = async (transaction) => broadcastRawTransaction(transaction);
     const signAndSendTransaction = async (transactionOrRequest, methodHint, description) => {
       const request2 = normalizeSignRequest(transactionOrRequest, methodHint);
-      const signed = await manager.signTransaction(request2);
+      const { activitySource, ...signRequest } = request2;
+      await resolveTransactionPreview(signRequest, description, previewResolver, previewConfirmer);
+      const signed = await manager.signTransaction(signRequest);
       const transaction = signed.signedTransaction ?? signed.transaction;
       if (!transaction) throw new WalletKitError("INVALID_TRANSACTION_SIGNATURE", "Wallet did not return a signed transaction.");
-      return broadcastRawTransaction(transaction, request2.methodHint ?? methodHint, description);
+      return broadcastRawTransaction(transaction, signRequest.methodHint ?? methodHint, description, activitySource ?? signRequest.transaction);
     };
-    const signAndSendBuiltTransaction = async (buildTransaction2, methodHint, description) => {
+    const signAndSendBuiltTransaction = async (buildTransaction2, methodHint, description, activitySource) => {
       try {
         const transaction = await buildTransaction2();
-        return await signAndSendTransaction({ transaction, ...methodHint ? { methodHint } : {} }, methodHint, description);
+        return await signAndSendTransaction({ transaction, ...methodHint ? { methodHint } : {}, ...activitySource ? { activitySource } : {} }, methodHint, description);
       } catch (error) {
         if (!isTransactionExpirationError(error)) throw error;
         const transaction = await buildTransaction2();
-        return signAndSendTransaction({ transaction, ...methodHint ? { methodHint } : {} }, methodHint, description);
+        return signAndSendTransaction({ transaction, ...methodHint ? { methodHint } : {}, ...activitySource ? { activitySource } : {} }, methodHint, description);
       }
     };
     const triggerSmartContract = (async (...args) => {
@@ -86126,6 +87063,7 @@ ${variables}
     return {
       transactionBuilder: {
         sendTrx: buildSendTrx,
+        withdrawReward: buildWithdrawReward,
         triggerSmartContract: buildTriggerSmartContract2
       },
       getTronWeb: getTronWebForSession,
@@ -86134,6 +87072,90 @@ ${variables}
       signAndSendBuiltTransaction,
       triggerSmartContract
     };
+  }
+  function createDefaultTransactionPreview(request2, description) {
+    const methodHint = request2.methodHint;
+    const transaction = request2.transaction;
+    const details = [];
+    const addDetail = (label, value) => {
+      if (value === void 0 || value === null || value === "") return;
+      details.push({ label, value: String(value) });
+    };
+    if (methodHint === "transferTrx") {
+      addDetail("To", transaction.to);
+      addDetail("Amount", formatSunLikeValue(transaction.amountSun));
+      addDetail("From", transaction.from);
+      return {
+        title: "Transfer TRX",
+        summary: description ?? buildTransferSummary("TRX", transaction.amountSun, transaction.to),
+        ...details.length > 0 ? { details } : {},
+        raw: transaction
+      };
+    }
+    if (methodHint === "transferTrc20") {
+      addDetail("Contract", transaction.contractAddress);
+      addDetail("To", transaction.to);
+      addDetail("Amount", transaction.amount);
+      return {
+        title: "Transfer TRC20",
+        summary: description ?? buildTransferSummary("TRC20", transaction.amount, transaction.to),
+        ...details.length > 0 ? { details } : {},
+        raw: transaction
+      };
+    }
+    if (methodHint === "triggerSmartContract") {
+      addDetail("Contract", transaction.contractAddress);
+      addDetail("Function", transaction.functionSelector ?? transaction.function);
+      addDetail("Fee limit", transaction.feeLimit ?? getNestedValue(transaction, ["raw_data", "fee_limit"]));
+      return {
+        title: "Smart contract",
+        summary: description ?? buildContractSummary(transaction),
+        ...details.length > 0 ? { details } : {},
+        raw: transaction
+      };
+    }
+    if (methodHint === "withdrawReward") {
+      addDetail("Owner", transaction.ownerAddress);
+      return {
+        title: "Claim rewards",
+        summary: description ?? "Claim available TRON voting rewards.",
+        ...details.length > 0 ? { details } : {},
+        raw: transaction
+      };
+    }
+    return {
+      title: "Transaction",
+      summary: description ?? "Review and sign this TRON transaction.",
+      raw: transaction
+    };
+  }
+  async function resolveTransactionPreview(request2, description, resolver, confirm) {
+    const transaction = request2.transaction;
+    const defaultPreview = createDefaultTransactionPreview(request2, description);
+    const context = {
+      request: request2,
+      transaction,
+      ...request2.methodHint ? { methodHint: request2.methodHint } : {},
+      ...description ? { description } : {},
+      defaultPreview
+    };
+    const resolved = resolver ? await resolver(request2, context) : void 0;
+    const preview = resolved ?? defaultPreview;
+    const accepted = confirm ? await confirm(preview, context) : void 0;
+    if (accepted === false) {
+      throw new WalletKitError("USER_REJECTED", "The transaction was cancelled before signing.");
+    }
+    return preview;
+  }
+  function resolvePreviewResolver(config) {
+    if (!config) return void 0;
+    if (typeof config === "function") return config;
+    if (config.enabled === false) return void 0;
+    return config.resolver;
+  }
+  function resolvePreviewConfirmer(config) {
+    if (!config || typeof config === "function" || config.enabled === false) return void 0;
+    return config.confirm;
   }
   function normalizeTriggerRequest(request2, fallbackIssuerAddress) {
     const functionSelector = request2.functionSelector ?? request2.function;
@@ -86153,6 +87175,183 @@ ${variables}
       ...issuerAddress ? { issuerAddress } : {},
       ...request2.description ? { description: request2.description } : {}
     };
+  }
+  function buildTransferSummary(symbol, amount, to3) {
+    const formattedAmount = formatSunLikeValue(amount);
+    const target = typeof to3 === "string" && to3.length > 0 ? ` to ${shortenMiddle(to3)}` : "";
+    return `Transfer ${formattedAmount} ${symbol}${target}.`;
+  }
+  function buildContractSummary(transaction) {
+    const functionSelector = transaction.functionSelector ?? transaction.function;
+    if (typeof functionSelector === "string" && functionSelector.length > 0) {
+      return `Call ${functionSelector}.`;
+    }
+    return "Call a TRON smart contract.";
+  }
+  function buildActivityMetadata(transaction, methodHint, accountAddress) {
+    if (methodHint === "transferTrx") {
+      const to3 = stringValue(transaction.to);
+      const amount = transaction.amountSun ?? transaction.amount;
+      const formattedAmount = formatSunLikeValue(amount);
+      return {
+        kind: "sent",
+        direction: "out",
+        ...to3 ? { subtitle: `To ${shortenMiddle(to3)}` } : {},
+        ...formattedAmount ? { amountText: `-${formattedAmount} TRX` } : {},
+        amountTone: "out",
+        token: "TRX"
+      };
+    }
+    if (methodHint === "transferTrc10") {
+      const to3 = stringValue(transaction.to);
+      const token = stringValue(transaction.tokenId) ?? "TRC10";
+      const amount = stringValue(transaction.amount);
+      return {
+        kind: "sentToken",
+        direction: "out",
+        ...to3 ? { subtitle: `To ${shortenMiddle(to3)}` } : {},
+        ...amount ? { amountText: `-${amount} ${token}` } : {},
+        amountTone: "out",
+        token
+      };
+    }
+    if (methodHint === "transferTrc20") {
+      const to3 = stringValue(transaction.to) ?? extractParameterValue(transaction.parameters, "address");
+      const token = stringValue(transaction.token) ?? "TRC20";
+      const amount = stringValue(transaction.amount) ?? extractParameterValue(transaction.parameters, "uint256");
+      return {
+        kind: "sentToken",
+        direction: "out",
+        ...to3 ? { subtitle: `To ${shortenMiddle(to3)}` } : {},
+        ...amount ? { amountText: `-${amount} ${token}` } : {},
+        amountTone: "out",
+        token
+      };
+    }
+    if (methodHint === "freezeBalance") {
+      const resource = normalizeResource(transaction.resource);
+      const amount = formatSunLikeValue(transaction.amountSun);
+      return {
+        kind: "staked",
+        direction: "neutral",
+        ...resource ? { resource } : {},
+        ...amount ? { amountText: `${amount} TRX` } : {},
+        amountTone: "muted",
+        token: "TRX"
+      };
+    }
+    if (methodHint === "unfreezeBalance") {
+      const resource = normalizeResource(transaction.resource);
+      const amount = formatSunLikeValue(transaction.amountSun);
+      return {
+        kind: "unstaked",
+        direction: "neutral",
+        ...resource ? { resource } : {},
+        ...amount ? { amountText: `${amount} TRX` } : {},
+        amountTone: "muted",
+        token: "TRX"
+      };
+    }
+    if (methodHint === "delegateResource" || methodHint === "undelegateResource") {
+      const to3 = stringValue(transaction.to);
+      const resource = normalizeResource(transaction.resource);
+      const amount = formatSunLikeValue(transaction.amountSun);
+      return {
+        kind: methodHint === "delegateResource" ? "delegated" : "undelegated",
+        direction: "neutral",
+        ...resource ? { resource } : {},
+        ...to3 ? { subtitle: `To ${shortenMiddle(to3)}` } : {},
+        ...amount ? { amountText: `${amount} TRX` } : {},
+        amountTone: "muted",
+        token: "TRX"
+      };
+    }
+    if (methodHint === "voteWitness") {
+      const votes = Array.isArray(transaction.votes) ? transaction.votes.reduce((total, vote) => total + numberValue(vote.voteCount), 0) : 0;
+      return {
+        kind: "voted",
+        direction: "neutral",
+        ...votes > 0 ? { subtitle: `${votes} votes`, amountText: `${votes} votes` } : {},
+        amountTone: "muted"
+      };
+    }
+    if (methodHint === "withdrawReward") {
+      return {
+        kind: "claimedRewards",
+        direction: "in",
+        subtitle: "Voting rewards",
+        amountTone: "in",
+        token: "TRX"
+      };
+    }
+    if (methodHint === "triggerSmartContract") {
+      const functionSelector = stringValue(transaction.functionSelector ?? transaction.function);
+      return {
+        kind: inferTriggerKind(functionSelector),
+        direction: "neutral",
+        ...functionSelector ? { subtitle: functionSelector } : {},
+        amountTone: "muted"
+      };
+    }
+    return {
+      kind: "unknown",
+      direction: "neutral",
+      amountTone: "muted"
+    };
+  }
+  function inferTriggerKind(functionSelector) {
+    if (!functionSelector) return "contractCall";
+    if (/^approve\(/i.test(functionSelector)) return "approve";
+    if (/^transfer\(/i.test(functionSelector)) return "sentToken";
+    return "contractCall";
+  }
+  function stringValue(value) {
+    if (typeof value === "string" && value.length > 0) return value;
+    if (typeof value === "number" || typeof value === "bigint") return String(value);
+    return void 0;
+  }
+  function numberValue(value) {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string") {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    return 0;
+  }
+  function normalizeResource(value) {
+    const resource = stringValue(value)?.toUpperCase();
+    if (resource === "ENERGY") return "energy";
+    if (resource === "BANDWIDTH") return "bandwidth";
+    return void 0;
+  }
+  function extractParameterValue(parameters, type) {
+    if (!Array.isArray(parameters)) return void 0;
+    const match = parameters.find((parameter) => {
+      if (!parameter || typeof parameter !== "object") return false;
+      return parameter.type === type;
+    });
+    if (!match || typeof match !== "object") return void 0;
+    return stringValue(match.value);
+  }
+  function formatSunLikeValue(value) {
+    if (typeof value !== "string" && typeof value !== "number" && typeof value !== "bigint") return "";
+    const raw = typeof value === "bigint" ? value.toString() : String(value);
+    if (!/^\d+$/.test(raw)) return raw;
+    const whole = raw.length > 6 ? raw.slice(0, -6) : "0";
+    const fraction = raw.slice(-6).padStart(6, "0").replace(/0+$/, "");
+    return fraction.length > 0 ? `${whole}.${fraction}` : whole;
+  }
+  function shortenMiddle(value, start = 6, end = 6) {
+    if (value.length <= start + end + 3) return value;
+    return `${value.slice(0, start)}...${value.slice(-end)}`;
+  }
+  function getNestedValue(source, path) {
+    let current = source;
+    for (const key of path) {
+      if (!current || typeof current !== "object") return void 0;
+      current = current[key];
+    }
+    return current;
   }
   function normalizeSignRequest(transactionOrRequest, methodHint) {
     if (typeof transactionOrRequest === "object" && transactionOrRequest !== null && "transaction" in transactionOrRequest) {
@@ -86249,10 +87448,10 @@ ${variables}
       if (value > maxSafe) throw new WalletKitError("INVALID_TRANSACTION", "Amount exceeds JavaScript safe integer range.");
       return Number(value);
     }
-    const numberValue = typeof value === "number" ? value : Number(value);
-    if (!Number.isFinite(numberValue) || numberValue < 0) throw new WalletKitError("INVALID_TRANSACTION", "Amount must be a positive number.");
-    if (numberValue > Number.MAX_SAFE_INTEGER) throw new WalletKitError("INVALID_TRANSACTION", "Amount exceeds JavaScript safe integer range.");
-    return numberValue;
+    const numberValue2 = typeof value === "number" ? value : Number(value);
+    if (!Number.isFinite(numberValue2) || numberValue2 < 0) throw new WalletKitError("INVALID_TRANSACTION", "Amount must be a positive number.");
+    if (numberValue2 > Number.MAX_SAFE_INTEGER) throw new WalletKitError("INVALID_TRANSACTION", "Amount exceeds JavaScript safe integer range.");
+    return numberValue2;
   }
 
   // ../client/src/utils.ts
@@ -86277,6 +87476,12 @@ ${variables}
     const uiConfig = resolveWalletUiConfig(ui);
     const modal = createWalletModal({ manager, ui });
     const buttonTheme = toThemeConfig(config.ui);
+    const transactionPreviewDialog = typeof document !== "undefined" && uiConfig.transactionPreview.enabled ? createTransactionPreviewDialog({
+      ...buttonTheme ?? {},
+      confirmLabel: uiConfig.transactionPreview.confirmLabel,
+      cancelLabel: uiConfig.transactionPreview.cancelLabel,
+      showRaw: uiConfig.transactionPreview.showRaw
+    }) : null;
     const identityResolver = resolveIdentityResolver(config.identity, manager);
     const identityCache = /* @__PURE__ */ new Map();
     const identityInFlight = /* @__PURE__ */ new Map();
@@ -86388,9 +87593,14 @@ ${variables}
     if (typeof document !== "undefined") {
       modal.mount();
       toast?.mount();
+      transactionPreviewDialog?.mount();
       if (config.connectButton?.target) button?.mount(config.connectButton.target);
     }
-    const transactionRuntime = createTransactionRuntime(manager);
+    const resolvedTransactionPreview = resolveKitTransactionPreview(config.transactionPreview, transactionPreviewDialog?.confirm);
+    const transactionRuntime = createTransactionRuntime(
+      manager,
+      resolvedTransactionPreview ? { transactionPreview: resolvedTransactionPreview } : {}
+    );
     const submit = (methodHint, transaction, description) => transactionRuntime.signAndSendTransaction({ methodHint, transaction }, methodHint, description);
     return {
       manager,
@@ -86403,10 +87613,12 @@ ${variables}
         modal.setTheme(theme);
         button?.setTheme(theme);
         toast?.setTheme(theme);
+        transactionPreviewDialog?.setTheme(theme);
       },
       destroy: () => {
         button?.destroy();
         toast?.destroy();
+        transactionPreviewDialog?.destroy();
         modal.destroy();
         manager.destroy();
         identityCache.clear();
@@ -86433,22 +87645,46 @@ ${variables}
         request2.description
       ),
       transferTrc10: (request2) => submit("transferTrc10", { tokenId: request2.tokenId, to: request2.to, amount: String(request2.amount) }, request2.description),
-      transferTrc20: (request2) => transactionRuntime.triggerSmartContract({
-        contractAddress: request2.contractAddress,
-        functionSelector: "transfer(address,uint256)",
-        parameters: [
-          { type: "address", value: request2.to },
-          { type: "uint256", value: String(request2.amount) }
-        ],
-        ...request2.feeLimit !== void 0 ? { feeLimit: request2.feeLimit } : {},
-        ...request2.description ? { description: request2.description } : {}
-      }),
+      transferTrc20: (request2) => transactionRuntime.signAndSendBuiltTransaction(
+        () => transactionRuntime.transactionBuilder.triggerSmartContract({
+          contractAddress: request2.contractAddress,
+          functionSelector: "transfer(address,uint256)",
+          parameters: [
+            { type: "address", value: request2.to },
+            { type: "uint256", value: String(request2.amount) }
+          ],
+          ...request2.feeLimit !== void 0 ? { feeLimit: request2.feeLimit } : {},
+          ...request2.description ? { description: request2.description } : {}
+        }),
+        "transferTrc20",
+        request2.description,
+        {
+          to: request2.to,
+          amount: String(request2.amount),
+          token: "TRC20"
+        }
+      ),
       triggerSmartContract: transactionRuntime.triggerSmartContract,
       freezeBalance: (request2) => submit("freezeBalance", { amountSun: String(request2.amountSun), resource: request2.resource }, request2.description),
       unfreezeBalance: (request2) => submit("unfreezeBalance", { amountSun: String(request2.amountSun), resource: request2.resource }, request2.description),
       delegateResource: (request2) => submit("delegateResource", { to: request2.to, amountSun: String(request2.amountSun), resource: request2.resource }, request2.description),
       undelegateResource: (request2) => submit("undelegateResource", { to: request2.to, amountSun: String(request2.amountSun), resource: request2.resource }, request2.description),
-      voteWitness: (request2) => submit("voteWitness", { votes: request2.votes }, request2.description)
+      voteWitness: (request2) => submit("voteWitness", { votes: request2.votes }, request2.description),
+      withdrawReward: (request2 = {}) => transactionRuntime.signAndSendBuiltTransaction(
+        () => transactionRuntime.transactionBuilder.withdrawReward(request2.ownerAddress ?? manager.getSession()?.account.address),
+        "withdrawReward",
+        request2.description,
+        { ownerAddress: request2.ownerAddress ?? manager.getSession()?.account.address }
+      )
+    };
+  }
+  function resolveKitTransactionPreview(config, confirm) {
+    if (!config) return confirm ? { confirm } : void 0;
+    if (typeof config === "function") return confirm ? { resolver: config, confirm } : config;
+    if (config.enabled === false) return config;
+    return {
+      ...config,
+      ...confirm && !config.confirm ? { confirm } : {}
     };
   }
   function isRateLimitError(error) {
