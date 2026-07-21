@@ -5550,3 +5550,128 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Phase 1 scope is low risk: `gasFree.enabled`, lazy SDK address derivation, Account Panel General/GasFree display mode, copy/QR for the GasFree address, and USDT balance from an app-provided GasFree API.
 - Phase 2 scope is separate: optional `signTypedData` capability, headless `kit.gasFree.transfer()` primitive, provider relay, toast/recent transaction integration, and localized `WalletKitError` mapping.
 - Hard UX rule: no default send form inside the account panel; any built-in send widget must remain opt-in and deferred.
+
+## 2026-07-21 GasFree Phase 1 Implementation
+
+- Implemented GasFree Phase 1 as a client/app-layer feature.
+- Added optional `@gasfree/gasfree-sdk` support:
+  - root devDependency for local development;
+  - optional peerDependency in `@tron-wallet-kit/client`;
+  - lazy SDK import in the runtime, only used when GasFree is enabled.
+- Added `kit.gasFree` runtime:
+  - `getAddress()` derives the deterministic GasFree address;
+  - `getBalance()` resolves USDT balance through `balanceResolver` first, then an app-provided `apiBaseUrl`;
+  - `setMode()`, `getSnapshot()`, `subscribe()`, and `refresh()` drive account-panel state.
+- Added React `useGasFree()` hook.
+- Added Account Panel General -> GasFree entry and GasFree display mode with title, badge, explainer, GasFree address, copy, QR, USDT balance, and Back to General.
+- Kept the hard boundary: no default GasFree send form and no Phase 2 `transfer()`/typed-data signing.
+- Enabled `react-basic` with a mock GasFree USDT balance resolver for local QA.
+- Added website docs at `website/docs/configuration/gasfree.md` plus client API notes.
+- Updated `Review/GASFREE_INTEGRATION_SPEC.md` with implementation status.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed;
+  - `pnpm --filter @tron-wallet-kit/ui typecheck` passed;
+  - `pnpm --filter @tron-wallet-kit/react typecheck` passed;
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed;
+  - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed;
+  - `pnpm --filter @tron-wallet-kit/ui test -- --run --reporter=dot` passed.
+- Browser/IIFE and website builds were intentionally not run per the current workflow rule.
+
+## 2026-07-21 GasFree Snapshot Cache Fix
+
+- Fixed a React Basic runtime crash after enabling GasFree.
+- Root cause: `kit.gasFree.getSnapshot()` returned a new object on every call, which violates `useSyncExternalStore` expectations and caused React's "getSnapshot should be cached" / maximum update depth error.
+- GasFree runtime now caches its snapshot and only rebuilds it when runtime state changes or the session reset handler runs.
+- Verified with `pnpm --filter @tron-wallet-kit/client typecheck`, `pnpm --filter @tron-wallet-kit/react typecheck`, and `pnpm --filter @tron-wallet-kit/examples typecheck`.
+
+## 2026-07-21 GasFree Snapshot Regression Test
+
+- Added a focused client regression test for GasFree `getSnapshot()` reference stability.
+- The test verifies consecutive snapshot reads return the same object, then change once after session state changes, matching React `useSyncExternalStore` requirements.
+- Verified with `pnpm --filter @tron-wallet-kit/client typecheck`, `pnpm --filter @tron-wallet-kit/react typecheck`, `pnpm --filter @tron-wallet-kit/examples typecheck`, and `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot`.
+
+## 2026-07-21 GasFree React Basic Visibility
+
+- Clarified GasFree runtime state by adding `configured` to `GasFreeSnapshot`; `configured` means the app turned the feature on in config, while `enabled` still means a connected mainnet session can use it.
+- Updated Account Panel to show the GasFree entry when configured, with a disabled reason when the wallet is not connected or not on TRON mainnet.
+- Updated `react-basic` metrics so GasFree no longer looks fully disabled before a compatible session is available.
+- Verified with `pnpm --filter @tron-wallet-kit/client typecheck`, `pnpm --filter @tron-wallet-kit/ui typecheck`, `pnpm --filter @tron-wallet-kit/react typecheck`, and `pnpm --filter @tron-wallet-kit/examples typecheck`.
+
+## 2026-07-21 GasFree Account Panel Chip
+
+- Reworked the Account Panel GasFree affordance after visual comparison with TronLink.
+- Removed the large GasFree row from the account panel body and replaced it with a compact top-right GasFree chip inside the account card.
+- The chip opens the GasFree panel when available; the GasFree panel now uses a visible `Use General Wallet` back control to return to the general wallet panel.
+- Kept the chip token-driven and added an expanded invisible hit area so the visual remains small without making the target too hard to click.
+- Verified with `pnpm --filter @tron-wallet-kit/ui typecheck`, `pnpm --filter @tron-wallet-kit/react typecheck`, and `pnpm --filter @tron-wallet-kit/examples typecheck`.
+
+## 2026-07-21 GasFree Panel-On-Demand Runtime
+
+- Checked `gasfreeio/gasfree-sdk-js` / `@gasfree/gasfree-sdk@1.1.2` against the local installed package.
+- Confirmed the SDK exports `TronGasFree` and generates a mainnet GasFree address from `new TronGasFree({ chainId: Number("0x2b6653dc") })`.
+- Observed the SDK import is heavy in Node, so the kit no longer auto-refreshes GasFree on wallet connect/session restore.
+- GasFree is now loaded on demand when the user enters the GasFree panel; unavailable/loading/error states are handled inside that panel rather than blocking the chip.
+- Verified with `pnpm --filter @tron-wallet-kit/client typecheck`, `pnpm --filter @tron-wallet-kit/ui typecheck`, `pnpm --filter @tron-wallet-kit/react typecheck`, `pnpm --filter @tron-wallet-kit/examples typecheck`, and `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot`.
+
+## 2026-07-21 GasFree Browser Polish
+
+- Lightened the Account Panel GasFree chip. The visible brand label should remain `GasFree`.
+- Restored pointer cursor on the chip hover state while keeping its expanded hit area.
+- Fixed the GasFree panel header back control by returning it to the standard icon-only header back button; the full `Use General Wallet` action remains in the panel body.
+- Added a browser-safe `globalThis.global` shim immediately before lazy-loading `@gasfree/gasfree-sdk` to avoid the SDK error `global is not defined`.
+- Verified with `pnpm --filter @tron-wallet-kit/client typecheck`, `pnpm --filter @tron-wallet-kit/ui typecheck`, `pnpm --filter @tron-wallet-kit/react typecheck`, `pnpm --filter @tron-wallet-kit/examples typecheck`, and `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot`.
+
+## 2026-07-21 GasFree Panel Simplification
+
+- Removed the extra GasFree badge/description block from the GasFree panel; the panel title now carries the feature identity.
+- Renamed the GasFree address field label to the generic account-panel `Address` label to avoid repeating `GasFree` too often.
+- Added `buffer` as a direct client dependency and shims `globalThis.Buffer` only in the lazy GasFree SDK path to fix the browser-side `Buffer is not defined` failure.
+- Verified with `pnpm --filter @tron-wallet-kit/client typecheck`, `pnpm --filter @tron-wallet-kit/ui typecheck`, `pnpm --filter @tron-wallet-kit/react typecheck`, `pnpm --filter @tron-wallet-kit/examples typecheck`, and `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot`.
+
+## 2026-07-21 GasFree Process Shim
+
+- Added a minimal `globalThis.process` shim in the lazy GasFree SDK path after browser QA showed `process is not defined`.
+- The shim only provides `browser`, `env`, and `nextTick`, which are enough for the SDK/browser dependency path without installing a full process polyfill.
+- Vite still logs `util` externalization warnings from the SDK dependency graph; this is tracked for browser QA and may require a wrapper/fallback if it becomes a runtime blocker.
+- Verified with `pnpm --filter @tron-wallet-kit/client typecheck`, `pnpm --filter @tron-wallet-kit/react typecheck`, `pnpm --filter @tron-wallet-kit/examples typecheck`, and `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot`.
+
+## 2026-07-21 GasFree Panel Meta Layout
+
+- Reworked the GasFree panel layout after Hallmark/component review.
+- The panel now mirrors the Account panel meta pattern: one compact address/balance pill with a QR icon action, followed by only `Copy address` and `Use General Wallet`.
+- Removed the separate Address and USDT balance field blocks to reduce vertical clutter.
+- Removed the fixed mock `18.75 USDT` GasFree balance resolver from `react-basic`; unknown GasFree balances now show as not configured/unavailable instead of pretending to be real.
+- Verified with `pnpm --filter @tron-wallet-kit/ui typecheck`, `pnpm --filter @tron-wallet-kit/react typecheck`, and `pnpm --filter @tron-wallet-kit/examples typecheck`.
+
+## 2026-07-21 GasFree General-State Parity
+
+- Adjusted GasFree so it behaves as a state switch within the Account Panel rather than a separate sparse screen.
+- GasFree view now keeps the same avatar and identity area as the General wallet view.
+- Only the meta pill changes to the GasFree address/balance/QR; actions become `Copy address` and `Use General Wallet`.
+- Verified with `pnpm --filter @tron-wallet-kit/ui typecheck`, `pnpm --filter @tron-wallet-kit/react typecheck`, and `pnpm --filter @tron-wallet-kit/examples typecheck`.
+
+## 2026-07-21 GasFree USDT Balance Resolver
+
+- Checked GasFree address `TQm2K3N4mMFf4cgbUA942yYkoHKeS9Dgds` against the TRON mainnet USDT contract.
+- On-chain `balanceOf(address)` returned `200000` raw USDT, which is `0.2 USDT` at 6 decimals.
+- Added `createTrc20GasFreeBalanceResolver()` as an explicit opt-in client helper for reading GasFree TRC-20 balances through `triggerconstantcontract`.
+- Updated `react-basic` to use that resolver instead of a mock balance, so the GasFree panel can show a real USDT balance while the kit still avoids shipping a hidden production provider default.
+- Verified with `pnpm --filter @tron-wallet-kit/client typecheck` and `pnpm --filter @tron-wallet-kit/examples typecheck`.
+
+## 2026-07-21 GasFree Provider API Wiring
+
+- Updated GasFree runtime to use the official provider API shape when `gasFree.apiBaseUrl` is configured.
+- `getAddress()` and `getBalance()` now call `GET /api/v1/address/{accountAddress}` and read `gasFreeAddress` plus token asset balance from the provider response before falling back to SDK derivation/on-chain resolver paths.
+- Added `gasFree.apiHeaders` so apps can inject signed provider headers from a backend signer or same-origin proxy without exposing API secrets in browser code.
+- Kept browser usage safe by documenting proxy-first configuration; `react-basic` uses `VITE_GASFREE_API_BASE_URL` when present and otherwise keeps the on-chain fallback resolver for local QA.
+- Rewrote GasFree docs around the real provider API, browser-safe authentication, local QA fallback, and Phase 1/Phase 2 boundaries.
+- Verified with `pnpm --filter @tron-wallet-kit/client typecheck`, `pnpm --filter @tron-wallet-kit/examples typecheck`, and `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot`.
+
+## 2026-07-21 GasFree Header Action
+
+- Moved the General account panel GasFree entry from the account card body to the top-right header action area.
+- Kept the title centered by using balanced left/right header action slots.
+- Made the GasFree chip smaller and static within the header so it reads as a mode switch instead of a detached body badge.
+- Kept the visible label as brand-correct `GasFree`.
+- Added mobile sizing for the header chip.
+- Verified with `pnpm --filter @tron-wallet-kit/ui typecheck`, `pnpm --filter @tron-wallet-kit/react typecheck`, and `pnpm --filter @tron-wallet-kit/examples typecheck`.

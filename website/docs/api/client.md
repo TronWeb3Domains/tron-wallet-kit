@@ -150,6 +150,28 @@ const identity = await kit.refreshIdentity();
 Identity is optional and stays outside core. Provide `identity.resolver` to use an app-specific cache
 or API while keeping the UI contract the same. See [Identity](/docs/configuration/identity).
 
+## GasFree
+
+```ts
+const kit = createWalletKit({
+  metadata: { name: "My dApp" },
+  network: "mainnet",
+  gasFree: {
+    enabled: true,
+    apiBaseUrl: "/api/gasfree",
+  },
+});
+
+const gasFreeAddress = await kit.gasFree.getAddress();
+const gasFreeBalance = await kit.gasFree.getBalance();
+kit.gasFree.setMode("gasfree");
+```
+
+GasFree Phase 1 is display-only: derive address, show it in the account panel, and show USDT balance
+from your provider API or resolver. Browser apps should use a same-origin proxy for signed provider
+API requests; never ship a GasFree API secret in frontend code. The account panel does not include a send form. See
+[GasFree](/docs/configuration/gasfree).
+
 ## Cleanup
 
 ```ts

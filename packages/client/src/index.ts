@@ -4,6 +4,7 @@ export * from "./app-metadata";
 export * from "./kit";
 export * from "./balance";
 export * from "./identity";
+export * from "./gasfree";
 export * from "./tronweb";
 export * from "./transactions";
 export * from "./utils";

@@ -1,6 +1,6 @@
 import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 import { createWalletAuth, type TronAuthAdapter, type TronAuthController, type TronAuthControllerOptions, type TronAuthState } from "@tron-wallet-kit/auth";
-import { createWalletKit, type TronIdentity, type WalletClientConfig, type WalletKit } from "@tron-wallet-kit/client";
+import { createWalletKit, type GasFreeMode, type GasFreeSnapshot, type TronIdentity, type WalletClientConfig, type WalletKit } from "@tron-wallet-kit/client";
 import type { SignMessageRequest, SignMessageResult, WalletAccount, WalletCapabilities, WalletNetworkId, WalletSession } from "@tron-wallet-kit/core";
 import { copyToClipboard, createAccountPanelHtml, createAddressQrPanelHtml, createConnectModalHtml, createStyledQrDataUrl, createThemeStyleProperties, createTransactionHistoryPanelHtml, createWalletButtonHtml, ensureWalletKitStyles, mapAdapterToWalletOption, mergeWalletOptionsWithCatalog, QR_FALLBACK_DARK, resolveSessionWalletMetadata, shortenAddress, type AccountPanelViewModel, type ConnectModalViewModel, type ThemeConfig, type WalletButtonViewModel } from "@tron-wallet-kit/ui";
 import type { WalletAvailability } from "@tron-wallet-kit/ui";
@@ -92,6 +92,13 @@ export type TrxNameState = {
   refresh(): Promise<TronIdentity | undefined>;
 };
 
+export type GasFreeHookState = GasFreeSnapshot & {
+  setMode(mode: GasFreeMode): void;
+  refresh(): Promise<GasFreeSnapshot>;
+  getAddress(): Promise<string | undefined>;
+  getBalance(): Promise<GasFreeSnapshot["balance"] | undefined>;
+};
+
 export type TronAuthHookState = TronAuthState & {
   signIn(): Promise<TronAuthState>;
   signOut(): void;
@@ -140,11 +147,12 @@ type WalletButtonAccountPanelModel = {
   balanceLoading: boolean;
   copyState: "idle" | "copied";
   mode: "dropdown" | "modal";
-  view: "account" | "address-qr" | "tx-history";
+  view: "account" | "address-qr" | "gasfree-address-qr" | "tx-history";
   showRecentTransactions?: boolean;
   maxVisibleTransactions?: number;
   explorerAccountUrl?: string;
   addressQrSrc?: string;
+  gasFree?: GasFreeSnapshot;
 };
 
 const WalletKitContext = createContext<WalletKit | null>(null);
@@ -679,6 +687,22 @@ export function useTrxName(): TrxNameState {
   return { ...(name ? { name } : {}), ...(identity ? { identity } : {}), isLoading, refresh };
 }
 
+export function useGasFree(): GasFreeHookState {
+  const kit = useWalletKit();
+  const snapshot = useSyncExternalStore(
+    kit.gasFree.subscribe,
+    kit.gasFree.getSnapshot,
+    kit.gasFree.getSnapshot
+  );
+  return {
+    ...snapshot,
+    setMode: kit.gasFree.setMode,
+    refresh: kit.gasFree.refresh,
+    getAddress: kit.gasFree.getAddress,
+    getBalance: kit.gasFree.getBalance
+  };
+}
+
 export function useSignMessage(): SignMessageState {
   const kit = useWalletKit();
   const [isPending, setIsPending] = useState(false);
@@ -736,13 +760,14 @@ export function WalletButton(props: WalletButtonProps) {
     },
     [accountOpen, props.accountPanelOpen, props.onAccountPanelOpenChange]
   );
-  const [accountPanelView, setAccountPanelView] = useState<"account" | "address-qr" | "tx-history">("account");
+  const [accountPanelView, setAccountPanelView] = useState<"account" | "address-qr" | "gasfree-address-qr" | "tx-history">("account");
   const [identity, setIdentity] = useState<TronIdentity | undefined>();
   const [balanceTrx, setBalanceTrx] = useState<string | undefined>();
   const [identityLoading, setIdentityLoading] = useState(false);
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
   const [addressQrSrc, setAddressQrSrc] = useState<string | undefined>();
+  const gasFreeSnapshot = useSyncExternalStore(kit.gasFree.subscribe, kit.gasFree.getSnapshot, kit.gasFree.getSnapshot);
   const pendingTransactions = useManagerSnapshot(kit, () => kit.manager.getTransactions().some((transaction) => transaction.status === "submitted"));
   const adapter = session ? kit.manager.getAdapter(session.adapterId) : null;
   const walletMetadata = resolveSessionWalletMetadata(session, adapter);
@@ -779,7 +804,8 @@ export function WalletButton(props: WalletButtonProps) {
         view: accountPanelView,
         showRecentTransactions: props.showRecentTransactions ?? kit.uiConfig.accountPanel.showRecentTransactions,
         maxVisibleTransactions: props.maxVisibleTransactions ?? kit.uiConfig.accountPanel.maxVisibleTransactions,
-        explorerAccountUrl: props.explorerAccountUrl ?? kit.uiConfig.accountPanel.explorerAccountUrl
+        explorerAccountUrl: props.explorerAccountUrl ?? kit.uiConfig.accountPanel.explorerAccountUrl,
+        gasFree: gasFreeSnapshot
       }
     : undefined;
   if (panelModel && identityName) panelModel.displayName = identityName;
@@ -841,7 +867,8 @@ export function WalletButton(props: WalletButtonProps) {
   }, [kit, session?.account.address, session?.network.id]);
 
   useEffect(() => {
-    if (!accountOpen || accountPanelView !== "address-qr" || !session?.account.address) {
+    const qrAddress = accountPanelView === "gasfree-address-qr" ? gasFreeSnapshot.address : session?.account.address;
+    if (!accountOpen || (accountPanelView !== "address-qr" && accountPanelView !== "gasfree-address-qr") || !qrAddress) {
       setAddressQrSrc(undefined);
       return;
     }
@@ -850,11 +877,11 @@ export function WalletButton(props: WalletButtonProps) {
     const qrFg = qrRoot && typeof globalThis.getComputedStyle === "function"
       ? globalThis.getComputedStyle(qrRoot).getPropertyValue("--twk-qr-foreground").trim() || QR_FALLBACK_DARK
       : QR_FALLBACK_DARK;
-    void createStyledQrDataUrl(session.account.address, { width: 264, margin: 4, foreground: qrFg, background: "transparent" })
+    void createStyledQrDataUrl(qrAddress, { width: 264, margin: 4, foreground: qrFg, background: "transparent" })
       .then((src) => { if (!cancelled) setAddressQrSrc(src); })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [accountOpen, accountPanelView, session?.account.address]);
+  }, [accountOpen, accountPanelView, gasFreeSnapshot.address, session?.account.address]);
 
   useEffect(() => {
     if (!pendingTransactions || !session) return;
@@ -915,7 +942,8 @@ export function WalletButton(props: WalletButtonProps) {
     const target = event.target instanceof Element ? event.target : null;
     const action = target?.closest("[data-twk-action]")?.getAttribute("data-twk-action");
     if (action === "copy" && liveSession) {
-      void copyText(liveSession.account.address).then((copied) => {
+      const value = target?.closest("[data-twk-copy-value]")?.getAttribute("data-twk-copy-value") ?? liveSession.account.address;
+      void copyText(value).then((copied) => {
         if (!copied) return;
         setCopyState("copied");
         globalThis.setTimeout(() => setCopyState("idle"), 1400);
@@ -926,8 +954,22 @@ export function WalletButton(props: WalletButtonProps) {
       setAccountPanelView("address-qr");
       return;
     }
+    if (action === "gasfree-address-qr") {
+      setAccountPanelView("gasfree-address-qr");
+      return;
+    }
     if (action === "tx-history") {
       setAccountPanelView("tx-history");
+      return;
+    }
+    if (action === "gasfree-mode") {
+      kit.gasFree.setMode("gasfree");
+      setAccountPanelView("account");
+      return;
+    }
+    if (action === "gasfree-back") {
+      kit.gasFree.setMode("general");
+      setAccountPanelView("account");
       return;
     }
     if (action === "account-back") {
@@ -1010,9 +1052,10 @@ function createWalletButtonAccountPanelHtml(input: WalletButtonAccountPanelModel
     ...(input.displayName?.endsWith(".trx") ? { domain: input.displayName } : input.displayName ? { displayName: input.displayName } : {})
   };
   let panel: string;
-  if (input.view === "address-qr") {
+  if (input.view === "address-qr" || input.view === "gasfree-address-qr") {
+    const address = input.view === "gasfree-address-qr" ? input.gasFree?.address : input.session.account.address;
     panel = createAddressQrPanelHtml({
-          address: input.session.account.address,
+          address: address ?? input.session.account.address,
           copyState: input.copyState,
           ...(input.addressQrSrc ? { qrImageSrc: input.addressQrSrc } : {})
         });
@@ -1028,7 +1071,8 @@ function createWalletButtonAccountPanelHtml(input: WalletButtonAccountPanelModel
       recentTransactions: transactions,
       ...(input.showRecentTransactions !== undefined ? { showRecentTransactions: input.showRecentTransactions } : {}),
       ...(input.maxVisibleTransactions ? { maxVisibleTransactions: input.maxVisibleTransactions } : {}),
-      showAddressQrButton: true
+      showAddressQrButton: true,
+      ...(input.gasFree ? { gasFree: input.gasFree } : {})
     } satisfies AccountPanelViewModel;
     panel = input.view === "tx-history" ? createTransactionHistoryPanelHtml(accountPanelModel) : createAccountPanelHtml(accountPanelModel);
   }

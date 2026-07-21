@@ -42,7 +42,15 @@ export const zh: WalletKitLabelPack = {
     lightQr: "浅色二维码",
     noTransactions: "暂无近期交易",
     recentTransactions: "近期交易",
-    qrAlt: "TRON 地址二维码"
+    qrAlt: "TRON 地址二维码",
+    gasFree: "GasFree",
+    gasFreeTitle: "GasFree",
+    gasFreeDescription: "Send USDT without TRX for gas.",
+    gasFreeAddress: "GasFree address",
+    gasFreeBalance: "USDT balance",
+    gasFreeBalanceLoading: "Loading USDT balance",
+    gasFreeUnavailable: "GasFree is not available for this account.",
+    backToGeneral: "Use General Wallet"
   },
   activity: {
     title: "活动记录",

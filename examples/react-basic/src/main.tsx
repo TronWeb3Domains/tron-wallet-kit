@@ -1,11 +1,13 @@
 import { StrictMode, useEffect, useMemo, useState } from "react";
 import { createTronAuthenticationAdapter } from "@tron-wallet-kit/auth";
+import { createTrc20GasFreeBalanceResolver } from "@tron-wallet-kit/client";
 import type { WalletTransaction } from "@tron-wallet-kit/core";
 import { createRoot } from "react-dom/client";
-import { TronConnectButton, TronKitProvider, getDefaultConfig, useTronKit, useWalletSession, useWalletStatus } from "@tron-wallet-kit/react";
+import { TronConnectButton, TronKitProvider, getDefaultConfig, useGasFree, useTronKit, useWalletSession, useWalletStatus } from "@tron-wallet-kit/react";
 import { createQrDataUrl, createThemeStyleProperties, getThemeNames, type ThemeName, type WalletListConfig } from "@tron-wallet-kit/ui";
 
 const walletConnectProjectId = ((import.meta as ImportMeta & { env?: { VITE_WALLETCONNECT_PROJECT_ID?: string } }).env?.VITE_WALLETCONNECT_PROJECT_ID) || "a4109c95d50e5c136cdafaf9fc44c105";
+const gasFreeApiBaseUrl = (import.meta as ImportMeta & { env?: { VITE_GASFREE_API_BASE_URL?: string } }).env?.VITE_GASFREE_API_BASE_URL;
 const kitFontFamily = 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 
 type ButtonVariant = "default" | "pill" | "minimal";
@@ -213,6 +215,10 @@ function ExampleApp() {
       failSilently: true,
       cacheTtlMs: 10 * 60 * 1000
     },
+    gasFree: {
+      enabled: true,
+      ...(gasFreeApiBaseUrl ? { apiBaseUrl: gasFreeApiBaseUrl } : { balanceResolver: createTrc20GasFreeBalanceResolver() })
+    },
     ui: {
       themeName,
       toast: true,
@@ -326,6 +332,7 @@ function ExampleWorkspace(props: ExampleWorkspaceProps) {
   const kit = useTronKit();
   const session = useWalletSession();
   const status = useWalletStatus();
+  const gasFree = useGasFree();
   const [log, setLog] = useState("Ready.");
   const [lastMockTransactionSampleIndex, setLastMockTransactionSampleIndex] = useState<number | undefined>();
   const [walletConnectQr, setWalletConnectQr] = useState<string | undefined>();
@@ -337,6 +344,24 @@ function ExampleWorkspace(props: ExampleWorkspaceProps) {
   const [contractFunction, setContractFunction] = useState("buyDomain(string,string)");
   const [contractOptions, setContractOptions] = useState('{"feeLimit":100000000}');
   const [contractParameters, setContractParameters] = useState('[{"type":"string","value":"alice"},{"type":"string","value":"trx"}]');
+  const gasFreeStatusLabel = gasFree.configured
+    ? gasFree.enabled
+      ? gasFree.address
+        ? `${gasFree.address.slice(0, 8)}...${gasFree.address.slice(-6)}`
+        : gasFree.isLoading
+          ? "loading"
+          : "ready"
+      : gasFree.disabledReason ?? "enabled"
+    : "disabled";
+  const gasFreeBalanceLabel = gasFree.balance
+    ? `${gasFree.balance.formatted} ${gasFree.balance.symbol}`
+    : gasFree.configured
+      ? gasFree.enabled
+        ? gasFree.isLoading
+          ? "loading"
+          : "not configured"
+        : "connect mainnet"
+      : "0 USDT";
   const kitThemeStyle = useMemo(() => {
     const properties = createThemeStyleProperties({ themeName: props.themeName });
     const { "color-scheme": colorScheme, ...variables } = properties;
@@ -522,6 +547,14 @@ function ExampleWorkspace(props: ExampleWorkspaceProps) {
               <div>
                 <span>Balance</span>
                 <strong>{sessionSummary?.balance ?? "0 TRX"}</strong>
+              </div>
+              <div>
+                <span>GasFree</span>
+                <strong>{gasFreeStatusLabel}</strong>
+              </div>
+              <div>
+                <span>GasFree balance</span>
+                <strong>{gasFreeBalanceLabel}</strong>
               </div>
             </div>
             {walletConnectQr ? (

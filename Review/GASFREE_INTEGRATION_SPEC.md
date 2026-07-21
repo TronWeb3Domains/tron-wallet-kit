@@ -59,7 +59,8 @@ getDefaultConfig({
   network: "mainnet",
   gasFree: {
     enabled: true,                       // default false; mainnet-only
-    apiBaseUrl: "https://open.gasfree.io/tron", // app-injected; do NOT hardcode a default in the kit
+    apiBaseUrl: "https://open.gasfree.io/tron", // or a same-origin proxy; do NOT hardcode a default in the kit
+    apiHeaders: async ({ method, path, timestamp }) => ({ /* signed provider headers */ }),
     serviceProvider: "T...",             // provider address (app choice / from API provider list)
     token: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", // default USDT (TRC-20)
     // optional custom controller: gasFreeController, beacon, creationCode
@@ -73,7 +74,7 @@ getDefaultConfig({
 useGasFree()  // {
   //   enabled, mode: "general" | "gasfree", setMode(m),
   //   address,            // derived GasFree address (offline)
-  //   balance,            // USDT balance of the GasFree address (from API)
+  //   balance,            // USDT balance of the GasFree address (from resolver/API)
   //   isLoading, refresh(),
   //   transfer(req),      // Phase 2 gasless send
   // }
@@ -83,7 +84,7 @@ useGasFree()  // {
 
 ```ts
 kit.gasFree.getAddress();        // derive (offline)
-await kit.gasFree.getBalance();  // USDT via GasFree API
+await kit.gasFree.getBalance();  // USDT via app resolver or GasFree API
 kit.gasFree.setMode("gasfree");  // drives the account panel view
 await kit.gasFree.transfer({ receiver, value });  // Phase 2
 ```
@@ -122,7 +123,8 @@ form (unless a dApp explicitly opts into a prebuilt widget — see the Hard boun
 - **Optional, lazy dependency.** `@gasfree/gasfree-sdk` is lazy-`import()`ed only when `gasFree.enabled`
   — respects the bundle budget.
 - **App-injected provider/API config.** `apiBaseUrl` + `serviceProvider` come from the app; the kit
-  ships no hardcoded provider (like WalletConnect projectId).
+  ships no hardcoded provider (like WalletConnect projectId). Browser apps should use a same-origin
+  proxy or an `apiHeaders` callback backed by a server signer; never ship a GasFree API secret in browser code.
 - **Mainnet-first.** Enable on mainnet; other networks resolve to disabled without error (like identity).
 - **No secrets.** Kit only derives, builds the message, requests a signature, and relays to the API.
 
@@ -140,3 +142,41 @@ form (unless a dApp explicitly opts into a prebuilt widget — see the Hard boun
 - WalletConnect TIP-712 method name/support for TRON.
 - Default token: USDT contract per network; allow app override + multi-token later.
 - Whether to show GasFree balance in the connect button (probably keep it in the panel only to avoid confusion).
+
+## Implementation status - 2026-07-21
+
+Phase 1 implemented:
+
+- Added `gasFree` client config with `enabled`, `apiBaseUrl`, `token`, optional custom chain info,
+  `balanceResolver`, custom `fetch`, and fail-silent behavior.
+- Added `kit.gasFree` runtime:
+  - `getAddress()` derives the deterministic GasFree address with lazy `@gasfree/gasfree-sdk` import.
+  - When `apiBaseUrl` is configured, `getAddress()` and `getBalance()` use the official provider
+    endpoint `GET /api/v1/address/{accountAddress}` first. The SDK derivation path is now a fallback
+    for apps that do not configure provider API access.
+  - `getBalance()` resolves USDT balance through the provider account assets first, then an
+    app-provided resolver when present.
+  - Added optional `apiHeaders` for signed provider requests without storing API secrets in the kit.
+  - Added `createTrc20GasFreeBalanceResolver()` as an explicit opt-in helper for dApps/playgrounds that
+    want to read the GasFree address TRC-20 balance on-chain through `triggerconstantcontract`.
+  - `setMode("gasfree" | "general")`, `getSnapshot()`, and `subscribe()` drive UI state.
+- Added React `useGasFree()` hook.
+- Added account panel General -> GasFree entry and GasFree mode display:
+  - title/badge/description;
+  - GasFree address copy + QR;
+  - USDT balance display/loading state;
+  - Back to General action.
+- Added `react-basic` GasFree balance QA using `createTrc20GasFreeBalanceResolver()`. The checked address
+  `TQm2K3N4mMFf4cgbUA942yYkoHKeS9Dgds` returned `200000` raw USDT (`0.2 USDT`) from the mainnet USDT
+  contract on 2026-07-21.
+- `react-basic` can use the real provider API by setting `VITE_GASFREE_API_BASE_URL`; without that env,
+  it keeps the on-chain fallback resolver so local QA does not require provider credentials.
+- Added website docs page `docs/configuration/gasfree.md` and Client API notes.
+
+Still deferred to Phase 2:
+
+- `signTypedData` adapter capability.
+- `kit.gasFree.transfer()` headless gasless send primitive.
+- Provider list/nonce/maxFee/deadline submit flow.
+- WalletConnect typed-data method audit.
+- Built-in send widget remains deferred and must stay opt-in only.

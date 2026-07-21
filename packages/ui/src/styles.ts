@@ -85,6 +85,17 @@ ${selector} .twk-header-main {
   min-width: 0;
   text-align: center;
 }
+${selector} .twk-header-action {
+  align-items: center;
+  display: flex;
+  flex: 0 0 104px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+${selector} .twk-header-action[data-hidden="true"] {
+  justify-content: flex-start;
+  visibility: hidden;
+}
 ${selector} .twk-title { font-size: 16px; font-weight: 500; line-height: 1.25; margin: 0; }
 ${selector} .twk-title[data-tone="danger"] { color: var(--twk-danger); font-weight: 600; }
 ${selector} .twk-subtitle, ${selector} .twk-muted {
@@ -1090,6 +1101,7 @@ ${selector} .twk-account-card {
   gap: 12px;
   min-height: 0;
   padding: 0;
+  position: relative;
 }
 ${selector} .twk-account-hero {
   align-items: center;
@@ -1289,6 +1301,75 @@ ${selector} .twk-actions {
 }
 ${selector} .twk-actions .twk-action {
   min-height: 46px;
+  width: 100%;
+}
+${selector} .twk-gasfree-chip {
+  align-items: center;
+  background: color-mix(in srgb, var(--twk-success) 7%, var(--twk-surface-muted));
+  border: 1px solid color-mix(in srgb, var(--twk-success) 11%, transparent);
+  border-radius: 999px;
+  color: var(--twk-text);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 11.5px;
+  font-weight: 600;
+  gap: 5px;
+  justify-content: center;
+  line-height: 1;
+  min-height: 28px;
+  padding: 0 8px 0 6px;
+  position: relative;
+  transition: background-color .16s ease, border-color .16s ease, opacity .16s ease;
+}
+${selector} .twk-gasfree-chip::after {
+  content: "";
+  inset: -7px;
+  position: absolute;
+}
+${selector} .twk-gasfree-chip:hover {
+  background: color-mix(in srgb, var(--twk-success) 12%, var(--twk-surface-muted));
+}
+${selector} .twk-gasfree-chip:disabled {
+  cursor: default;
+  opacity: .5;
+}
+${selector} .twk-gasfree-chip:disabled:hover {
+  background: color-mix(in srgb, var(--twk-success) 7%, var(--twk-surface-muted));
+}
+${selector} .twk-gasfree-chip svg {
+  color: var(--twk-text-muted);
+  flex: 0 0 auto;
+}
+${selector} .twk-gasfree-mark {
+  align-items: center;
+  background: color-mix(in srgb, var(--twk-success) 82%, var(--twk-surface));
+  border-radius: 5px;
+  color: var(--twk-surface);
+  display: inline-flex;
+  font-size: 11px;
+  font-style: italic;
+  height: 18px;
+  justify-content: center;
+  width: 18px;
+}
+${selector} .twk-gasfree-badge {
+  align-items: center;
+  background: color-mix(in srgb, var(--twk-success) 12%, var(--twk-surface-muted));
+  border-radius: 999px;
+  color: var(--twk-success);
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 650;
+  justify-self: center;
+  line-height: 1;
+  min-height: 22px;
+  padding: 0 9px;
+}
+${selector} .twk-gasfree-card {
+  gap: 16px;
+}
+${selector} .twk-gasfree-meta-pill {
+  max-width: 440px;
   width: 100%;
 }
 ${selector} .twk-qr-slot {
@@ -2013,6 +2094,13 @@ ${selector} .twk-toast-link:hover, ${selector} .twk-toast-dismiss:hover { backgr
   }
   ${selector} .twk-body {
     max-height: calc(100dvh - 56px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+  ${selector} .twk-header-action {
+    flex-basis: 88px;
+  }
+  ${selector} .twk-gasfree-chip {
+    font-size: 11px;
+    max-width: 84px;
   }
   ${selector} .twk-wallet-grid, ${selector} .twk-no-wallets {
     max-height: min(360px, calc(100dvh - 150px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));

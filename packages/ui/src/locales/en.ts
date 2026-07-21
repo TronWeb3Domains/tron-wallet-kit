@@ -42,7 +42,15 @@ export const en: WalletKitLabelPack = {
     lightQr: "Light QR",
     noTransactions: "Your activity will show up here.",
     recentTransactions: "Recent transactions",
-    qrAlt: "TRON address QR"
+    qrAlt: "TRON address QR",
+    gasFree: "GasFree",
+    gasFreeTitle: "GasFree",
+    gasFreeDescription: "Send USDT without TRX for gas.",
+    gasFreeAddress: "GasFree address",
+    gasFreeBalance: "USDT balance",
+    gasFreeBalanceLoading: "Loading USDT balance",
+    gasFreeUnavailable: "GasFree is not available for this account.",
+    backToGeneral: "Use General Wallet"
   },
   activity: {
     title: "Activity",

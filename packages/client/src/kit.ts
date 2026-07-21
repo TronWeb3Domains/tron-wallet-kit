@@ -2,6 +2,7 @@ import { type TransactionPayload, type TronMethodHint } from "@tron-wallet-kit/c
 import { createTransactionPreviewDialog, createWalletButton, createWalletModal, createWalletToast, resolveWalletUiConfig } from "@tron-wallet-kit/ui";
 import { createDefaultTrxBalanceResolver, normalizeBalance } from "./balance";
 import { createWalletClient } from "./client";
+import { createGasFreeRuntime } from "./gasfree";
 import { resolveIdentityResolver } from "./identity";
 import { createTransactionRuntime, type TransactionPreviewConfig, type TransactionPreviewConfirmer } from "./transactions";
 import { configureSharedTronWeb } from "./tronweb";
@@ -34,6 +35,7 @@ export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
   const identityCacheTtlMs = config.identity?.cacheTtlMs ?? 10 * 60 * 1000;
   const identityRateLimitCooldownMs = Math.min(2 * 60 * 1000, Math.max(30 * 1000, identityCacheTtlMs / 5));
   const balanceResolver = config.balance?.enabled === false ? undefined : (config.balance?.resolver ?? createDefaultTrxBalanceResolver());
+  const gasFree = createGasFreeRuntime(manager, config.gasFree);
   const getRefreshTargetSession = (session: NonNullable<ReturnType<typeof manager.getSession>>) => {
     const latest = manager.getSession();
     if (!latest) return null;
@@ -133,7 +135,8 @@ export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
         accountPanelMode: uiConfig.accountPanel.mode === "inline" ? "dropdown" : "modal",
         refreshAccountDetails: async () => {
           await Promise.allSettled([refreshIdentity(), refreshBalance()]);
-        }
+        },
+        gasFree
       })
     : null;
   const toast = config.ui?.toast ? createWalletToast({ manager, ui }) : null;
@@ -182,6 +185,7 @@ export function createWalletKit(config: WalletClientConfig = {}): WalletKit {
     refreshBalance,
     refreshAccount: async () => manager.getAccount(),
     refreshIdentity,
+    gasFree,
     getSession: manager.getSession.bind(manager),
     signMessage: (request) => manager.signMessage(request),
     signTransaction: (transaction) => manager.signTransaction(transaction),

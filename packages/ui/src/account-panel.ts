@@ -29,6 +29,9 @@ const DEFAULT_DATE_LOCALE = "en-US";
 
 export function createAccountPanelHtml(viewModel: AccountPanelViewModel): string {
   const labels = { ...defaultAccountPanelLabels, ...viewModel.labels };
+  if (viewModel.gasFree?.configured && viewModel.gasFree.mode === "gasfree") {
+    return createGasFreeAccountPanelHtml(viewModel, labels);
+  }
   const activityLabels = { ...defaultActivityLabels, ...viewModel.activityLabels };
   const hasIdentityName = Boolean(viewModel.account.domain ?? viewModel.account.displayName);
   const displayName = viewModel.account.domain ?? viewModel.account.displayName;
@@ -86,6 +89,14 @@ export function createAccountPanelHtml(viewModel: AccountPanelViewModel): string
         <div class="twk-tx-list"><div class="twk-tx-list-inner">${transactions}</div></div>
       </section>`
       : "";
+  const gasFreeChip =
+    viewModel.gasFree?.configured
+        ? `<button class="twk-gasfree-chip" type="button" data-twk-action="gasfree-mode" data-enabled="${viewModel.gasFree.enabled ? "true" : "false"}" aria-label="${escapeAttribute(viewModel.gasFree.enabled ? labels.gasFreeTitle : viewModel.gasFree.disabledReason ?? labels.gasFreeUnavailable)}" title="${escapeAttribute(viewModel.gasFree.enabled ? labels.gasFreeTitle : viewModel.gasFree.disabledReason ?? labels.gasFreeUnavailable)}">
+        <span class="twk-gasfree-mark" aria-hidden="true">F</span>
+        <span>${escapeHtml(labels.gasFree)}</span>
+        <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>`
+      : "";
   const showBalanceDivider = Boolean(balanceHtml);
   const metaPill = `<div class="twk-account-meta-pill">
     <span class="twk-pill-address">${escapeHtml(shortenAddress(viewModel.account.address))}</span>
@@ -95,11 +106,11 @@ export function createAccountPanelHtml(viewModel: AccountPanelViewModel): string
 
   return `<section class="twk-account-panel" data-has-recent="${recent ? "true" : "false"}" aria-labelledby="twk-account-title">
   <header class="twk-header">
-    <span class="twk-back" data-hidden="true" aria-hidden="true"></span>
+    <div class="twk-header-action" data-hidden="true" aria-hidden="true"><span class="twk-back" data-hidden="true" aria-hidden="true"></span></div>
     <div class="twk-header-main">
       <h2 class="twk-title" id="twk-account-title">${escapeHtml(labels.title)}</h2>
     </div>
-    <span class="twk-back" data-hidden="true" aria-hidden="true"></span>
+    <div class="twk-header-action">${gasFreeChip || '<span class="twk-back" data-hidden="true" aria-hidden="true"></span>'}</div>
   </header>
   <div class="twk-account-body">
     <div class="twk-account-card" data-avatar-tone="${avatarTone(viewModel.account.address)}" data-has-recent="${recent ? "true" : "false"}">
@@ -112,7 +123,7 @@ export function createAccountPanelHtml(viewModel: AccountPanelViewModel): string
       </div>
       ${recent}
       <div class="twk-actions">
-        <button class="twk-action" type="button" data-twk-action="copy" aria-describedby="twk-copy-status">${createActionContentHtml(copyIconHtml, labels.copy, copyState)}</button>
+        <button class="twk-action" type="button" data-twk-action="copy" data-twk-copy-value="${escapeAttribute(viewModel.account.address)}" aria-describedby="twk-copy-status">${createActionContentHtml(copyIconHtml, labels.copy, copyState)}</button>
         <span class="twk-sr-only" id="twk-copy-status" aria-live="polite">${escapeHtml(copyStatusLabel)}</span>
         ${explorerButton}
         ${sendButton}
@@ -123,6 +134,69 @@ export function createAccountPanelHtml(viewModel: AccountPanelViewModel): string
   ${viewModel.showAddressQrButton ? "" : `<div class="twk-section">
     <div class="twk-qr-slot">${qr}</div>
   </div>`}
+</section>`;
+}
+
+function createGasFreeAccountPanelHtml(viewModel: AccountPanelViewModel, labels: AccountPanelLabels): string {
+  const gasFree = viewModel.gasFree!;
+  const hasIdentityName = Boolean(viewModel.account.domain ?? viewModel.account.displayName);
+  const displayName = viewModel.account.domain ?? viewModel.account.displayName;
+  const identityHtml = viewModel.identityLoading
+    ? `<div class="twk-domain twk-skeleton-line" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">${escapeHtml(shortenAddress(viewModel.account.address))}</span></div>`
+    : hasIdentityName
+      ? `<div class="twk-domain">${escapeHtml(displayName!)}</div>`
+      : "";
+  const avatar = viewModel.account.avatar
+    ? `<img src="${escapeAttribute(viewModel.account.avatar)}" alt="" aria-hidden="true" />`
+    : `<span class="twk-avatar-spot" aria-hidden="true"></span>`;
+  const copyStatusLabel = viewModel.copyState === "copied" ? labels.copied : labels.copy;
+  const copyIconHtml = viewModel.copyState === "copied" ? checkIcon() : copyIcon();
+  const copyState = viewModel.copyState === "copied" ? "success" : undefined;
+  const address = gasFree.address;
+  const balance = gasFree.balance;
+  const balanceHtml = gasFree.isLoading && !balance
+    ? `<span class="twk-pill-balance twk-skeleton-pill" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">${escapeHtml(labels.gasFreeBalanceLoading)}</span></span>`
+    : balance
+      ? `<span class="twk-pill-balance">${escapeHtml(balance.formatted)} ${escapeHtml(balance.symbol)}</span>`
+      : `<span class="twk-pill-balance twk-muted">-- USDT</span>`;
+  const metaPill = address
+    ? `<div class="twk-account-meta-pill twk-gasfree-meta-pill">
+      <span class="twk-pill-address">${escapeHtml(shortenAddress(address))}</span>
+      <span class="twk-pill-divider" aria-hidden="true"></span>
+      ${balanceHtml}
+      <button class="twk-address-qr-action" type="button" data-twk-action="gasfree-address-qr" aria-label="${escapeAttribute(labels.showQr)}">${qrIcon()}</button>
+    </div>`
+    : gasFree.isLoading
+      ? `<div class="twk-account-meta-pill twk-gasfree-meta-pill twk-skeleton-line" data-loading="true"><span class="twk-skeleton" aria-hidden="true"></span><span class="twk-sr-only">${escapeHtml(labels.gasFreeAddress)}</span></div>`
+      : `<div class="twk-address-chip twk-address-chip-full">${escapeHtml(gasFree.error ?? gasFree.disabledReason ?? labels.gasFreeUnavailable)}</div>`;
+  const copyButton = address
+    ? `<button class="twk-action" type="button" data-twk-action="copy" data-twk-copy-value="${escapeAttribute(address)}" aria-describedby="twk-copy-status">${createActionContentHtml(copyIconHtml, labels.copy, copyState)}</button>`
+    : "";
+
+  return `<section class="twk-account-panel" data-twk-account-view="gasfree" aria-labelledby="twk-gasfree-title">
+  <header class="twk-header">
+    <button class="twk-back" type="button" data-twk-action="gasfree-back" aria-label="${escapeAttribute(labels.backToGeneral)}">${backIcon()}</button>
+    <div class="twk-header-main">
+      <h2 class="twk-title" id="twk-gasfree-title">${escapeHtml(labels.gasFreeTitle)}</h2>
+    </div>
+    <button class="twk-close" type="button" data-twk-action="close-account" aria-label="${escapeAttribute(labels.close)}">${closeIcon()}</button>
+  </header>
+  <div class="twk-account-body">
+    <div class="twk-account-card twk-gasfree-card" data-avatar-tone="${avatarTone(viewModel.account.address)}">
+      <div class="twk-account-hero">
+        <div class="twk-account-avatar">${avatar}</div>
+        <div class="twk-identity">
+          ${identityHtml}
+          ${metaPill}
+        </div>
+      </div>
+      <div class="twk-actions">
+        ${copyButton}
+        <button class="twk-action" type="button" data-twk-action="gasfree-back">${createActionContentHtml(backIcon(), labels.backToGeneral)}</button>
+      </div>
+      <span class="twk-sr-only" id="twk-copy-status" aria-live="polite">${escapeHtml(copyStatusLabel)}</span>
+    </div>
+  </div>
 </section>`;
 }
 
@@ -178,7 +252,7 @@ export function createAddressQrPanelHtml(viewModel: AddressQrPanelViewModel): st
     <div class="twk-qr-slot twk-address-qr-slot">${qrContent}</div>
     <div class="twk-address-chip twk-address-chip-full">${escapeHtml(viewModel.address)}</div>
     <div class="twk-actions">
-      <button class="twk-action" type="button" data-twk-action="copy" aria-describedby="twk-copy-status">${createActionContentHtml(copyIconHtml, labels.copy, copyState)}</button>
+      <button class="twk-action" type="button" data-twk-action="copy" data-twk-copy-value="${escapeAttribute(viewModel.address)}" aria-describedby="twk-copy-status">${createActionContentHtml(copyIconHtml, labels.copy, copyState)}</button>
       <span class="twk-sr-only" id="twk-copy-status" aria-live="polite">${escapeHtml(copyStatusLabel)}</span>
     </div>
   </div>

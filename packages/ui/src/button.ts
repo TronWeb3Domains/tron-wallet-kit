@@ -68,13 +68,19 @@ export type WalletButtonControllerOptions = {
   variant?: WalletButtonViewModel["variant"];
   theme?: ThemeConfig;
   refreshAccountDetails?: () => Promise<void> | void;
+  gasFree?: {
+    getSnapshot(): NonNullable<AccountPanelViewModel["gasFree"]>;
+    setMode(mode: "general" | "gasfree"): void;
+    refresh(): Promise<unknown>;
+    subscribe(listener: () => void): () => void;
+  };
 };
 
 export function createWalletButton(options: WalletButtonControllerOptions): WalletButton {
   let root: HTMLElement | null = null;
   let documentRef: Document | null = null;
   let accountOpen = false;
-  let accountView: "account" | "address-qr" | "tx-history" = "account";
+  let accountView: "account" | "address-qr" | "gasfree-address-qr" | "tx-history" = "account";
   let copyState: "idle" | "copied" = "idle";
   let addressQrSrc: string | undefined;
   let isRefreshingDetails = false;
@@ -105,7 +111,7 @@ export function createWalletButton(options: WalletButtonControllerOptions): Wall
     if (walletMetadata.icon) viewModel.adapterIcon = walletMetadata.icon;
     if (walletMetadata.name) viewModel.adapterName = walletMetadata.name;
     const panelHtml = session && accountOpen
-      ? createButtonAccountPanelHtml(session, accountView, copyState, addressQrSrc, options.manager, options.accountPanelMode ?? "modal")
+      ? createButtonAccountPanelHtml(session, accountView, copyState, addressQrSrc, options.manager, options.accountPanelMode ?? "modal", options.gasFree?.getSnapshot())
       : "";
     root.innerHTML = `${createWalletButtonHtml(viewModel)}${panelHtml}`;
   };
@@ -125,14 +131,15 @@ export function createWalletButton(options: WalletButtonControllerOptions): Wall
   };
   const renderAddressQr = () => {
     const session = options.manager.getSession();
-    if (!root || !session?.account.address || accountView !== "address-qr") return;
+    const qrAddress = accountView === "gasfree-address-qr" ? options.gasFree?.getSnapshot().address : session?.account.address;
+    if (!root || !qrAddress || (accountView !== "address-qr" && accountView !== "gasfree-address-qr")) return;
     const runId = ++qrRunId;
     addressQrSrc = undefined;
     render();
     const foreground = typeof globalThis.getComputedStyle === "function"
       ? globalThis.getComputedStyle(root).getPropertyValue("--twk-qr-foreground").trim() || QR_FALLBACK_DARK
       : QR_FALLBACK_DARK;
-    void createStyledQrDataUrl(session.account.address, { width: 264, margin: 4, foreground, background: "transparent" })
+    void createStyledQrDataUrl(qrAddress, { width: 264, margin: 4, foreground, background: "transparent" })
       .then((src) => {
         if (runId !== qrRunId) return;
         addressQrSrc = src;
@@ -153,7 +160,8 @@ export function createWalletButton(options: WalletButtonControllerOptions): Wall
     const action = target?.closest("[data-twk-action]")?.getAttribute("data-twk-action");
     const session = options.manager.getSession();
     if (action === "copy" && session && documentRef) {
-      void copyToClipboard(session.account.address, documentRef).then((copied) => {
+      const value = target?.closest("[data-twk-copy-value]")?.getAttribute("data-twk-copy-value") ?? session.account.address;
+      void copyToClipboard(value, documentRef).then((copied) => {
         if (!copied) return;
         copyState = "copied";
         render();
@@ -169,6 +177,11 @@ export function createWalletButton(options: WalletButtonControllerOptions): Wall
       renderAddressQr();
       return;
     }
+    if (action === "gasfree-address-qr") {
+      accountView = "gasfree-address-qr";
+      renderAddressQr();
+      return;
+    }
     if (action === "tx-history") {
       accountView = "tx-history";
       render();
@@ -178,6 +191,18 @@ export function createWalletButton(options: WalletButtonControllerOptions): Wall
       accountView = "account";
       addressQrSrc = undefined;
       qrRunId += 1;
+      render();
+      return;
+    }
+    if (action === "gasfree-mode") {
+      options.gasFree?.setMode("gasfree");
+      accountView = "account";
+      render();
+      return;
+    }
+    if (action === "gasfree-back") {
+      options.gasFree?.setMode("general");
+      accountView = "account";
       render();
       return;
     }
@@ -231,7 +256,8 @@ export function createWalletButton(options: WalletButtonControllerOptions): Wall
     }),
     options.manager.on("tx_submitted", render),
     options.manager.on("tx_confirmed", render),
-    options.manager.on("tx_failed", render)
+    options.manager.on("tx_failed", render),
+    options.gasFree?.subscribe(render) ?? (() => undefined)
   ];
   return {
     mount(target) {
@@ -265,15 +291,17 @@ export function createWalletButton(options: WalletButtonControllerOptions): Wall
 
 function createButtonAccountPanelHtml(
   session: NonNullable<ReturnType<WalletManager["getSession"]>>,
-  view: "account" | "address-qr" | "tx-history",
+  view: "account" | "address-qr" | "gasfree-address-qr" | "tx-history",
   copyState: "idle" | "copied",
   addressQrSrc: string | undefined,
   manager: WalletManager,
-  mode: "dropdown" | "modal"
+  mode: "dropdown" | "modal",
+  gasFree?: AccountPanelViewModel["gasFree"]
 ): string {
-  if (view === "address-qr") {
+  if (view === "address-qr" || view === "gasfree-address-qr") {
+    const address = view === "gasfree-address-qr" ? gasFree?.address : session.account.address;
     return createButtonPanelShell(createAddressQrPanelHtml({
-      address: session.account.address,
+      address: address ?? session.account.address,
       copyState,
       ...(addressQrSrc ? { qrImageSrc: addressQrSrc } : {})
     }), mode);
@@ -285,7 +313,8 @@ function createButtonAccountPanelHtml(
     recentTransactions: manager.getTransactions(10).map(mapTransaction),
     showRecentTransactions: true,
     maxVisibleTransactions: 3,
-    showAddressQrButton: true
+    showAddressQrButton: true,
+    ...(gasFree ? { gasFree } : {})
   };
   const panel = view === "tx-history" ? createTransactionHistoryPanelHtml(model) : createAccountPanelHtml(model);
   return createButtonPanelShell(panel, mode);

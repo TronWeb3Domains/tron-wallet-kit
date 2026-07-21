@@ -15,7 +15,7 @@ import {
 } from "../src/index";
 import { resetWalletProviderDiscoveryForTests } from "../src/injected/eip6963";
 
-function createMockAdapter(id = "mock"): WalletAdapter {
+function createMockAdapter(id = "mock", network = TRON_NILE): WalletAdapter {
   return {
     metadata: {
       id,
@@ -30,8 +30,8 @@ function createMockAdapter(id = "mock"): WalletAdapter {
       transferTrx: true
     },
     connect: async () => ({
-      account: { address: "T2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", network: TRON_NILE },
-      network: TRON_NILE
+      account: { address: "T2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", network },
+      network
     }),
     disconnect: async () => undefined,
     signMessage: async ({ message }) => ({
@@ -223,6 +223,79 @@ describe("client entrypoints", () => {
       hash: "trx-built-hash"
     });
     expect(kit.manager.getTransactions()[0]?.methodHint).toBe("transferTrx");
+  });
+
+  it("caches GasFree snapshots for React external-store subscribers", async () => {
+    const kit = createWalletKit({
+      adapters: [createMockAdapter()],
+      gasFree: { enabled: true }
+    });
+
+    const first = kit.gasFree.getSnapshot();
+    expect(kit.gasFree.getSnapshot()).toBe(first);
+
+    await kit.manager.connect("mock");
+
+    const afterConnect = kit.gasFree.getSnapshot();
+    expect(afterConnect).not.toBe(first);
+    expect(kit.gasFree.getSnapshot()).toBe(afterConnect);
+  });
+
+  it("uses the GasFree provider API for address and balance when configured", async () => {
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          code: 200,
+          data: {
+            accountAddress: "T2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            gasFreeAddress: "TQm2K3N4mMFf4cgbUA942yYkoHKeS9Dgds",
+            active: true,
+            nonce: 1,
+            allow_submit: true,
+            assets: [
+              {
+                tokenAddress: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+                tokenSymbol: "USDT",
+                balance: "200000",
+                decimal: 6,
+                frozen: "0"
+              }
+            ]
+          }
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      );
+    });
+    const kit = createWalletKit({
+      adapters: [createMockAdapter("mock", TRON_MAINNET)],
+      gasFree: {
+        enabled: true,
+        apiBaseUrl: "https://open.gasfree.io/tron",
+        apiHeaders: ({ path, timestamp }) => ({
+          Timestamp: String(timestamp),
+          Authorization: `signed:${path}`
+        }),
+        fetch: fetchMock as unknown as typeof globalThis.fetch
+      }
+    });
+
+    await kit.manager.connect("mock");
+
+    await expect(kit.gasFree.getAddress()).resolves.toBe("TQm2K3N4mMFf4cgbUA942yYkoHKeS9Dgds");
+    await expect(kit.gasFree.getBalance()).resolves.toMatchObject({
+      value: "200000",
+      formatted: "0.2",
+      symbol: "USDT"
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const fetchCalls = fetchMock.mock.calls as unknown as Array<[string, RequestInit | undefined]>;
+    expect(fetchCalls[0]?.[0]).toBe("https://open.gasfree.io/tron/api/v1/address/T2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+    expect(fetchCalls[0]?.[1]).toMatchObject({
+      method: "GET",
+      headers: {
+        Authorization: "signed:/tron/api/v1/address/T2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      }
+    });
   });
 
   it("resolves transaction previews before signing and sending", async () => {

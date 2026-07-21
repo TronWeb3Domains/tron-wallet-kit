@@ -27,18 +27,23 @@
   },
   "dependencies": {
     "@tron-wallet-kit/adapter-tronlink": "workspace:*",
-    "@tron-wallet-kit/adapter-walletconnect": "workspace:*",
     "@tron-wallet-kit/adapter-tronwallet-bridge": "workspace:*",
+    "@tron-wallet-kit/adapter-walletconnect": "workspace:*",
     "@tron-wallet-kit/core": "workspace:*",
     "@tron-wallet-kit/ui": "workspace:*",
     "@tronweb3/tronwallet-adapter-ledger": "^1.1.0",
+    "buffer": "^6.0.3",
     "tronweb": "^6.4.0"
   },
   "peerDependencies": {
+    "@gasfree/gasfree-sdk": "*",
     "@tronweb3/tronwallet-adapter-imtoken": "*",
     "@tronweb3/tronwallet-adapter-metamask-tron": "*"
   },
   "peerDependenciesMeta": {
+    "@gasfree/gasfree-sdk": {
+      "optional": true
+    },
     "@tronweb3/tronwallet-adapter-imtoken": {
       "optional": true
     },

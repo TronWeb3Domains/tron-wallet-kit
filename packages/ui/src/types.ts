@@ -331,6 +331,14 @@ export type AccountPanelLabels = {
   noTransactions: string;
   recentTransactions: string;
   qrAlt: string;
+  gasFree: string;
+  gasFreeTitle: string;
+  gasFreeDescription: string;
+  gasFreeAddress: string;
+  gasFreeBalance: string;
+  gasFreeBalanceLoading: string;
+  gasFreeUnavailable: string;
+  backToGeneral: string;
 };
 
 export type ActivityLabels = {
@@ -387,6 +395,19 @@ export type AccountPanelViewModel = {
   showSendButton?: boolean;
   showDisconnectButton?: boolean;
   showAddressQrButton?: boolean;
+  gasFree?: {
+    configured?: boolean;
+    enabled: boolean;
+    mode: "general" | "gasfree";
+    address?: string;
+    balance?: {
+      formatted: string;
+      symbol: string;
+    };
+    isLoading?: boolean;
+    error?: string;
+    disabledReason?: string;
+  };
 };
 
 export type AddressQrPanelViewModel = {

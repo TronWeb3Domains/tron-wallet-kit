@@ -60,6 +60,7 @@ export default defineConfig({
           { text: "Theming", link: "/docs/configuration/theming" },
           { text: "WalletConnect", link: "/docs/configuration/walletconnect" },
           { text: "Identity", link: "/docs/configuration/identity" },
+          { text: "GasFree", link: "/docs/configuration/gasfree" },
           { text: "Localization", link: "/docs/configuration/localization" },
         ],
       },

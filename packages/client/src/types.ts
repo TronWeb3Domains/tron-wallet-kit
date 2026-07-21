@@ -70,6 +70,7 @@ export type WalletClientConfig = Omit<WalletManagerConfig, "adapters" | "network
     useBrowserStorage?: boolean;
     identity?: WalletClientIdentityConfig;
     balance?: WalletClientBalanceConfig;
+    gasFree?: WalletClientGasFreeConfig;
     transactionPreview?: TransactionPreviewConfig;
     tronWeb?: {
       fullHost?: string;
@@ -237,6 +238,7 @@ export type WalletKit = {
   refreshBalance(): Promise<WalletSessionBalance | undefined>;
   refreshAccount(): Promise<TronAccount | null>;
   refreshIdentity(): Promise<TronIdentity | undefined>;
+  gasFree: GasFreeRuntime;
   getSession: WalletManager["getSession"];
   signMessage(request: string | SignMessageRequest): Promise<SignMessageResult>;
   signTransaction(transaction: TransactionPayload | SignTransactionRequest): Promise<SignTransactionResult>;
@@ -306,4 +308,83 @@ export type WalletClientBalanceConfig = {
   enabled?: boolean;
   resolver?: TronBalanceResolver;
   failSilently?: boolean;
+};
+
+export type GasFreeMode = "general" | "gasfree";
+
+export type GasFreeBalance = {
+  value: string;
+  formatted: string;
+  symbol: string;
+  decimals?: number;
+  raw?: unknown;
+};
+
+export type GasFreeBalanceResolverContext = {
+  account: TronAccount;
+  network: TronNetwork;
+  gasFreeAddress: string;
+  token: string;
+};
+
+export type GasFreeBalanceResolverResult = GasFreeBalance | string | number | bigint | undefined;
+
+export type GasFreeBalanceResolver = (context: GasFreeBalanceResolverContext) => Promise<GasFreeBalanceResolverResult>;
+
+export type GasFreeApiHeadersContext = {
+  method: "GET" | "POST";
+  url: string;
+  path: string;
+  timestamp: number;
+  account: TronAccount;
+  network: TronNetwork;
+};
+
+export type GasFreeApiHeadersResolver = (context: GasFreeApiHeadersContext) => HeadersInit | Promise<HeadersInit | undefined> | undefined;
+
+export type WalletClientGasFreeConfig = {
+  enabled?: boolean;
+  /**
+   * GasFree provider API base URL, for example https://open.gasfree.io/tron
+   * or a same-origin backend proxy. The kit never ships a production default;
+   * integrations must inject the provider/proxy they trust.
+   */
+  apiBaseUrl?: string;
+  /**
+   * Optional request headers for the GasFree provider API. Do not expose an API
+   * secret in browser code; prefer a same-origin proxy for signed production requests.
+   */
+  apiHeaders?: GasFreeApiHeadersResolver;
+  token?: string;
+  serviceProvider?: string;
+  chainId?: string | number;
+  gasFreeController?: string;
+  beacon?: string;
+  creationCode?: string;
+  balanceResolver?: GasFreeBalanceResolver;
+  fetch?: typeof globalThis.fetch;
+  failSilently?: boolean;
+};
+
+export type GasFreeSnapshot = {
+  configured: boolean;
+  enabled: boolean;
+  mode: GasFreeMode;
+  address?: string;
+  balance?: GasFreeBalance;
+  isLoading: boolean;
+  token: string;
+  error?: string;
+  disabledReason?: string;
+};
+
+export type GasFreeRuntime = {
+  readonly enabled: boolean;
+  getMode(): GasFreeMode;
+  setMode(mode: GasFreeMode): void;
+  subscribe(listener: () => void): () => void;
+  getSnapshot(): GasFreeSnapshot;
+  getAddress(): Promise<string | undefined>;
+  getBalance(): Promise<GasFreeBalance | undefined>;
+  refresh(): Promise<GasFreeSnapshot>;
 };
