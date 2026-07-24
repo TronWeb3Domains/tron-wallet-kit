@@ -27,6 +27,7 @@ Legend: `[ ]` todo · `[~]` partial · `[x]` done.
 - `[x]` Per-package `README` + verify `package.json` `exports`, `types`, `files`, `sideEffects` for tree-shaking.
 - `[x]` Bump versions to `0.1.0`; add `CHANGELOG.md`; configure npm publish (access, `publishConfig`, provenance, `latest` tag).
 - `[x]` Confirm no secrets / no hardcoded WalletConnect `projectId` in any published package (project hard rule).
+- `[x]` Confirm wallet icon brand/source policy for generated data URIs (`Review/WALLET_ICON_BRAND_SOURCE_NOTES.md`).
 
 ### CI / quality gate
 - `[x]` Add CI (`.github/workflows`) running `lint + typecheck + test + build` on every PR.
@@ -152,3 +153,5 @@ Release target updated to **`0.1.0`** for the first stable package line.
 - `[x]` Changed internal workspace package references from `workspace:*` to `workspace:^` so pnpm rewrites npm package dependencies cleanly during pack/publish.
 - `[x]` `pnpm typecheck` passed.
 - `[x]` `pnpm -r publish --dry-run --no-git-checks --tag latest` passed for all 10 public packages.
+- `[x]` Added `Review/WALLET_ICON_BRAND_SOURCE_NOTES.md` for built-in icon source/brand policy.
+- `[x]` Added `Review/P0_LIVE_QA_SIGNOFF.md` so the remaining real-wallet publish blockers have explicit pass criteria.

@@ -5693,3 +5693,9 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Verification:
   - `pnpm typecheck` passed.
   - `pnpm -r publish --dry-run --no-git-checks --tag latest` passed for all 10 public packages after running `pnpm install`.
+
+## 2026-07-24 P0 Release QA Prep
+
+- Added `Review/WALLET_ICON_BRAND_SOURCE_NOTES.md` to document built-in wallet icon inventory, local source files, and brand/trademark usage policy for generated data URIs.
+- Added `Review/P0_LIVE_QA_SIGNOFF.md` with explicit pass criteria for WalletConnect QR, fixed-bug reverification, transaction reject/success paths, and optional Ledger hardware QA.
+- Updated `Review/RELEASE_CHECKLIST.md` and `Review/RELEASE_READINESS.md` so icon/source policy is closed and remaining publish blockers are clearly the real-wallet QA sign-off items.

@@ -20,7 +20,7 @@
 - [x] Confirm Next.js integration API.
 - [x] Confirm adapter contracts.
 - [x] Confirm theme token contract.
-- [ ] Confirm wallet icon brand/source licensing for generated SVG data URIs.
+- [x] Confirm wallet icon brand/source policy for generated data URIs (`Review/WALLET_ICON_BRAND_SOURCE_NOTES.md`).
 - [x] Confirm docs for HTML legacy/CDN usage.
 - [x] Confirm docs for React usage.
 - [x] Decide all-in-one browser IIFE vs split adapter browser bundles.
@@ -72,6 +72,7 @@
 | Ledger descriptor optional peer | `pnpm --filter @tron-wallet-kit/client test` | Descriptor/catalog tested on 2026-07-08; real-device QA pending |
 | Release 0.1.0 typecheck | `pnpm typecheck` | Passed on 2026-07-21 |
 | Release 0.1.0 publish dry-run | `pnpm -r publish --dry-run --no-git-checks --tag latest` | Passed on 2026-07-21 for all 10 public packages |
+| P0 live QA sign-off checklist | `Review/P0_LIVE_QA_SIGNOFF.md` | Created on 2026-07-24; execution pending real wallets/devices |
 
 ## Ledger Hardware QA
 
@@ -94,3 +95,4 @@
 - Browser IIFE release size recorded on 2026-07-15: unminified 3,459,117 bytes; minified 1,737,483 bytes.
 - First stable package line is prepared for npm tag `latest`; run the final dry-run and live WalletConnect QA before publishing.
 - 0.1.0 latest prep passed on 2026-07-21: `pnpm typecheck` and `pnpm -r publish --dry-run --no-git-checks --tag latest`.
+- P0 icon brand/source policy and live QA sign-off checklist were added on 2026-07-24.
