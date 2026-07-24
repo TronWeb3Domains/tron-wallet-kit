@@ -46,13 +46,13 @@ Legend: `[ ]` todo · `[~]` partial · `[x]` done.
 ## P1 — needed for a credible launch (the DX layer)
 
 ### Docs site (VitePress — currently sparse)
-- `[ ]` Getting started per framework: **React, Next, vanilla TS, HTML/CDN** (copy-paste runnable).
-- `[ ]` Configuration reference: **i18n/locales, theme tokens (`--twk-*`), featured/rank, wallet enable/disable**.
-- `[ ]` **WalletConnect setup**: how to obtain and inject `projectId`, network selection, mobile QR flow.
-- `[ ]` Wallet catalog page: supported wallets, platforms, detection/connect notes, status badges.
-- `[ ]` Adapter contract + **contribution guide** (Path A PR / Path B external package) from `WALLET_ADAPTER_ORG_SPEC`.
-- `[ ]` Troubleshooting page (namespace collision, "not installed", WC "cancelled in wallet", first-connect).
-- `[ ]` API reference (typedoc) generated from the public types.
+- `[x]` Getting started per framework: **React, Next, vanilla TS, HTML/CDN**.
+- `[x]` Configuration reference: **i18n/locales, theme tokens (`--twk-*`), featured/rank, wallet enable/disable**.
+- `[x]` **WalletConnect setup**: how to obtain and inject `projectId`, network selection, mobile QR flow.
+- `[x]` Wallet catalog page: supported wallets, platforms, detection/connect notes, status badges.
+- `[x]` Adapter contract + **contribution guide** (Path A PR / Path B external package) from `WALLET_ADAPTER_ORG_SPEC`.
+- `[x]` Troubleshooting page (namespace collision, "not installed", WC "cancelled in wallet", first-connect).
+- `[ ]` API reference (typedoc) generated from the public types. Manual API pages exist; generated typedoc remains open.
 - `[x]` Product UI QA checklist created for React Basic and website playground/theme builder visual sign-off.
 
 ### Visual live demo (deployed)
@@ -165,3 +165,11 @@ Release target updated to **`0.1.0`** for the first stable package line.
 - `[x]` Added `Review/P2_WALLET_ADAPTER_QA_SIGNOFF.md` as the P2 execution plan for wallet detection, provider collision, extension connect/sign, WalletConnect QR, and Ledger hardware QA.
 - `[x]` Linked P2 sign-off from `Review/WALLET_TEST_MATRIX.md` and `Review/RELEASE_CHECKLIST.md`.
 - `[ ]` Execute P2 with real extension/mobile/hardware wallets before promoting QA-critical wallets such as MathWallet or Ledger into broader default recommendations.
+
+## Implementation update - 2026-07-24 P3 Docs / Website Prep
+
+- `[x]` Added `Review/P3_DOCS_WEBSITE_QA_SIGNOFF.md` as the website/docs execution checklist.
+- `[x]` Added `/docs/adapters/contributing` and linked it from the sidebar and adapter overview.
+- `[x]` Updated wallet catalog copy/table to match the current descriptor registry and P2 support policy.
+- `[x]` Updated troubleshooting with Trust/Binance namespace-only gating, WalletConnect metadata fallback, Gate HTTPS, and Ledger hardware notes.
+- `[ ]` Execute manual website QA on `https://127.0.0.1:5175/` before public docs sign-off.

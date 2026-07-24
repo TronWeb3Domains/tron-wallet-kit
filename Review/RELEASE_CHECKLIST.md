@@ -77,6 +77,7 @@
 | P1 website docs build | `pnpm --filter @tron-wallet-kit/website build` | Passed on 2026-07-24 |
 | P1 examples typecheck | `pnpm --filter @tron-wallet-kit/examples typecheck` | Passed on 2026-07-24 |
 | P2 wallet/adapter QA sign-off checklist | `Review/P2_WALLET_ADAPTER_QA_SIGNOFF.md` | Created on 2026-07-24; execution pending real extension/mobile/hardware wallets |
+| P3 docs/website QA sign-off checklist | `Review/P3_DOCS_WEBSITE_QA_SIGNOFF.md` | Created on 2026-07-24; website build passed for this pass |
 
 ## Ledger Hardware QA
 
@@ -103,3 +104,4 @@
 - P1 product UI QA checklist and going-live UI guidance were added on 2026-07-24.
 - P2 wallet/adapter QA sign-off checklist was added on 2026-07-24 for extension collision, WalletConnect mobile, and Ledger hardware execution.
 - P1 docs verification passed on 2026-07-24: website build and examples typecheck.
+- P3 docs/website QA checklist and wallet contribution docs were added on 2026-07-24.

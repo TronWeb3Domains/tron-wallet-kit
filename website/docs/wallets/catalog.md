@@ -1,21 +1,24 @@
 # Wallet catalog
 
 The wallets TRON Wallet Kit knows about, how each one connects, and its support level. The connect
-modal only shows wallets that are ready, so users never see a wallet that can't actually connect.
+modal can show installed, QR, hardware, and unavailable states depending on your `walletList`
+configuration. Use the support level as a release signal, not as a guarantee that every wallet is
+available in every browser.
 
 ## Support levels
 
-<span class="twk-badge live">live</span> verified with the real wallet — shown by default. &nbsp;
-<span class="twk-badge qa">qa</span> expected to work, still under QA — shown but flagged. &nbsp;
-<span class="twk-badge qa">qa</span> descriptor exists — hidden until verified.
+<span class="twk-badge live">live</span> verified with the real wallet for the primary flow. &nbsp;
+<span class="twk-badge beta">beta</span> built in, but still needs broader device/collision QA. &nbsp;
+<span class="twk-badge qa">qa</span> descriptor exists, but keep it out of strict production lists until verified.
 
 <WalletTable />
 
 ::: trx TRON namespace note
-Many TRON wallets inject into the shared `window.tronLink` / `window.tron` globals, so several
-installed wallets can overwrite each other. The kit detects each wallet by its own marker (and by
-the collision-free 6963 announcement) rather than the bare global, then falls back to TronLink last.
-See [Troubleshooting](/docs/troubleshooting) for the "not installed" and namespace-collision cases.
+Many TRON wallets inject into shared `window.tronLink`, `window.tron`, or `window.tronWeb` globals,
+so several installed wallets can overwrite each other. The kit detects each wallet by its own marker
+or collision-free 6963 announcement where available, then keeps connect quirks inside the selected
+wallet descriptor. See [Troubleshooting](/docs/troubleshooting) for "not installed" and namespace
+collision cases.
 :::
 
 ## Enabling and disabling wallets
@@ -32,5 +35,14 @@ const config = getDefaultConfig({
 });
 ```
 
-Adding a brand-new wallet (as a first party or a third party) is covered in the adapter
-[Overview](/docs/adapters/overview).
+Adding a brand-new wallet as a first party or a third party is covered in
+[Adapters overview](/docs/adapters/overview) and [Contributing wallets](/docs/adapters/contributing).
+
+## Production gating
+
+For a production dApp, keep your `featuredWallets` list short and live-test each featured wallet on
+your production origin. Wallets marked `beta` or `qa` can still be enabled for internal testing, but
+should not be the only way a user can connect.
+
+WalletConnect is a transport entry. After a mobile wallet connects, the connected account UI may use
+the wallet metadata returned by the session when the wallet provides it.

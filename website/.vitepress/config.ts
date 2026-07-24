@@ -96,6 +96,7 @@ export default defineConfig({
         text: "Adapters",
         items: [
           { text: "Overview", link: "/docs/adapters/overview" },
+          { text: "Contributing wallets", link: "/docs/adapters/contributing" },
           { text: "TronLink", link: "/docs/adapters/tronlink" },
           { text: "WalletConnect", link: "/docs/adapters/walletconnect" },
         ],

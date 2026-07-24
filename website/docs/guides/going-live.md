@@ -49,4 +49,9 @@ pnpm test
 pnpm --filter @tron-wallet-kit/website build
 ```
 
-Before npm publish, also run the P0 live wallet checklist in `Review/P0_LIVE_QA_SIGNOFF.md`.
+Before npm publish, also run:
+
+- `Review/P0_LIVE_QA_SIGNOFF.md` for real-wallet release blockers.
+- `Review/P1_PRODUCT_UI_QA_CHECKLIST.md` for product UI screenshots and interaction QA.
+- `Review/P2_WALLET_ADAPTER_QA_SIGNOFF.md` for wallet/adapter collision, WalletConnect, and Ledger QA.
+- `Review/P3_DOCS_WEBSITE_QA_SIGNOFF.md` for website navigation, docs accuracy, and public copy QA.

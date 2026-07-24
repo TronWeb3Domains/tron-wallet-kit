@@ -173,7 +173,8 @@ component and mount it below your layout. A dedicated Next guide is coming.
 ## Local example
 
 ```sh
-pnpm dev:vanilla
+pnpm dev:examples
 ```
 
-Open `http://127.0.0.1:5173/`.
+Open `https://127.0.0.1:5174/react-basic/` when using the HTTPS dev mode, or
+`http://127.0.0.1:5174/react-basic/` for wallets that allow HTTP localhost.

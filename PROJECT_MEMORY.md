@@ -5719,3 +5719,14 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Verification:
   - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
   - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed with 76 tests.
+
+## 2026-07-24 P3 Docs / Website Prep
+
+- Added `Review/P3_DOCS_WEBSITE_QA_SIGNOFF.md` as the docs/website execution checklist for public launch readiness.
+- Added `website/docs/adapters/contributing.md` and linked it from the VitePress sidebar plus adapter overview.
+- Updated the public wallet catalog so support levels and platforms match the current descriptor registry and P2 QA policy.
+- Rewrote troubleshooting copy for Trust/Binance namespace-only detection, WalletConnect metadata fallback, Gate HTTPS injection, Ledger hardware requirements, and TronGrid rate limits.
+- Updated Going Live docs to reference P0/P1/P2/P3 sign-off files.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/website build` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.

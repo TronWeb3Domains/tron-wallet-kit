@@ -17,8 +17,9 @@ connect logic stays isolated per wallet.
 
 ## Contributing a wallet
 
-Two supported paths — both use the same `WalletDescriptor` shape, so a Path B package can later be
-upstreamed as a Path A PR unchanged.
+Two supported paths use the same `WalletDescriptor` shape, so a Path B package can later be
+upstreamed as a Path A PR unchanged. The full checklist lives in
+[Contributing wallets](/docs/adapters/contributing).
 
 ### Path A — PR into the kit (ship as a built-in)
 
