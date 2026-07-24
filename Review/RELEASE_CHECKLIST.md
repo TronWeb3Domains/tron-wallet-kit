@@ -79,6 +79,9 @@
 | P2 wallet/adapter QA sign-off checklist | `Review/P2_WALLET_ADAPTER_QA_SIGNOFF.md` | Created on 2026-07-24; execution pending real extension/mobile/hardware wallets |
 | P3 docs/website QA sign-off checklist | `Review/P3_DOCS_WEBSITE_QA_SIGNOFF.md` | Created on 2026-07-24; website build passed for this pass |
 | Generated API reference | `pnpm docs:api`; `/docs/api/generated` | Added on 2026-07-24; website build passed for this pass |
+| Release 0.1.0 final local gate | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` | Passed on 2026-07-24 before npm publish |
+| Release 0.1.0 final publish dry-run | `pnpm -r publish --dry-run --no-git-checks --tag latest` | Passed on 2026-07-24 for all 10 public packages |
+| Browser IIFE optional SDK boundary | `pnpm --filter @tron-wallet-kit/browser build` | Passed on 2026-07-24 after keeping `@gasfree/gasfree-sdk` and `tronweb` out of the IIFE bundle |
 
 ## Ledger Hardware QA
 
@@ -107,3 +110,4 @@
 - P1 docs verification passed on 2026-07-24: website build and examples typecheck.
 - P3 docs/website QA checklist and wallet contribution docs were added on 2026-07-24.
 - Generated API reference script and `/docs/api/generated` were added on 2026-07-24.
+- Final 0.1.0 local release gate passed on 2026-07-24: lint, typecheck, test, build, and recursive publish dry-run.

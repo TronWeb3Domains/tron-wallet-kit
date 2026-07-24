@@ -15,7 +15,23 @@ mkdirSync(distDir, { recursive: true });
 
 const result = spawnSync(
   "pnpm",
-  ["exec", "tsup", "src/index.ts", "--format", "iife", "--global-name", "TronWalletKit", "--platform", "browser", "--minify", "--sourcemap"],
+  [
+    "exec",
+    "tsup",
+    "src/index.ts",
+    "--format",
+    "iife",
+    "--global-name",
+    "TronWalletKit",
+    "--platform",
+    "browser",
+    "--external",
+    "@gasfree/gasfree-sdk",
+    "--external",
+    "tronweb",
+    "--minify",
+    "--sourcemap"
+  ],
   {
     cwd: packageDir,
     shell: process.platform === "win32",

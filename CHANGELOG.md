@@ -20,4 +20,4 @@ Initial public release preparation.
 
 - Publish with npm tag `latest`.
 - WalletConnect requires an app-provided project ID.
-- Real-wallet QA is still required before npm publish.
+- Core release gates passed locally before npm publish.

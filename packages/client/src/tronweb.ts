@@ -50,6 +50,7 @@ const balanceTronWebPathsByWallet: Record<string, readonly string[]> = {
 
 const sharedTronWebByHost = new Map<string, TronDomainTronWeb>();
 let sharedTronWebConfig: SharedTronWebConfig = {};
+const TRONWEB_PACKAGE = "tronweb";
 
 export function configureSharedTronWeb(config: SharedTronWebConfig | undefined): void {
   sharedTronWebConfig = config ?? {};
@@ -89,7 +90,7 @@ function isBalanceTronWeb(value: unknown): value is BalanceTronWeb {
 }
 
 async function loadTronWebConstructor(): Promise<TronWebConstructor> {
-  const tronWebModule = (await import("tronweb")) as unknown as { TronWeb?: TronWebConstructor; default?: { TronWeb?: TronWebConstructor } | TronWebConstructor };
+  const tronWebModule = (await import(TRONWEB_PACKAGE)) as unknown as { TronWeb?: TronWebConstructor; default?: { TronWeb?: TronWebConstructor } | TronWebConstructor };
   const defaultExport = tronWebModule.default;
   const TronWeb = tronWebModule.TronWeb ?? (typeof defaultExport === "function" ? defaultExport : defaultExport?.TronWeb);
   if (!TronWeb) throw new WalletKitError("CONFIGURATION_ERROR", "Unable to load TronWeb constructor.");

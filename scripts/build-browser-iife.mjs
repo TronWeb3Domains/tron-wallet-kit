@@ -13,7 +13,22 @@ const iifeMap = join(distDir, "tron-wallet-kit.iife.js.map");
 
 const result = spawnSync(
   "pnpm",
-  ["exec", "tsup", "src/index.ts", "--format", "iife", "--global-name", "TronWalletKit", "--platform", "browser", "--sourcemap"],
+  [
+    "exec",
+    "tsup",
+    "src/index.ts",
+    "--format",
+    "iife",
+    "--global-name",
+    "TronWalletKit",
+    "--platform",
+    "browser",
+    "--external",
+    "@gasfree/gasfree-sdk",
+    "--external",
+    "tronweb",
+    "--sourcemap"
+  ],
   {
     cwd: packageDir,
     shell: process.platform === "win32",

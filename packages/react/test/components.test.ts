@@ -227,6 +227,9 @@ describe("React wallet surfaces", () => {
             {
               id: "tx-1",
               label: "Send TRX",
+              kind: "sent",
+              amountText: "-1 TRX",
+              subtitle: "To TReceiver...2Zp9",
               status: "success",
               txHash: "abcdef1234567890abcdef1234567890abcdef12"
             }
@@ -239,7 +242,9 @@ describe("React wallet surfaces", () => {
     expect(html).toContain("88.5 TRX");
     expect(html).not.toContain("nile");
     expect(html).toContain("twk-qr-slot");
-    expect(html).toContain("Send TRX");
+    expect(html).toContain("Sent");
+    expect(html).toContain("-1 TRX");
+    expect(html).toContain("To TReceiver...2Zp9");
   });
 });
 

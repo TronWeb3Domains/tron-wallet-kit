@@ -10,6 +10,7 @@ import type {
 } from "./types";
 
 const GASFREE_USDT_MAINNET = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
+const GASFREE_SDK_PACKAGE = "@gasfree/gasfree-sdk";
 const GASFREE_CHAIN_IDS: Record<string, number> = {
   mainnet: Number("0x2b6653dc"),
   nile: Number("0xcd8690dc"),
@@ -272,7 +273,7 @@ function normalizeGasFreeConfig(config: WalletClientGasFreeConfig | undefined): 
 
 async function createGasFree(network: TronNetwork, config: ReturnType<typeof normalizeGasFreeConfig>) {
   await ensureGasFreeSdkGlobals();
-  const { TronGasFree } = await import("@gasfree/gasfree-sdk") as GasFreeSdkModule;
+  const { TronGasFree } = await import(GASFREE_SDK_PACKAGE) as GasFreeSdkModule;
   const defaultChainId = GASFREE_CHAIN_IDS.mainnet;
   if (!defaultChainId) throw new Error("GasFree mainnet chain id is not configured.");
   const chainId = normalizeChainId(config.chainId ?? GASFREE_CHAIN_IDS[String(network.id)] ?? defaultChainId);

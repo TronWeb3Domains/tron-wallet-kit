@@ -179,3 +179,14 @@ Release target updated to **`0.1.0`** for the first stable package line.
 - `[x]` Added `pnpm docs:api` using `scripts/generate-api-reference.mjs`.
 - `[x]` Generated `/docs/api/generated` from the public package entrypoints.
 - `[x]` Linked generated exports from the VitePress API sidebar and client API page.
+
+## Implementation update - 2026-07-24 Final Publish Gate
+
+- `[x]` Fixed React account-panel test expectations for the current Activity/recent transaction taxonomy.
+- `[x]` Kept the browser/CDN IIFE release build free of bundled `@gasfree/gasfree-sdk` and `tronweb` Node-only transitive modules by making those fallback imports bundler-lazy and external in the IIFE scripts.
+- `[x]` `pnpm --filter @tron-wallet-kit/react test -- --run --reporter=dot` passed.
+- `[x]` `pnpm test` passed.
+- `[x]` `pnpm typecheck` passed.
+- `[x]` `pnpm lint` passed.
+- `[x]` `pnpm build` passed.
+- `[x]` `pnpm -r publish --dry-run --no-git-checks --tag latest` passed for all 10 public packages.

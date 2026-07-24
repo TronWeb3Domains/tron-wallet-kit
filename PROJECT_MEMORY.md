@@ -5741,3 +5741,17 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Verification:
   - `pnpm docs:api` passed.
   - `pnpm --filter @tron-wallet-kit/website build` passed.
+
+## 2026-07-24 Npm Publish Gate Prep
+
+- Fixed the React account-panel SSR test after the Activity/recent transaction taxonomy upgrade so it asserts explicit transaction kind, amount, and subtitle metadata.
+- Kept browser/CDN publishing viable by making GasFree SDK and TronWeb fallback imports truly lazy for bundlers and externalizing them from IIFE build scripts.
+- Browser IIFE release build now includes `tron-wallet-kit.iife.js` and `tron-wallet-kit.iife.min.js` without bundling `@gasfree/gasfree-sdk` or `tronweb` Node-only transitive modules.
+- Updated `CHANGELOG.md` release note wording from pre-publish QA language to local-gate status.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/react test -- --run --reporter=dot` passed.
+  - `pnpm test` passed.
+  - `pnpm typecheck` passed.
+  - `pnpm lint` passed.
+  - `pnpm build` passed.
+  - `pnpm -r publish --dry-run --no-git-checks --tag latest` passed for all 10 public packages.
