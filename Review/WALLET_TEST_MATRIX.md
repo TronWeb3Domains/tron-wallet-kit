@@ -4,6 +4,8 @@
 
 Track expected wallet behavior for MVP and future adapters.
 
+P2 live wallet execution is tracked in `Review/P2_WALLET_ADAPTER_QA_SIGNOFF.md`. This matrix keeps historical unit/mock coverage plus high-level status; use the P2 sign-off file for real extension, WalletConnect, collision, and Ledger pass criteria.
+
 ## Wallets
 
 | Wallet | Package | Connect | Address | Balance | signMessage | signTransaction | Send TRX | Network Handling | Notes |

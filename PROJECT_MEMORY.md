@@ -5709,3 +5709,13 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Verification:
   - `pnpm --filter @tron-wallet-kit/website build` passed.
   - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+
+## 2026-07-24 P2 Wallet / Adapter QA Prep
+
+- Added `Review/P2_WALLET_ADAPTER_QA_SIGNOFF.md` as the execution plan for real-wallet P2 QA.
+- The plan separates lightweight installed detection from on-demand connect/sign behavior so the UI can stay responsive without claiming namespace-only wallets are usable TRON providers.
+- Covered extension collision QA, first-connect/autoconnect checks, WalletConnect QR lifecycle, Ledger hardware sign-off, and wallet-by-wallet promotion criteria.
+- Linked the new P2 sign-off from `Review/WALLET_TEST_MATRIX.md`, `Review/RELEASE_CHECKLIST.md`, and `Review/RELEASE_READINESS.md`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/client typecheck` passed.
+  - `pnpm --filter @tron-wallet-kit/client test -- --run --reporter=dot` passed with 76 tests.

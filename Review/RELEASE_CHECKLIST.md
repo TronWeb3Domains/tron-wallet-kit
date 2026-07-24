@@ -76,6 +76,7 @@
 | P1 product UI QA checklist | `Review/P1_PRODUCT_UI_QA_CHECKLIST.md` | Created on 2026-07-24; execution pending screenshots/manual visual QA |
 | P1 website docs build | `pnpm --filter @tron-wallet-kit/website build` | Passed on 2026-07-24 |
 | P1 examples typecheck | `pnpm --filter @tron-wallet-kit/examples typecheck` | Passed on 2026-07-24 |
+| P2 wallet/adapter QA sign-off checklist | `Review/P2_WALLET_ADAPTER_QA_SIGNOFF.md` | Created on 2026-07-24; execution pending real extension/mobile/hardware wallets |
 
 ## Ledger Hardware QA
 
@@ -100,4 +101,5 @@
 - 0.1.0 latest prep passed on 2026-07-21: `pnpm typecheck` and `pnpm -r publish --dry-run --no-git-checks --tag latest`.
 - P0 icon brand/source policy and live QA sign-off checklist were added on 2026-07-24.
 - P1 product UI QA checklist and going-live UI guidance were added on 2026-07-24.
+- P2 wallet/adapter QA sign-off checklist was added on 2026-07-24 for extension collision, WalletConnect mobile, and Ledger hardware execution.
 - P1 docs verification passed on 2026-07-24: website build and examples typecheck.

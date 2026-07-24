@@ -66,7 +66,7 @@ Legend: `[ ]` todo · `[~]` partial · `[x]` done.
 
 ## P2 — post-launch
 
-- `[ ]` More wallets (fill `[QA]` rows after live QA), MathWallet promotion.
+- `[ ]` More wallets (fill `[QA]` rows after live QA), MathWallet promotion. Execution checklist: `Review/P2_WALLET_ADAPTER_QA_SIGNOFF.md`.
 - `[ ]` More examples (Next app router, Vue), plus GIF/video walkthroughs.
 - `[ ]` Additional i18n locales.
 - `[ ]` Opt-in analytics / telemetry for adoption insight.
@@ -159,3 +159,9 @@ Release target updated to **`0.1.0`** for the first stable package line.
 - `[x]` Added `Review/P1_PRODUCT_UI_QA_CHECKLIST.md` for Product/UI screenshot and interaction sign-off.
 - `[x]` Updated website GitHub links to the real repository URL.
 - `[x]` Updated Going Live docs with GasFree, Activity/recent transactions, and P0/P1 checklist references.
+
+## Implementation update - 2026-07-24 P2 Wallet QA Prep
+
+- `[x]` Added `Review/P2_WALLET_ADAPTER_QA_SIGNOFF.md` as the P2 execution plan for wallet detection, provider collision, extension connect/sign, WalletConnect QR, and Ledger hardware QA.
+- `[x]` Linked P2 sign-off from `Review/WALLET_TEST_MATRIX.md` and `Review/RELEASE_CHECKLIST.md`.
+- `[ ]` Execute P2 with real extension/mobile/hardware wallets before promoting QA-critical wallets such as MathWallet or Ledger into broader default recommendations.
