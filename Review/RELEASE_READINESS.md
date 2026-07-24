@@ -53,6 +53,7 @@ Legend: `[ ]` todo · `[~]` partial · `[x]` done.
 - `[ ]` Adapter contract + **contribution guide** (Path A PR / Path B external package) from `WALLET_ADAPTER_ORG_SPEC`.
 - `[ ]` Troubleshooting page (namespace collision, "not installed", WC "cancelled in wallet", first-connect).
 - `[ ]` API reference (typedoc) generated from the public types.
+- `[x]` Product UI QA checklist created for React Basic and website playground/theme builder visual sign-off.
 
 ### Visual live demo (deployed)
 - `[ ]` Deploy a demo site: real connect flow, all shipped wallets, **light/dark theme switch**, account panel, and a **testnet transaction** demo.
@@ -155,3 +156,6 @@ Release target updated to **`0.1.0`** for the first stable package line.
 - `[x]` `pnpm -r publish --dry-run --no-git-checks --tag latest` passed for all 10 public packages.
 - `[x]` Added `Review/WALLET_ICON_BRAND_SOURCE_NOTES.md` for built-in icon source/brand policy.
 - `[x]` Added `Review/P0_LIVE_QA_SIGNOFF.md` so the remaining real-wallet publish blockers have explicit pass criteria.
+- `[x]` Added `Review/P1_PRODUCT_UI_QA_CHECKLIST.md` for Product/UI screenshot and interaction sign-off.
+- `[x]` Updated website GitHub links to the real repository URL.
+- `[x]` Updated Going Live docs with GasFree, Activity/recent transactions, and P0/P1 checklist references.

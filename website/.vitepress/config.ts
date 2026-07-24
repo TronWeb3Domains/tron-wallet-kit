@@ -22,7 +22,7 @@ export default defineConfig({
       { text: "Wallets", link: "/docs/wallets/catalog" },
       { text: "Playground", link: "/docs/playground" },
       { text: "Theme builder", link: "/docs/theme-builder" },
-      { text: "GitHub", link: "https://github.com/" },
+      { text: "GitHub", link: "https://github.com/TronWeb3Domains/tron-wallet-kit" },
     ],
     sidebar: [
       {
@@ -119,7 +119,7 @@ export default defineConfig({
         ],
       },
     ],
-    socialLinks: [{ icon: "github", link: "https://github.com/" }],
+    socialLinks: [{ icon: "github", link: "https://github.com/TronWeb3Domains/tron-wallet-kit" }],
     search: { provider: "local" },
   },
   vite: {

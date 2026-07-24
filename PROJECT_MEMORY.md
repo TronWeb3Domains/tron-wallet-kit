@@ -5699,3 +5699,13 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Added `Review/WALLET_ICON_BRAND_SOURCE_NOTES.md` to document built-in wallet icon inventory, local source files, and brand/trademark usage policy for generated data URIs.
 - Added `Review/P0_LIVE_QA_SIGNOFF.md` with explicit pass criteria for WalletConnect QR, fixed-bug reverification, transaction reject/success paths, and optional Ledger hardware QA.
 - Updated `Review/RELEASE_CHECKLIST.md` and `Review/RELEASE_READINESS.md` so icon/source policy is closed and remaining publish blockers are clearly the real-wallet QA sign-off items.
+
+## 2026-07-24 P1 Product UI QA Prep
+
+- Added `Review/P1_PRODUCT_UI_QA_CHECKLIST.md` for React Basic and website visual QA across light/dark/mobile, connect/all-wallets/QR/account/GasFree/activity/transaction-preview/auth views.
+- Updated the website docs GitHub nav/social link to `https://github.com/TronWeb3Domains/tron-wallet-kit`.
+- Updated Going Live docs with GasFree, Activity/recent transactions, and P0/P1 checklist references.
+- Added a playground maintainer note that browser/IIFE rebuilds should be reserved for explicit browser, website demo, or npm publish passes.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/website build` passed.
+  - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.

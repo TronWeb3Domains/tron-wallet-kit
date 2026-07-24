@@ -32,4 +32,5 @@ Ready to integrate? Start with the [Quick start](/docs/quick-start).
 This page loads `public/tron-wallet-kit.iife.min.js` (the browser IIFE) — no npm dependency needed.
 After changing the SDK, rebuild `@tron-wallet-kit/browser` and copy the fresh IIFE into
 `website/public/`. Set `window.__TWK_WC_PROJECT_ID__` to enable WalletConnect in the playground.
+For the current workflow, rebuild this browser asset only during an explicit browser, website demo, or npm publish pass.
 :::

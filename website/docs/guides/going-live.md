@@ -35,6 +35,9 @@ Use this checklist before shipping a production TRON dApp integration.
 - Test portal-to-body rendering.
 - Test mobile bottom sheet behavior on large phones.
 - Test account panel, address QR, copy address, and disconnect.
+- Test GasFree mode if enabled: header chip, general-wallet return, address QR, and fallback states.
+- Test recent transactions and Activity with mixed transaction types, pending, failed, and confirmed rows.
+- Keep the internal product UI sign-off checklist in sync with `Review/P1_PRODUCT_UI_QA_CHECKLIST.md`.
 
 ## Release gates
 
@@ -45,3 +48,5 @@ pnpm typecheck
 pnpm test
 pnpm --filter @tron-wallet-kit/website build
 ```
+
+Before npm publish, also run the P0 live wallet checklist in `Review/P0_LIVE_QA_SIGNOFF.md`.

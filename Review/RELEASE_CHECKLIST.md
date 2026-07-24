@@ -73,6 +73,9 @@
 | Release 0.1.0 typecheck | `pnpm typecheck` | Passed on 2026-07-21 |
 | Release 0.1.0 publish dry-run | `pnpm -r publish --dry-run --no-git-checks --tag latest` | Passed on 2026-07-21 for all 10 public packages |
 | P0 live QA sign-off checklist | `Review/P0_LIVE_QA_SIGNOFF.md` | Created on 2026-07-24; execution pending real wallets/devices |
+| P1 product UI QA checklist | `Review/P1_PRODUCT_UI_QA_CHECKLIST.md` | Created on 2026-07-24; execution pending screenshots/manual visual QA |
+| P1 website docs build | `pnpm --filter @tron-wallet-kit/website build` | Passed on 2026-07-24 |
+| P1 examples typecheck | `pnpm --filter @tron-wallet-kit/examples typecheck` | Passed on 2026-07-24 |
 
 ## Ledger Hardware QA
 
@@ -96,3 +99,5 @@
 - First stable package line is prepared for npm tag `latest`; run the final dry-run and live WalletConnect QA before publishing.
 - 0.1.0 latest prep passed on 2026-07-21: `pnpm typecheck` and `pnpm -r publish --dry-run --no-git-checks --tag latest`.
 - P0 icon brand/source policy and live QA sign-off checklist were added on 2026-07-24.
+- P1 product UI QA checklist and going-live UI guidance were added on 2026-07-24.
+- P1 docs verification passed on 2026-07-24: website build and examples typecheck.
