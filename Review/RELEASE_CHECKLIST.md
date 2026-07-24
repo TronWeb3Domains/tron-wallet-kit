@@ -82,6 +82,7 @@
 | Release 0.1.0 final local gate | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` | Passed on 2026-07-24 before npm publish |
 | Release 0.1.0 final publish dry-run | `pnpm -r publish --dry-run --no-git-checks --tag latest` | Passed on 2026-07-24 for all 10 public packages |
 | Browser IIFE optional SDK boundary | `pnpm --filter @tron-wallet-kit/browser build` | Passed on 2026-07-24 after keeping `@gasfree/gasfree-sdk` and `tronweb` out of the IIFE bundle |
+| Release 0.1.0 npm publish | Per-package `npm publish`/`pnpm publish` with `--no-provenance` | Accepted by npm on 2026-07-24 for all 10 packages; `npm access get status` reports `public` |
 
 ## Ledger Hardware QA
 
@@ -111,3 +112,4 @@
 - P3 docs/website QA checklist and wallet contribution docs were added on 2026-07-24.
 - Generated API reference script and `/docs/api/generated` were added on 2026-07-24.
 - Final 0.1.0 local release gate passed on 2026-07-24: lint, typecheck, test, build, and recursive publish dry-run.
+- 0.1.0 npm publish was accepted on 2026-07-24 for all 10 public packages. Local publish used `--no-provenance` because npm automatic provenance requires a supported CI provider.

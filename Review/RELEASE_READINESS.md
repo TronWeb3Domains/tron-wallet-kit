@@ -190,3 +190,7 @@ Release target updated to **`0.1.0`** for the first stable package line.
 - `[x]` `pnpm lint` passed.
 - `[x]` `pnpm build` passed.
 - `[x]` `pnpm -r publish --dry-run --no-git-checks --tag latest` passed for all 10 public packages.
+- `[x]` Recursive publish with provenance failed before publishing because npm automatic provenance is not supported from this local environment.
+- `[x]` Published all 10 packages at `0.1.0` with `--no-provenance` under npm tag `latest`.
+- `[x]` `npm access get status <package>` reports `public` for all 10 packages.
+- `[~]` `npm view` returned 404 immediately after publish even though npm logs show `PUT 200`, access status is `public`, and `npm pack @tron-wallet-kit/core@0.1.0 --dry-run` succeeds. Treat as registry document propagation/cache until rechecked.

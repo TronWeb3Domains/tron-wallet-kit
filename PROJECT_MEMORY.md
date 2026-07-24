@@ -5748,6 +5748,9 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Kept browser/CDN publishing viable by making GasFree SDK and TronWeb fallback imports truly lazy for bundlers and externalizing them from IIFE build scripts.
 - Browser IIFE release build now includes `tron-wallet-kit.iife.js` and `tron-wallet-kit.iife.min.js` without bundling `@gasfree/gasfree-sdk` or `tronweb` Node-only transitive modules.
 - Updated `CHANGELOG.md` release note wording from pre-publish QA language to local-gate status.
+- Published 10 public npm packages at `0.1.0` under `latest`.
+- Local npm publish had to use `--no-provenance` because automatic npm provenance is not supported outside a supported CI provider; package manifests still keep provenance enabled for future CI-backed releases.
+- Verified npm access status is `public` for all 10 packages. `npm view` returned 404 immediately after publish even though npm accepted `PUT 200` and `npm pack @tron-wallet-kit/core@0.1.0 --dry-run` succeeded, so registry document visibility may lag.
 - Verification:
   - `pnpm --filter @tron-wallet-kit/react test -- --run --reporter=dot` passed.
   - `pnpm test` passed.
@@ -5755,3 +5758,6 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm lint` passed.
   - `pnpm build` passed.
   - `pnpm -r publish --dry-run --no-git-checks --tag latest` passed for all 10 public packages.
+  - `pnpm -r publish --no-git-checks --tag latest` failed before publishing because local automatic provenance was unsupported.
+  - `npm publish`/`pnpm publish` per package with `--no-provenance` succeeded for all 10 packages.
+  - `npm access get status <package>` returned `public` for all 10 packages.
