@@ -52,7 +52,7 @@ Legend: `[ ]` todo · `[~]` partial · `[x]` done.
 - `[x]` Wallet catalog page: supported wallets, platforms, detection/connect notes, status badges.
 - `[x]` Adapter contract + **contribution guide** (Path A PR / Path B external package) from `WALLET_ADAPTER_ORG_SPEC`.
 - `[x]` Troubleshooting page (namespace collision, "not installed", WC "cancelled in wallet", first-connect).
-- `[ ]` API reference (typedoc) generated from the public types. Manual API pages exist; generated typedoc remains open.
+- `[x]` Generated API reference from public package entrypoints. Manual API pages provide usage guidance; full typedoc-style signatures can be upgraded later.
 - `[x]` Product UI QA checklist created for React Basic and website playground/theme builder visual sign-off.
 
 ### Visual live demo (deployed)
@@ -173,3 +173,9 @@ Release target updated to **`0.1.0`** for the first stable package line.
 - `[x]` Updated wallet catalog copy/table to match the current descriptor registry and P2 support policy.
 - `[x]` Updated troubleshooting with Trust/Binance namespace-only gating, WalletConnect metadata fallback, Gate HTTPS, and Ledger hardware notes.
 - `[ ]` Execute manual website QA on `https://127.0.0.1:5175/` before public docs sign-off.
+
+## Implementation update - 2026-07-24 Generated API Reference
+
+- `[x]` Added `pnpm docs:api` using `scripts/generate-api-reference.mjs`.
+- `[x]` Generated `/docs/api/generated` from the public package entrypoints.
+- `[x]` Linked generated exports from the VitePress API sidebar and client API page.

@@ -112,6 +112,7 @@ export default defineConfig({
       {
         text: "API reference",
         items: [
+          { text: "Generated exports", link: "/docs/api/generated" },
           { text: "Client", link: "/docs/api/client" },
           { text: "Manager", link: "/docs/api/manager" },
           { text: "UI", link: "/docs/api/ui" },

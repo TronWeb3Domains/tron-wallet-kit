@@ -10,6 +10,7 @@
     "build": "pnpm -r --if-present build",
     "dev:examples": "pnpm --filter @tron-wallet-kit/examples dev",
     "dev:website": "pnpm --filter @tron-wallet-kit/website dev",
+    "docs:api": "node scripts/generate-api-reference.mjs",
     "icons:wallets": "node scripts/gen-wallet-icons.mjs",
     "wallets:validate": "node scripts/validate-wallet-registry.mjs",
     "test": "pnpm -r --if-present test",

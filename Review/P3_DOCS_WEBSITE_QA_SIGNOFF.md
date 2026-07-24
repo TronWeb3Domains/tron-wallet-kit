@@ -42,6 +42,7 @@ This checklist tracks the documentation and website pass for the "TRON-native Co
 | Reference | `/docs/guides/going-live` | Production checklist | Updated in this pass |
 | Reference | `/docs/troubleshooting` | Known wallet/RPC issues | Updated in this pass |
 | Reference | `/docs/migration-from-tronwallet-adapter` | Migration guide | Present |
+| API reference | `/docs/api/generated` | Generated package export inventory | Added in this pass |
 
 ## URL Rules
 
@@ -75,7 +76,7 @@ Run against `https://127.0.0.1:5175/` when the website server is requested.
 
 ## Remaining P3 Work
 
-- Generate typed API reference or add an explicit "manual API reference" status page before a broader public launch.
+- Upgrade the generated export inventory to full typedoc-style signatures if the public API grows beyond what the manual API pages can explain.
 - Add real live-demo screenshots or short video walkthroughs after P0/P1/P2 QA sign-off.
 - Add a deployed demo URL once hosting is ready.
 - Expand framework docs with Next App Router and vanilla TypeScript copy-paste examples after npm publish.

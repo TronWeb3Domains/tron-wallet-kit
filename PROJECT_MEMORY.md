@@ -5730,3 +5730,14 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Verification:
   - `pnpm --filter @tron-wallet-kit/website build` passed.
   - `pnpm --filter @tron-wallet-kit/examples typecheck` passed.
+
+## 2026-07-24 Generated API Reference
+
+- Chose generated API reference before demo deployment because it closes the remaining release-readiness docs gap with lower operational risk.
+- Added `scripts/generate-api-reference.mjs`, using the TypeScript compiler API already in the workspace to scan public package entrypoints.
+- Added root script `pnpm docs:api`.
+- Generated `website/docs/api/generated.md` and linked it from the API sidebar plus the client API page.
+- Updated P3/release docs to treat generated export inventory as closed for launch, with full typedoc-style signatures deferred as a future polish step.
+- Verification:
+  - `pnpm docs:api` passed.
+  - `pnpm --filter @tron-wallet-kit/website build` passed.

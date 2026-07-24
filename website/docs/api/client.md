@@ -3,6 +3,9 @@
 `@tron-wallet-kit/client` is the framework-agnostic entrypoint. `createWalletKit(config)` returns a
 `WalletKit` that owns the modal, account panel, session, and transaction helpers.
 
+For a generated list of public exports across every package, see
+[Generated exports](/docs/api/generated).
+
 ```ts
 import { createWalletKit } from "@tron-wallet-kit/client";
 
