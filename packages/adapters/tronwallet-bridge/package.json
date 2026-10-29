@@ -1,6 +1,6 @@
 {
   "name": "@tron-wallet-kit/adapter-tronwallet-bridge",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Bridge runtime @tronweb3/tronwallet-adapter instances into TRON Wallet Kit.",
   "license": "MIT",
   "type": "module",

@@ -1,6 +1,6 @@
 {
   "name": "@tron-wallet-kit/client",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Headless client orchestration for TRON Wallet Kit.",
   "license": "MIT",
   "type": "module",

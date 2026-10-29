@@ -3,6 +3,7 @@ import { defineConfig } from "vitepress";
 
 export default defineConfig({
   title: "TRON Wallet Kit",
+  base: "/tron-wallet-kit/",
   description: "The best way to connect a TRON wallet — a polished, TRON-native wallet UX kit for dApps.",
   cleanUrls: true,
   head: [

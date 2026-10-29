@@ -8,6 +8,8 @@ function getTrustInjectedProvider(): InjectedTronProvider | undefined {
   const trustwallet = safeGetProperty(globals, "trustwallet");
   if (!trustwallet || typeof trustwallet !== "object") return undefined;
   const wallet = trustwallet as Record<string, unknown>;
+  const mobileProvider = asUsableTrustProvider(safeGetProperty(wallet, "tron"));
+  if (/Android|iPhone|iPad|iPod/i.test(globalThis.navigator?.userAgent ?? "") && mobileProvider) return mobileProvider;
   return asUsableTrustProvider(safeGetProperty(wallet, "tronLink")) ?? asUsableTrustProvider(safeGetProperty(wallet, "tron"));
 }
 

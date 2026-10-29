@@ -231,7 +231,10 @@ export function createLazyTronwalletBridgeAdapter(options: LazyTronwalletBridgeA
   };
 
   const loadInner = async (): Promise<TronwalletBridgeInnerAdapter> => {
-    innerPromise ??= Promise.resolve(options.importer());
+    innerPromise ??= Promise.resolve().then(options.importer).catch((error) => {
+      innerPromise = undefined;
+      throw error;
+    });
     return innerPromise;
   };
 
@@ -330,7 +333,7 @@ export function normalizeTronwalletBridgeError(error: unknown, fallbackCode: str
   const name = getErrorString(error, "name");
   const message = getErrorString(error, "message") ?? fallbackMessage;
   const code = getErrorCode(error);
-  if (isDynamicImportError(message)) return new WalletKitError(fallbackCode, fallbackMessage, error);
+  if (isDynamicImportError(message)) return new WalletKitError("CONFIGURATION_ERROR", message, error);
   if (isUserRejectedError(code, message)) return new WalletKitError("USER_REJECTED", message, error);
   if (name === "WalletNotFoundError") return new WalletKitError("WALLET_NOT_FOUND", message, error);
   if (name === "WalletDisconnectedError") return new WalletKitError("NO_SESSION", message, error);
@@ -341,7 +344,7 @@ export function normalizeTronwalletBridgeError(error: unknown, fallbackCode: str
 }
 
 function isDynamicImportError(message: string): boolean {
-  return /dynamically imported module|importing a module script failed|failed to fetch|cannot find module/i.test(message);
+  return /dynamically imported module|importing a module script failed|failed to fetch|failed to resolve module|cannot find module/i.test(message);
 }
 
 function subscribeToInnerEvents(inner: TronwalletBridgeInnerAdapter, options: ConnectOptions): EventCleanup | undefined {

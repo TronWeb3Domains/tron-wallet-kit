@@ -103,15 +103,20 @@ function createConnectingHtml(viewModel: ConnectModalViewModel & { labels: Conne
   const wallet = resolveActiveWallet(viewModel.wallets, viewModel.activeWalletId ?? viewModel.selectedWalletId);
   if (!wallet) return createFeaturedHtml(viewModel);
   const installUrl = wallet.downloadUrl ?? wallet.homepage;
-  const installRow = createInstallRowHtml(wallet.name, installUrl, labels);
+  const hardware = isHardwareWallet(wallet);
+  const installRow = hardware ? "" : createInstallRowHtml(wallet.name, installUrl, labels);
+  const pendingTitle = hardware ? `Connect your ${wallet.name}` : `${labels.continueInWallet} ${wallet.name}`;
+  const pendingMessage = hardware
+    ? "Connect and unlock your device, open the TRON app, then select it in the browser device chooser and approve the address on your device."
+    : labels.acceptRequest;
   const hasError = Boolean(viewModel.errorMessage);
   const displayError = hasError ? resolveConnectErrorDisplay(viewModel.errorMessage, wallet, viewModel.errorMessages, viewModel.errorTitle) : undefined;
   const retryBusy = viewModel.retryState === "busy";
   const retryIcon = retryBusy ? actionSpinnerIcon() : refreshIcon();
   return `<div class="twk-connect-detail">
     ${createConnectingWalletIconHtml(wallet, hasError)}
-    <h3 class="twk-title twk-view-title" ${hasError ? `data-tone="danger"` : ""}>${escapeHtml(hasError ? displayError?.title ?? labels.connectionDeclined : `${labels.continueInWallet} ${wallet.name}`)}</h3>
-    <p class="twk-detail-subtitle">${escapeHtml(hasError ? displayError?.message ?? labels.acceptRequest : labels.acceptRequest)}</p>
+    <h3 class="twk-title twk-view-title" ${hasError ? `data-tone="danger"` : ""}>${escapeHtml(hasError ? displayError?.title ?? labels.connectionDeclined : pendingTitle)}</h3>
+    <p class="twk-detail-subtitle">${escapeHtml(hasError ? displayError?.message ?? pendingMessage : pendingMessage)}</p>
     <div class="twk-detail-actions">
       <button class="twk-action" type="button" data-twk-action="retry" ${retryBusy ? `data-busy="true" disabled` : ""}>${createActionContentHtml(retryIcon, labels.tryAgain, retryBusy ? "busy" : undefined)}</button>
     </div>

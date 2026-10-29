@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { withBase } from "vitepress";
+import { version } from "../../../package.json";
 
 const installCmd = "npm i @tron-wallet-kit/react";
 const copied = ref(false);
@@ -28,7 +30,7 @@ const features = [
   <div class="hl">
     <section class="hl-hero">
       <div class="hl-copy">
-        <div class="hl-eyebrow"><span class="hl-dot"></span> TRON-native wallet UX · v0.1.0-beta</div>
+        <div class="hl-eyebrow"><span class="hl-dot"></span> TRON-native wallet UX · v{{ version }}</div>
         <h1 class="hl-title">Connect a TRON wallet in <span class="hl-mark">three lines.</span></h1>
         <p class="hl-lede">
           A product-grade wallet experience for TRON dApps — connect, sign, and transact.
@@ -36,9 +38,9 @@ const features = [
         </p>
 
         <div class="hl-cta">
-          <a class="hl-btn hl-btn-primary" href="/docs/quick-start">Get started</a>
-          <a class="hl-btn" href="/docs/playground">Live playground</a>
-          <a class="hl-btn hl-btn-ghost" href="/docs/introduction">Introduction <span aria-hidden="true">→</span></a>
+          <a class="hl-btn hl-btn-primary" :href="withBase('/docs/quick-start')">Get started</a>
+          <a class="hl-btn" :href="withBase('/docs/playground')">Live playground</a>
+          <a class="hl-btn hl-btn-ghost" :href="withBase('/docs/introduction')">Introduction <span aria-hidden="true">→</span></a>
         </div>
 
         <button class="hl-install" @click="copyInstall" :aria-label="'Copy: ' + installCmd">
@@ -93,8 +95,8 @@ const features = [
         <p class="hl-band-sub">Three lines to a connect flow that looks like you built it.</p>
       </div>
       <div class="hl-band-cta">
-        <a class="hl-btn hl-btn-primary" href="/docs/quick-start">Read the quick start</a>
-        <a class="hl-btn" href="/docs/theme-builder">Open the theme builder</a>
+        <a class="hl-btn hl-btn-primary" :href="withBase('/docs/quick-start')">Read the quick start</a>
+        <a class="hl-btn" :href="withBase('/docs/theme-builder')">Open the theme builder</a>
       </div>
     </section>
   </div>

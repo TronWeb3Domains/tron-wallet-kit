@@ -1,7 +1,7 @@
 import { existsSync, renameSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
+import { build } from "tsup";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const packageDir = join(scriptDir, "..", "packages", "browser");
@@ -11,32 +11,17 @@ const generatedMap = join(distDir, "index.global.js.map");
 const iifeFile = join(distDir, "tron-wallet-kit.iife.js");
 const iifeMap = join(distDir, "tron-wallet-kit.iife.js.map");
 
-const result = spawnSync(
-  "pnpm",
-  [
-    "exec",
-    "tsup",
-    "src/index.ts",
-    "--format",
-    "iife",
-    "--global-name",
-    "TronWalletKit",
-    "--platform",
-    "browser",
-    "--external",
-    "@gasfree/gasfree-sdk",
-    "--external",
-    "tronweb",
-    "--sourcemap"
-  ],
-  {
-    cwd: packageDir,
-    shell: process.platform === "win32",
-    stdio: "inherit"
-  }
-);
-
-if (result.status !== 0) process.exit(result.status ?? 1);
+process.chdir(packageDir);
+await build({
+  entry: ["src/index.ts"],
+  format: ["iife"],
+  globalName: "TronWalletKit",
+  platform: "browser",
+  esbuildOptions(options) {
+    options.external = ["@gasfree/gasfree-sdk", "tronweb", "@tronweb3/tronwallet-adapter-ledger"];
+  },
+  sourcemap: true
+});
 
 if (existsSync(iifeFile)) rmSync(iifeFile);
 if (existsSync(iifeMap)) rmSync(iifeMap);

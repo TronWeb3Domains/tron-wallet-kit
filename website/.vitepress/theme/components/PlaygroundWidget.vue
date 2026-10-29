@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { version as KIT_VERSION } from "../../../package.json";
 
-const KIT_VERSION = "0.1.0-beta.0-account-panel-identity-cooldown";
 const network = ref<"mainnet" | "shasta" | "nile">("mainnet");
 const mode = ref<"light" | "dark" | "auto">("auto");
 const layout = ref<"list" | "card">("list");

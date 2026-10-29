@@ -207,6 +207,24 @@ describe("tronwallet bridge adapter", () => {
     await expect(adapter.connect({ network: TRON_MAINNET })).rejects.toMatchObject({ code: "CONNECTION_FAILED" });
   });
 
+  it("retries a failed lazy import and shares the successful adapter", async () => {
+    let attempts = 0;
+    const adapter = createLazyTronwalletBridgeAdapter({
+      id: "ledger",
+      importer: async () => {
+        if (++attempts === 1) throw new Error("Cannot find package");
+        return new MockTronwalletAdapter();
+      }
+    });
+
+    await expect(adapter.isAvailable?.()).resolves.toBe(false);
+    await expect(adapter.connect({ network: TRON_MAINNET })).resolves.toMatchObject({
+      account: { address: "TMockAddress" }
+    });
+    await adapter.isAvailable?.();
+    expect(attempts).toBe(2);
+  });
+
   it("waits briefly for lazy adapters to leave Loading before checking availability", async () => {
     const inner = new MockTronwalletAdapter();
     inner.readyState = "Loading";

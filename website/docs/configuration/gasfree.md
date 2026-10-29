@@ -138,6 +138,10 @@ await kit.gasFree.refresh();
 
 GasFree is mainnet-first. On unsupported networks, the runtime resolves to disabled without throwing.
 
+For standalone browser/CDN IIFE pages, use the provider API for both address and balance. The IIFE
+keeps the optional SDK and TronWeb modules external; local derivation or the on-chain fallback
+requires a custom bundled entrypoint or another browser-resolvable module setup.
+
 ## Phase Boundary
 
 Phase 1:

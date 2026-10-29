@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  '@ledgerhq/hw-transport-webhid@6.27.1>@ledgerhq/hw-transport': 6.27.1
+
 importers:
 
   .:
@@ -4908,7 +4911,7 @@ snapshots:
     dependencies:
       '@ledgerhq/devices': 6.27.1
       '@ledgerhq/errors': 6.37.0
-      '@ledgerhq/hw-transport': 6.35.5
+      '@ledgerhq/hw-transport': 6.27.1
       '@ledgerhq/logs': 6.17.0
 
   '@ledgerhq/hw-transport@6.27.1':

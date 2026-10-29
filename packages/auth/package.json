@@ -1,6 +1,6 @@
 {
   "name": "@tron-wallet-kit/auth",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Authentication message helpers for TRON Wallet Kit.",
   "license": "MIT",
   "type": "module",

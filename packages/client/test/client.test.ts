@@ -131,6 +131,8 @@ describe("client entrypoints", () => {
     delete (globalThis as Record<string, unknown>).guarda;
     delete (globalThis as Record<string, unknown>).$onekey;
     delete (globalThis as Record<string, unknown>).SafePalHook;
+    delete (globalThis as Record<string, unknown>).safepalTronProvider;
+    delete (globalThis as Record<string, unknown>).safepalwallet;
     delete (globalThis as Record<string, unknown>).sfpPlatform;
     delete (globalThis as Record<string, unknown>).trustwallet;
     delete (globalThis as Record<string, unknown>).foxwallet;
@@ -1395,6 +1397,55 @@ describe("client entrypoints", () => {
     await expect(manager.connect("foxwallet")).resolves.toMatchObject({ account: { address: "TQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } });
     await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "fox-parent:hello" });
     expect(request).toHaveBeenCalledWith({ method: "tron_requestAccounts" });
+  });
+
+  it.each(["extension", "mobile"])("connects and signs with the modern SafePal %s provider", async (platform) => {
+    const request = vi.fn(async () => ({ code: 200 }));
+    const signMessageV2 = vi.fn(async (message: string) => `safepal-v2:${message}`);
+    const provider = {
+      request,
+      tronWeb: {
+        defaultAddress: { base58: "TRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" },
+        trx: { signMessageV2 }
+      }
+    };
+    (globalThis as Record<string, unknown>)[platform === "extension" ? "safepalTronProvider" : "safepalwallet"] =
+      platform === "extension" ? provider : { tron: provider };
+    (globalThis as Record<string, unknown>).tronLink = provider;
+    (globalThis as Record<string, unknown>).tronWeb = {
+      defaultAddress: { base58: "T8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" },
+      trx: {}
+    };
+    const manager = createWalletClient({ wallets: ["safepal"], network: TRON_MAINNET });
+    await expect(manager.getWallets()[0]?.detect?.()).resolves.toBe(true);
+    expect(request).not.toHaveBeenCalled();
+    const tronlink = createWalletClient({ wallets: ["tronlink"] });
+    await expect(Promise.resolve(tronlink.getWallets()[0]?.detect?.())).resolves.toBe(false);
+    await expect(manager.connect("safepal")).resolves.toMatchObject({ account: { address: "TRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } });
+    await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "safepal-v2:hello" });
+    expect(signMessageV2).toHaveBeenCalledWith("hello");
+  });
+
+  it("prefers the authorized Trust mobile provider without requiring a request method", async () => {
+    vi.stubGlobal("navigator", { userAgent: "Mozilla/5.0 (iPhone)" });
+    try {
+      const extensionRequest = vi.fn();
+      (globalThis as Record<string, unknown>).trustwallet = {
+        tronLink: { request: extensionRequest },
+        tron: {
+          tronWeb: {
+            defaultAddress: { base58: "TLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" },
+            trx: { signMessageV2: async (message: string) => `trust-mobile:${message}` }
+          }
+        }
+      };
+      const manager = createWalletClient({ wallets: ["trust"], network: TRON_MAINNET });
+      await expect(manager.connect("trust")).resolves.toMatchObject({ account: { address: "TLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } });
+      await expect(manager.signMessage("hello")).resolves.toMatchObject({ proof: "trust-mobile:hello" });
+      expect(extensionRequest).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("connects SafePal through SafePalHook and the global tronWeb", async () => {

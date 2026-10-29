@@ -34,7 +34,7 @@ const adapter = createWalletConnectAdapter({
 
 ## Status
 
-This package is part of the TRON Wallet Kit 0.1.0 release line and is intended for the npm `latest` tag.
+This package is part of the TRON Wallet Kit 0.1.1 release line and is intended for the npm `latest` tag.
 
 ## License
 

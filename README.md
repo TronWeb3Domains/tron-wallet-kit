@@ -2,7 +2,7 @@
 
 TRON Wallet Kit is a TRON-native wallet kit for building dapps with a product-grade connect modal, account panel, WalletConnect QR flow, injected wallet support, GasFree account mode, theming, React bindings, and browser/CDN output.
 
-This project is prepared for the first stable package line, `0.1.0`, published under the npm `latest` tag.
+The current stable package line is `0.1.1`, published under the npm `latest` tag.
 
 ## Packages
 
@@ -114,7 +114,7 @@ The browser package emits:
 
 ## Release Status
 
-The first release target is `0.1.0` under the npm `latest` tag.
+The current release is `0.1.1` under the npm `latest` tag. See [CHANGELOG.md](./CHANGELOG.md) for changes and integration notes.
 
 Before publishing to npm, run the release quality gates, npm dry-run, and real-wallet QA checklist.
 

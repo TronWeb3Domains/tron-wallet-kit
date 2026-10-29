@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, reactive, ref, computed, watch, nextTick } from "vue";
+import { withBase } from "vitepress";
+import { version as KIT_VERSION } from "../../../package.json";
 
-const KIT_VERSION = "0.1.0-beta.0-flow-guards";
 const WALLETCONNECT_PROJECT_ID = "a4109c95d50e5c136cdafaf9fc44c105";
 
 const mode = ref<"light" | "dark" | "auto">("light");
@@ -63,7 +64,7 @@ let reopenTimer: any;
 function goBack() {
   if (typeof window === "undefined") return;
   if (window.history.length > 1) window.history.back();
-  else window.location.href = "/docs/quick-start";
+  else window.location.href = withBase("/docs/quick-start");
 }
 
 function sdkThemeName(): string | undefined {

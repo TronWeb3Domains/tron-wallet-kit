@@ -53,6 +53,35 @@ prefer `metadata`.
 
 React dapps should normally consume these through `@tron-wallet-kit/react`.
 
+SafePal recognizes `safepalTronProvider` (extension), `safepalwallet.tron` (in-app), and legacy
+`SafePalHook`. Trust mobile prefers `trustwallet.tron`, including authorized providers without
+`request`; the desktop extension uses `trustwallet.tronLink`. Test mobile injection by opening
+the dApp in the wallet's browser. Public TIP-712 `signTypedData` is not yet exposed by the kit.
+
+## Ledger
+
+Ledger connects directly to the device through WebHID in a supported desktop browser. Ledger Live
+is not required. Open the TRON app, choose the device, and confirm the selected address on Ledger.
+The built-in flow connects the first TRON account (index `0`, path `44'/195'/0'/0/0`). Preparation
+and address verification stay in the kit's connecting panel; no additional Ledger modal is opened.
+
+The upstream WebHID `6.27.1` package requires a compatible base transport. For pnpm apps, add this
+override to the application's root `package.json`, reinstall dependencies, and restart Vite with
+`--force`:
+
+```json
+{
+  "pnpm": {
+    "overrides": {
+      "@ledgerhq/hw-transport-webhid@6.27.1>@ledgerhq/hw-transport": "6.27.1"
+    }
+  }
+}
+```
+
+This workspace already applies the override. An incompatible base transport can throw
+`Class constructor Transport cannot be invoked without 'new'` after the device chooser.
+
 ## GasFree
 
 GasFree Phase 1 is an account-panel mode for showing a deterministic GasFree address and USDT
@@ -142,7 +171,7 @@ const kit = createWalletKit({
 
 ## Status
 
-This package is part of the TRON Wallet Kit 0.1.0 release line and is intended for the npm `latest` tag.
+This package is part of the TRON Wallet Kit 0.1.1 release line and is intended for the npm `latest` tag.
 
 ## License
 

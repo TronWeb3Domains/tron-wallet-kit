@@ -466,6 +466,8 @@ function isKnownNonTronLinkProvider(provider: unknown, globalObject: TronProvide
 }
 
 const KNOWN_NON_TRONLINK_PROVIDER_PATHS = [
+  ["safepalTronProvider"],
+  ["safepalwallet", "tron"],
   ["tokenpocket", "tron"],
   ["tokenpocket", "tronLink"],
   ["bitkeep", "tron"],
@@ -493,6 +495,8 @@ const KNOWN_NON_TRONLINK_PROVIDER_PATHS = [
 ] as const;
 
 const KNOWN_NON_TRONLINK_PROVIDER_ROOTS = [
+  "safepalTronProvider",
+  "safepalwallet",
   "tokenpocket",
   "bitkeep",
   "okxwallet",

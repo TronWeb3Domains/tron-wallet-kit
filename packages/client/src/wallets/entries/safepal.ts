@@ -1,10 +1,20 @@
-import { standardInjected, withAddressPoll, withSignMode } from "../../adapters/injected-strategy";
-import { extractInjectedAddress, getDefaultBase58Address, safeGetProperty } from "../../injected/detect";
+import { defaultInjectedSignMessage, standardInjected, withAddressPoll } from "../../adapters/injected-strategy";
+import { cloneInjectedProvider, extractInjectedAddress, getDefaultBase58Address, safeGetProperty } from "../../injected/detect";
 import type { InjectedTronProvider } from "../../types";
 import type { WalletDescriptor } from "../types";
 
 function getSafePalInjectedProvider(): InjectedTronProvider | undefined {
   const globals = globalThis as unknown as Record<string, unknown>;
+  const mobileWallet = safeGetProperty(globals, "safepalwallet");
+  const modernProviders = [
+    safeGetProperty(globals, "safepalTronProvider"),
+    mobileWallet && typeof mobileWallet === "object" ? safeGetProperty(mobileWallet as Record<string, unknown>, "tron") : undefined
+  ];
+  for (const value of modernProviders) {
+    if (!value || typeof value !== "object") continue;
+    const provider = cloneInjectedProvider(value);
+    if (provider.request || provider.tronWeb?.trx) return provider;
+  }
   const safePalHook = safeGetProperty(globals, "SafePalHook");
   if (!safePalHook || typeof safePalHook !== "object") return undefined;
   const hook = safePalHook as Record<string, unknown>;
@@ -32,7 +42,7 @@ function getSafePalInjectedProvider(): InjectedTronProvider | undefined {
 
 function hasSafePalInjectedMarker(): boolean {
   const globals = globalThis as unknown as Record<string, unknown>;
-  return Boolean(safeGetProperty(globals, "SafePalHook") || safeGetProperty(globals, "sfpPlatform"));
+  return Boolean(getSafePalInjectedProvider() || safeGetProperty(globals, "SafePalHook") || safeGetProperty(globals, "sfpPlatform"));
 }
 
 function createSafePalTronWeb(tronWeb: unknown, hook: Record<string, unknown>): NonNullable<InjectedTronProvider["tronWeb"]> {
@@ -83,14 +93,18 @@ export const safepal: WalletDescriptor = {
   platforms: ["extension", "mobile"],
   group: "popular",
   supportsWalletConnect: true,
-  injected: withSignMode(withAddressPoll(standardInjected({
-    provider: getSafePalInjectedProvider,
-    rdns: ["com.safepal"],
-    marker: hasSafePalInjectedMarker
-  }), {
-    settleMs: 2500,
-    retryDelayMs: 300,
-    retryTimeoutMs: 3000
-  }), "sign"),
+  injected: {
+    ...withAddressPoll(standardInjected({
+      provider: getSafePalInjectedProvider,
+      rdns: ["com.safepal"],
+      marker: hasSafePalInjectedMarker
+    }), {
+      settleMs: 2500,
+      retryDelayMs: 300,
+      retryTimeoutMs: 3000
+    }),
+    signMessage: (ctx, message) => defaultInjectedSignMessage(ctx, message,
+      ctx.getProvider()?.tronWeb?.trx?.signMessageV2 ? "signMessageV2" : "sign")
+  },
   detect: { provider: getSafePalInjectedProvider, availabilityProbe: hasSafePalInjectedMarker }
 };

@@ -31,6 +31,13 @@ installed but connect cannot return a TRON address.
 If your QA environment proves a new provider path for either wallet, add it to that wallet's
 descriptor and record the path in the P2 wallet QA notes.
 
+Trust's mobile in-app provider is `trustwallet.tron` and may have no `request` method. The kit
+reads its authorized address directly and keeps using its own `tronWeb` for signing and balance.
+Open the dApp inside Trust Wallet; an external browser-to-app jump may not inject a TRON provider.
+
+SafePal extension and in-app providers are `safepalTronProvider` and `safepalwallet.tron`.
+Legacy `SafePalHook` is also supported. Modern providers use `signMessageV2` for messages.
+
 ## WalletConnect: "cancelled in the wallet"
 
 If you scan the WalletConnect QR, approve in your wallet, and still get "The request was cancelled in
@@ -64,12 +71,41 @@ HTTPS origin during development.
 Ledger is hardware-supported, not an injected extension. It should be offered as a hardware-capable
 wallet on desktop, but a real connection still needs:
 
-- the optional Ledger adapter peer installed in the app;
+- the built-in Ledger adapter dependency (included with `@tron-wallet-kit/client`);
 - a Ledger device connected and unlocked;
 - the TRON app open on the device;
-- browser transport permissions granted.
+- a desktop browser with WebHID support, such as Chrome or Edge, on HTTPS or localhost;
+- browser device permissions granted after selecting Ledger in the device chooser.
 
-Missing Ledger peer support must not break other wallets.
+Close Ledger Live or other applications using the device before retrying. The built-in flow uses
+the first TRON account (index `0`, path `44'/195'/0'/0/0`) and asks you to verify its address on the
+device. It stays in the kit's connecting panel without opening another Ledger modal. Rejecting
+verification does not connect the wallet. If loading the adapter fails, refresh the page and retry.
+
+The browser connects directly to the hardware device through WebHID. Ledger Live is not required.
+The kit displays the preparation instructions; the browser displays the device chooser.
+
+### Failure after choosing the device
+
+The panel displays device error details instead of hiding them behind a generic connection hint.
+If it reports `Class constructor Transport cannot be invoked without 'new'`, the legacy WebHID
+package `6.27.1` has resolved an incompatible newer base transport. This workspace pins the base
+transport for that package only. Applications using the npm packages must apply the same override
+in their root `package.json`:
+
+```json
+{
+  "pnpm": {
+    "overrides": {
+      "@ledgerhq/hw-transport-webhid@6.27.1>@ledgerhq/hw-transport": "6.27.1"
+    }
+  }
+}
+```
+
+Reinstall dependencies and restart the dev server with `--force` to refresh Vite's optimized modules.
+For npm, use a nested `overrides` entry for `@ledgerhq/hw-transport-webhid@6.27.1` with
+`"@ledgerhq/hw-transport": "6.27.1"`.
 
 ## TronGrid rate limits
 

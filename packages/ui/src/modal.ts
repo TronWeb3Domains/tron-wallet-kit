@@ -3,6 +3,7 @@ import { resolveWalletUiConfig } from "./config";
 import { applyThemeToElement, createElementFromHtml, createWalletKitRoot, ensureWalletKitStyles } from "./dom";
 import { backIcon, closeIcon } from "./icons";
 import { en } from "./locales/en";
+import { ledgerConnectErrorMessage } from "./ledger-errors";
 import { copyToClipboard } from "./clipboard";
 import { createStyledQrDataUrl, renderWalletQr } from "./qr";
 import { escapeAttribute, escapeHtml } from "./utils";
@@ -33,7 +34,7 @@ type ConnectWalletOptions = {
 };
 
 function shouldAutoRetryConnect(error: unknown, wallet: WalletOptionViewModel, options: { isQrFlow: boolean; attempt?: number }): boolean {
-  if (options.isQrFlow) return false;
+  if (options.isQrFlow || wallet.transport === "hardware" || wallet.platforms?.includes("hardware")) return false;
   if ((options.attempt ?? 0) >= 1) return false;
   const code = typeof error === "object" && error !== null && "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
   const message = error instanceof Error ? error.message : String(error);
@@ -409,7 +410,9 @@ function createWalletController(options: { manager: WalletManager; ui?: WalletUi
       const rawErrorMessage = error instanceof Error ? error.message : String(error);
       errorTitle = formattedError.title;
       errorMessage =
-        formattedError.code === "CONFIGURATION_ERROR" && /dynamically imported module|importing a module script failed|failed to fetch/i.test(rawErrorMessage)
+        wallet.id === "ledger"
+          ? ledgerConnectErrorMessage(error, Boolean(documentRef.defaultView?.navigator && "hid" in documentRef.defaultView.navigator))
+          : formattedError.code === "CONFIGURATION_ERROR" && /dynamically imported module|importing a module script failed|failed to fetch/i.test(rawErrorMessage)
           ? `${wallet.name} could not be loaded. Refresh the page and try again.`
           : formattedError.message;
       view = qrUri ? "qr" : "connecting";

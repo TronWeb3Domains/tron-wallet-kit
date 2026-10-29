@@ -5761,3 +5761,101 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
   - `pnpm -r publish --no-git-checks --tag latest` failed before publishing because local automatic provenance was unsupported.
   - `npm publish`/`pnpm publish` per package with `--no-provenance` succeeded for all 10 packages.
   - `npm access get status <package>` returned `public` for all 10 packages.
+
+## 2026-07-24 Website Subpath Deployment
+
+- Set the VitePress website base path to `/tron-wallet-kit/` so the built site can live at `trxdomains.xyz/tron-wallet-kit`.
+- Updated custom homepage CTA links and the theme-builder fallback navigation to use VitePress `withBase()` instead of root-relative `/docs/...` paths.
+- Restarted the website dev server on `https://127.0.0.1:5175/tron-wallet-kit/`.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/website build` passed.
+  - `curl.exe -k -I https://127.0.0.1:5175/tron-wallet-kit/` returned `200 OK`.
+  - `curl.exe -k -I https://127.0.0.1:5175/tron-wallet-kit/docs/introduction` returned `200 OK`.
+
+## 2026-07-30 Website Docs Build
+
+- Rebuilt the VitePress website docs for deployment under `/tron-wallet-kit/`.
+- Confirmed the generated output contains `index.html`, docs pages, and assets in `website/.vitepress/dist`.
+- Verified no generated HTML links still point to root-relative `/docs/...` or root `/` scripts.
+- Verification:
+  - `pnpm --filter @tron-wallet-kit/website build` passed.
+  - `rg -n 'href="/docs|src="/' website/.vitepress/dist` returned no matches.
+
+## 2026-10-13 Ledger Connection Fix
+
+- Replaced the ignored variable Ledger import with a literal lazy import so Vite resolves the installed dependency for browsers.
+- Initialize Buffer before loading Ledger; the upstream wallet uses it for message signing.
+- Clear failed lazy bridge imports so retry can recover, and classify module-load failures as configuration errors.
+- Disable automatic hardware connection retries and show Ledger-specific browser, cancellation, and device guidance.
+- Updated troubleshooting to reflect the bundled dependency, WebHID requirements, and account verification flow.
+- Verification: bridge suite passed (12 tests); client/UI typechecks passed. Edge browser smoke confirmed Ledger imports and constructs with readyState Found, WebHID available, and no page errors.
+- React Basic server running at https://127.0.0.1:5174/react-basic/. No browser/IIFE build performed.
+- Physical device connection, account selection, and signing still require hardware QA.
+
+## 2026-10-13 Ledger Direct Device Preparation UI
+
+- Confirmed the upstream "Log in with Ledger" modal is browser UI, not Ledger Live; transport connects directly through WebHID.
+- Disabled the upstream preparation modal through beforeConnect and disabled external website opening when the device API is unsupported.
+- Kit hardware connecting view now instructs users to unlock the device, open TRON, and use the browser device chooser; removed the install/download row for hardware.
+- Preserved upstream account selection and on-device address verification.
+- Verification: client/UI typechecks passed. Edge smoke with a mocked WebHID chooser confirmed requestDevice is called, cancellation propagates, no upstream preparation modal appears, and the kit renders direct-device instructions.
+- Physical device reads and signing remain unverified. No browser/IIFE build performed.
+
+## 2026-10-13 Ledger Post-Chooser Transport Compatibility
+
+- User confirmed the browser chooser appears and failure follows selecting the device.
+- Browser reproduction with a mocked HID device exposed `Class constructor Transport cannot be invoked without 'new'` after device.open, before any USB report.
+- Root cause: legacy @ledgerhq/hw-transport-webhid 6.27.1 resolved base @ledgerhq/hw-transport 6.35.5, whose native class cannot be invoked by the legacy transpiled subclass.
+- Scoped pnpm override now pins that WebHID package's base transport to 6.27.1; lockfile preserves all other dependency versions. Applied with offline frozen installation after stopping a slow online resolution.
+- Added Ledger-specific error formatting that preserves sanitized upstream details and provides targeted device-open, TRON-app, cancellation, and timeout instructions.
+- Updated client README and troubleshooting with direct-device flow and consuming-app override instructions; root overrides do not propagate to npm consumers.
+- Verification: four focused error tests and UI typecheck passed. Browser mock now reaches device.open and sendReport, with the injected USB error preserved in panel text. Actual hardware connection and signing remain unverified.
+- Restarted React Basic HTTPS server on port 5174. No browser/IIFE build performed.
+
+## 2026-10-13 Ledger Single-Panel Connection Flow
+
+- Replaced upstream default selectAccount hook to prevent its account picker and address-verification modals from stacking over the kit.
+- Built-in flow uses the first TRON account (index 0, 44'/195'/0'/0/0), requests on-device address display/approval, verifies the returned address matches, then connects.
+- Rejecting on-device verification keeps the adapter disconnected. Browser hardware permission chooser remains native.
+- Updated connecting instructions, client README, and troubleshooting to reflect the single-panel first-account flow.
+- Verification: client/UI typechecks passed. Edge smoke with mocked hardware reads confirmed address approval is requested, success connects, rejection stays disconnected, and no additional Ledger modal appears.
+- No browser/IIFE build performed; physical-device verification remains pending.
+
+## 2026-10-13 GasFree Browser SDK Import Fix
+
+- Replaced variable dynamic imports for @gasfree/gasfree-sdk and the shared TronWeb fallback with literal lazy imports so Vite resolves them to browser module URLs.
+- Removed the unused package-name constants. Existing GasFree browser globals and provider/balance behavior remain in place.
+- Verification: client typecheck passed. Edge browser runtime used the real SDK to derive TQm2K3N4mMFf4cgbUA942yYkoHKeS9Dgds from TSFquXZoXtei19kDJ1Sy1YGjznz8gWhfKd with no SDK errors or page errors.
+- React Basic source updates served on HTTPS port 5174. No browser/IIFE build performed.
+- Focused existing GasFree tests passed (2 tests: snapshot stability and provider address/balance mapping).
+
+## 2026-10-29 Upstream Wallet Provider Parity And Local Testing
+
+- Compared upstream v1.3.3/v1.3.4 release notes and current provider implementations with the kit registry. SafePal is the new upstream TRON adapter; the kit already listed it but lacked the current provider paths.
+- Added SafePal extension safepalTronProvider and in-app safepalwallet.tron, preserving legacy SafePalHook resolution. Modern providers use signMessageV2 when available; sign remains the fallback.
+- Added SafePal provider aliases to TronLink collision exclusions. Detection remains side-effect free.
+- Trust mobile now prefers its usable trustwallet.tron provider even if a tronLink object also exists; no request method is required for authorized in-app providers.
+- Updated balance resolution to prefer wallet-owned SafePal/Trust TronWeb instances, including Trust mobile priority. Removed Trust's shared global fallback.
+- Updated client README, website wallet catalog, and troubleshooting with provider behavior and accurate support limitations.
+- Verification: 12 focused SafePal/Trust tests passed, including modern extension/mobile connect/sign, legacy hooks, namespace-only detection, and collision prevention. Client and TronLink typechecks passed. Both local URLs returned HTTP 200.
+- React Basic runs at https://127.0.0.1:5176/react-basic/ because port 5174 is occupied by another project's scripts/serve-vanilla.mjs; that process was preserved.
+- Website runs at https://127.0.0.1:5175/tron-wallet-kit/. No package or browser/IIFE builds performed.
+- Follow-up plan, not implemented in this provider pass:
+  1. Define TIP-712 request/result types and adapter capability in core, including domain/network validation and explicit unsupported errors.
+  2. Add manager signing lifecycle/timeout handling and bridge forwarding with truthful capability detection for installed imToken versions.
+  3. Expose client/React typed-data actions, add an explicit signing demo, document payload semantics, and verify success/rejection/unsupported cases together.
+  4. Add SafePal direct app-opening deeplink handling with cancellation/re-entry semantics; current mobile testing uses the in-app dApp browser or WalletConnect.
+- Real-wallet approvals, signing, and account switching still need device QA; automated provider tests are not hardware sign-off.
+
+## 2026-10-29 Release 0.1.1 Preparation
+
+- Verified all 10 npm packages and the latest GitHub release were 0.1.0; reserved the next patch line 0.1.1.
+- Bumped all workspace manifests and package README release labels; updated root README and CHANGELOG, and added Review/RELEASE_0.1.1.md.
+- Website version label and playground bundle cache keys now read the website package version.
+- Initial workspace build exposed that tsup skips its normal external plugin for IIFE builds. Browser scripts now use the build API with native esbuild external options for GasFree SDK, TronWeb, and Ledger. Documented standalone IIFE boundaries.
+- Validation passed: pnpm lint; pnpm typecheck; pnpm test (219 tests). All public packages built successfully after the focused IIFE/Next retries; examples and website production builds passed.
+- Rebuilt and synchronized both IIFEs into examples/public/vendor and website/public. SHA-256 verification confirmed website production output contains the same bundles.
+- Both IIFEs passed VM smoke for global API availability and client startup. Website output displays v0.1.1 under /tron-wallet-kit/.
+- Packed and audited all 10 public tarballs in dist/release-0.1.1: manifests, README, ESM/CJS/types, and internal dependency ranges ^0.1.1 checked.
+- npm publish dry-runs passed for all 10 tarballs. Local publishing uses provenance=false, as automatic provenance requires supported CI.
+- Publication and GitHub release are the next actions; do not interpret preparation checks as real-device wallet QA.

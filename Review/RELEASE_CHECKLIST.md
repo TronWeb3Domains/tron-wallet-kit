@@ -96,6 +96,16 @@
 
 ## Release Notes
 
+### 0.1.1 - 2026-10-29
+
+- [x] Bump all public packages to 0.1.1 and update README/changelog/release notes.
+- [x] Lint, workspace typecheck, and 219 unit tests.
+- [x] Public package builds, browser/IIFE builds, examples build, and website build.
+- [x] Synchronize browser bundles and verify production website asset hashes.
+- [x] Audit all 10 tarballs and internal dependency ranges; npm publish dry-runs.
+- [ ] Commit/push, npm publish under latest, and GitHub v0.1.1 release.
+- Real-device wallet signing QA remains manual; Ledger transport override and standalone IIFE SDK boundaries are documented in the release notes.
+
 - `0.1.0` release preparation started on 2026-07-21.
 - Root `LICENSE`, `README.md`, `CHANGELOG.md`, package READMEs, CI workflow, 0.1.0 versions, and package publish metadata have been added.
 - Full local gates passed on 2026-07-14: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.

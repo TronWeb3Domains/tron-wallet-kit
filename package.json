@@ -1,11 +1,16 @@
 {
   "name": "tron-wallet-kit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "TRON-native wallet kit with clean adapters and product-grade wallet UX.",
   "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@10.13.1",
+  "pnpm": {
+    "overrides": {
+      "@ledgerhq/hw-transport-webhid@6.27.1>@ledgerhq/hw-transport": "6.27.1"
+    }
+  },
   "scripts": {
     "build": "pnpm -r --if-present build",
     "dev:examples": "pnpm --filter @tron-wallet-kit/examples dev",

@@ -36,13 +36,13 @@ const balanceTronWebPathsByWallet: Record<string, readonly string[]> = {
   tokenpocket: ["tokenpocket.tron.tronWeb", "tokenpocket.tronWeb"],
   okx: ["okxwallet.tronLink.tronWeb"],
   bitget: ["bitkeep.tron.tronWeb", "bitkeep.tronLink.tronWeb", "bitkeep.tronWeb"],
-  trust: ["trustwallet.tronLink.tronWeb", "tronWeb"],
+  trust: ["trustwallet.tronLink.tronWeb", "trustwallet.tron.tronWeb"],
   gate: ["gatewallet.tron.tronWeb", "gatewallet.tronLink.tronWeb", "gatewallet.tronWeb"],
   foxwallet: ["foxwallet.tronLink.tronWeb"],
   bybit: ["bybitWallet.tronLink.tronWeb", "bybitWallet.tron.tronWeb"],
   imtoken: ["tronweb"],
   binance: ["binancew3w.tron.tronWeb", "binancew3w.tronLink.tronWeb"],
-  safepal: ["tronWeb"],
+  safepal: ["safepalTronProvider.tronWeb", "safepalwallet.tron.tronWeb", "SafePalHook.tronWeb", "tronWeb"],
   guarda: ["guarda.tronWeb", "guarda.tron.tronWeb"],
   onekey: ["$onekey.tron.tronWeb", "$onekey.tronLink.tronWeb"],
   backpack: ["backpack.tron.tronWeb", "backpack.tronLink.tronWeb"]
@@ -50,7 +50,6 @@ const balanceTronWebPathsByWallet: Record<string, readonly string[]> = {
 
 const sharedTronWebByHost = new Map<string, TronDomainTronWeb>();
 let sharedTronWebConfig: SharedTronWebConfig = {};
-const TRONWEB_PACKAGE = "tronweb";
 
 export function configureSharedTronWeb(config: SharedTronWebConfig | undefined): void {
   sharedTronWebConfig = config ?? {};
@@ -58,7 +57,10 @@ export function configureSharedTronWeb(config: SharedTronWebConfig | undefined):
 
 export function resolveBalanceTronWeb(walletId: string | undefined): BalanceTronWeb | undefined {
   const paths = walletId ? balanceTronWebPathsByWallet[walletId] : undefined;
-  for (const path of paths ?? []) {
+  const preferredPaths = walletId === "trust" && /Android|iPhone|iPad|iPod/i.test(globalThis.navigator?.userAgent ?? "")
+    ? ["trustwallet.tron.tronWeb", "trustwallet.tronLink.tronWeb"]
+    : paths;
+  for (const path of preferredPaths ?? []) {
     const value = getPathValue(globalThis as unknown as Record<string, unknown>, path);
     if (isBalanceTronWeb(value)) return value;
   }
@@ -90,7 +92,7 @@ function isBalanceTronWeb(value: unknown): value is BalanceTronWeb {
 }
 
 async function loadTronWebConstructor(): Promise<TronWebConstructor> {
-  const tronWebModule = (await import(TRONWEB_PACKAGE)) as unknown as { TronWeb?: TronWebConstructor; default?: { TronWeb?: TronWebConstructor } | TronWebConstructor };
+  const tronWebModule = (await import("tronweb")) as unknown as { TronWeb?: TronWebConstructor; default?: { TronWeb?: TronWebConstructor } | TronWebConstructor };
   const defaultExport = tronWebModule.default;
   const TronWeb = tronWebModule.TronWeb ?? (typeof defaultExport === "function" ? defaultExport : defaultExport?.TronWeb);
   if (!TronWeb) throw new WalletKitError("CONFIGURATION_ERROR", "Unable to load TronWeb constructor.");

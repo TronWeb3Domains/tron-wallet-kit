@@ -1,6 +1,6 @@
 {
   "name": "@tron-wallet-kit/adapter-walletconnect",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "WalletConnect adapter for TRON Wallet Kit.",
   "license": "MIT",
   "type": "module",

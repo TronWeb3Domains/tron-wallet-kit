@@ -45,9 +45,16 @@ GasFree is optional. If enabled in a browser/CDN page, route `apiBaseUrl` throug
 so provider API secrets never appear in page source. The browser bundle can show the GasFree account
 panel mode, address copy/QR, and USDT balance when the provider API or resolver is configured.
 
+The standalone IIFE keeps `@gasfree/gasfree-sdk`, `tronweb`, and the Ledger adapter external. For pages without a
+bundler, configure the provider API to return the GasFree address and balance. Local SDK derivation
+and TronWeb fallback imports need browser-resolvable modules, such as a custom bundled entrypoint;
+installing an npm package alone does not resolve bare imports in a plain HTML page.
+Ledger device connections likewise require a bundled entrypoint or browser-resolvable adapter
+module; the standalone IIFE does not include the Ledger SDK and its transitive dependencies.
+
 ## Status
 
-This package is part of the TRON Wallet Kit 0.1.0 release line and is intended for the npm `latest` tag.
+This package is part of the TRON Wallet Kit 0.1.1 release line and is intended for the npm `latest` tag.
 
 ## License
 
