@@ -5865,3 +5865,5 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - npm accepted all 10 packages at 0.1.1 after web login and browser publish authorization. Some latest metadata is still propagating; verified registry integrity for packages already visible.
 - GitHub draft has 12 assets: 10 audited npm tarballs plus unminified/minified browser bundles.
 - Initial GitHub CI stopped at Knip because lazy buffer usage and optional GasFree SDK were misclassified. Added explicit dependency exceptions matching the existing optional-adapter policy; pnpm check:quality now passes (Knip, clone threshold, and dependency-cycle checks).
+- GitHub v0.1.1 is public at https://github.com/TronWeb3Domains/tron-wallet-kit/releases/tag/v0.1.1 with 12 assets, targeting release commit 0af0845.
+- A subsequent clean CI run passed quality checks but exposed auth's dependency on built core declarations. Moved the existing workspace build before typecheck/tests in CI; this workflow-only correction does not change published package contents.
