@@ -5867,3 +5867,13 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Initial GitHub CI stopped at Knip because lazy buffer usage and optional GasFree SDK were misclassified. Added explicit dependency exceptions matching the existing optional-adapter policy; pnpm check:quality now passes (Knip, clone threshold, and dependency-cycle checks).
 - GitHub v0.1.1 is public at https://github.com/TronWeb3Domains/tron-wallet-kit/releases/tag/v0.1.1 with 12 assets, targeting release commit 0af0845.
 - A subsequent clean CI run passed quality checks but exposed auth's dependency on built core declarations. Moved the existing workspace build before typecheck/tests in CI; this workflow-only correction does not change published package contents.
+
+## 2026-10-29 Release 0.1.1 Complete
+
+- All 10 public packages are published at 0.1.1 under latest. Public registry metadata and SHA-512 integrity match each audited local tarball, including WalletConnect and React after propagation completed.
+- GitHub release: https://github.com/TronWeb3Domains/tron-wallet-kit/releases/tag/v0.1.1 (stable/latest, 12 assets). Tag v0.1.1 points to 0af08457bd2d9473195d718460ef58ce957ecbae.
+- Code/release commit 3160e34, quality configuration follow-up 0af0845, and clean-CI workflow correction ad211f7 were pushed to origin/codex/injected-strategy-migration.
+- Clean GitHub CI passed on ad211f7: https://github.com/TronWeb3Domains/tron-wallet-kit/actions/runs/40832872747. Install, lint, quality gates, build, typecheck, and tests all passed.
+- This final receipt/checklist update is documentation-only; commit uses [skip ci] to avoid rebuilding unchanged release code again.
+- Real-wallet/device QA and dependency security hardening remain documented limitations. No claim of a clean dependency vulnerability audit.
+- Pre-existing .agents/, skills-lock.json, and Review/X402_TRON_ASSESSMENT.md remain untracked and outside release commits.

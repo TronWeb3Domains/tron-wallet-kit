@@ -105,7 +105,8 @@
 - [x] Audit all 10 tarballs and internal dependency ranges; npm publish dry-runs.
 - [x] Commit/push and npm acceptance for all 10 packages under latest.
 - [x] Knip, clone detection threshold, and dependency-cycle quality gates.
-- [ ] Publish GitHub v0.1.1 draft and finish registry propagation checks.
+- [x] Publish GitHub v0.1.1 release and verify latest/integrity for all 10 npm packages.
+- [x] Clean GitHub CI passed on ad211f7: install, lint, quality gates, build, typecheck, and tests.
 - Real-device wallet signing QA remains manual; Ledger transport override and standalone IIFE SDK boundaries are documented in the release notes.
 
 - `0.1.0` release preparation started on 2026-07-21.
