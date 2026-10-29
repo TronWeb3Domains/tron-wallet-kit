@@ -26,8 +26,13 @@ and website subpath deployment. All 10 public packages are versioned together at
   bundled entrypoint or browser-resolvable adapter module.
 - TIP-712 typed-data signing and direct SafePal app-opening deeplinks are not included.
 - Automated tests and browser mocks do not replace real-wallet/device approval and signing QA.
+- The installed production/peer dependency tree still reports security advisories. In this
+  workspace, all five critical advisories affect the auto-installed Next.js 16.2.10 peer;
+  Next.js itself is not bundled in this kit's package tarballs. Deployment projects must audit
+  their own dependency versions. This patch does not claim a clean dependency security audit.
 
 ## Validation
 
 Release checks: lint, workspace typecheck, workspace tests, workspace build (including browser/IIFE,
 examples, and website), package tarball audit, and browser bundle smoke checks.
+All 219 unit tests passed. Knip, clone detection threshold, and dependency-cycle checks also passed.

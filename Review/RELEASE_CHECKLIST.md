@@ -103,7 +103,9 @@
 - [x] Public package builds, browser/IIFE builds, examples build, and website build.
 - [x] Synchronize browser bundles and verify production website asset hashes.
 - [x] Audit all 10 tarballs and internal dependency ranges; npm publish dry-runs.
-- [ ] Commit/push, npm publish under latest, and GitHub v0.1.1 release.
+- [x] Commit/push and npm acceptance for all 10 packages under latest.
+- [x] Knip, clone detection threshold, and dependency-cycle quality gates.
+- [ ] Publish GitHub v0.1.1 draft and finish registry propagation checks.
 - Real-device wallet signing QA remains manual; Ledger transport override and standalone IIFE SDK boundaries are documented in the release notes.
 
 - `0.1.0` release preparation started on 2026-07-21.

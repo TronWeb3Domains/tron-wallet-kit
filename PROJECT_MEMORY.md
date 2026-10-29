@@ -5859,3 +5859,9 @@ Build a dedicated TRON Wallet Kit inspired by XRPL Wallet Kit architecture and d
 - Packed and audited all 10 public tarballs in dist/release-0.1.1: manifests, README, ESM/CJS/types, and internal dependency ranges ^0.1.1 checked.
 - npm publish dry-runs passed for all 10 tarballs. Local publishing uses provenance=false, as automatic provenance requires supported CI.
 - Publication and GitHub release are the next actions; do not interpret preparation checks as real-device wallet QA.
+- Release commit 3160e34 was pushed to origin/codex/injected-strategy-migration. GitHub v0.1.1 draft created with both IIFEs; publication waits for npm web authorization.
+- Existing npm credential could read but not publish (E404). Web login succeeded; a TTY publish now uses browser approval instead of requesting OTP in chat.
+- Production/peer dependency audit reports 5 critical, 50 high, 59 moderate, and 4 low findings. All 5 critical findings are on the installed Next.js 16.2.10 peer, not bundled in kit tarballs. Dependency hardening is separate pending work and is disclosed in release notes.
+- npm accepted all 10 packages at 0.1.1 after web login and browser publish authorization. Some latest metadata is still propagating; verified registry integrity for packages already visible.
+- GitHub draft has 12 assets: 10 audited npm tarballs plus unminified/minified browser bundles.
+- Initial GitHub CI stopped at Knip because lazy buffer usage and optional GasFree SDK were misclassified. Added explicit dependency exceptions matching the existing optional-adapter policy; pnpm check:quality now passes (Knip, clone threshold, and dependency-cycle checks).
